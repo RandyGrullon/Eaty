@@ -5,16 +5,34 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
   Calendar,
   TrendingUp,
   Target,
   Award,
   CalendarDays,
+  Edit,
 } from "lucide-react";
 import { MealCalendar } from "./meal-calendar";
 import { useAuth } from "@/hooks/use-auth";
-import { getUserMeals } from "@/lib/meals";
-import type { Meal } from "@/types/meal";
+import { getUserMeals, getUserProfile, updateUserProfile } from "@/lib/meals";
+import type { Meal, UserProfile } from "@/types/meal";
 
 interface ProfileStats {
   totalMeals: number;
@@ -29,11 +47,37 @@ interface ProfileStats {
   weeklyCalories: number;
 }
 
+type TimePeriod =
+  | "daily"
+  | "weekly"
+  | "monthly"
+  | "quarterly"
+  | "semi-annual"
+  | "annual";
+
 export function ProfilePage() {
   const [meals, setMeals] = useState<Meal[]>([]);
   const [stats, setStats] = useState<ProfileStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>("weekly");
+  const [editData, setEditData] = useState({
+    age: "",
+    gender: "male" as "male" | "female" | "other",
+    weight: "",
+    weightUnit: "kg" as "kg" | "lbs",
+    height: "",
+    heightUnit: "cm" as "cm" | "inches",
+    activityLevel: "moderate" as
+      | "sedentary"
+      | "light"
+      | "moderate"
+      | "active"
+      | "very_active",
+  });
   const { user } = useAuth();
 
   useEffect(() => {
@@ -49,9 +93,14 @@ export function ProfilePage() {
     setError(null);
 
     try {
-      const userMeals = await getUserMeals(user.uid);
+      const [userMeals, profile] = await Promise.all([
+        getUserMeals(user.uid),
+        getUserProfile(user.uid),
+      ]);
+
       setMeals(userMeals);
-      calculateStats(userMeals);
+      setUserProfile(profile);
+      calculateStats(userMeals, selectedPeriod);
     } catch (error: any) {
       setError(error.message);
     } finally {
@@ -59,8 +108,9 @@ export function ProfilePage() {
     }
   };
 
-  const calculateStats = (meals: Meal[]) => {
-    if (meals.length === 0) {
+  const calculateStats = (meals: Meal[], period: TimePeriod = "weekly") => {
+    const filteredMeals = filterMealsByPeriod(meals, period);
+    if (filteredMeals.length === 0) {
       setStats({
         totalMeals: 0,
         totalCalories: 0,
@@ -76,29 +126,37 @@ export function ProfilePage() {
       return;
     }
 
-    const totalMeals = meals.length;
-    const totalCalories = meals.reduce((sum, meal) => sum + meal.calories, 0);
-    const averageCalories = Math.round(totalCalories / totalMeals);
-
-    const totalProtein = meals.reduce(
-      (sum, meal) => sum + meal.macros.protein,
-      0
-    );
-    const totalCarbs = meals.reduce((sum, meal) => sum + meal.macros.carbs, 0);
-    const totalFat = meals.reduce((sum, meal) => sum + meal.macros.fat, 0);
-    const totalFiber = meals.reduce((sum, meal) => sum + meal.macros.fiber, 0);
-    const totalSugar = meals.reduce((sum, meal) => sum + meal.macros.sugar, 0);
-
-    // Calculate weekly stats (last 7 days)
-    const weekAgo = new Date();
-    weekAgo.setDate(weekAgo.getDate() - 7);
-
-    const weeklyMealsData = meals.filter((meal) => meal.createdAt >= weekAgo);
-    const weeklyMeals = weeklyMealsData.length;
-    const weeklyCalories = weeklyMealsData.reduce(
+    const totalMeals = filteredMeals.length;
+    const totalCalories = filteredMeals.reduce(
       (sum, meal) => sum + meal.calories,
       0
     );
+    const averageCalories = Math.round(totalCalories / totalMeals);
+
+    const totalProtein = filteredMeals.reduce(
+      (sum, meal) => sum + meal.macros.protein,
+      0
+    );
+    const totalCarbs = filteredMeals.reduce(
+      (sum, meal) => sum + meal.macros.carbs,
+      0
+    );
+    const totalFat = filteredMeals.reduce(
+      (sum, meal) => sum + meal.macros.fat,
+      0
+    );
+    const totalFiber = filteredMeals.reduce(
+      (sum, meal) => sum + meal.macros.fiber,
+      0
+    );
+    const totalSugar = filteredMeals.reduce(
+      (sum, meal) => sum + meal.macros.sugar,
+      0
+    );
+
+    // For period stats, use the filtered meals count and calories
+    const periodMeals = filteredMeals.length;
+    const periodCalories = totalCalories;
 
     setStats({
       totalMeals,
@@ -109,9 +167,209 @@ export function ProfilePage() {
       totalFat,
       totalFiber,
       totalSugar,
-      weeklyMeals,
-      weeklyCalories,
+      weeklyMeals: periodMeals,
+      weeklyCalories: periodCalories,
     });
+  };
+
+  // Time period filtering functions
+  const filterMealsByPeriod = (meals: Meal[], period: TimePeriod): Meal[] => {
+    const now = new Date();
+    let startDate: Date;
+
+    switch (period) {
+      case "daily":
+        startDate = new Date(now);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case "weekly":
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - 7);
+        break;
+      case "monthly":
+        startDate = new Date(now);
+        startDate.setMonth(now.getMonth() - 1);
+        break;
+      case "quarterly":
+        startDate = new Date(now);
+        startDate.setMonth(now.getMonth() - 3);
+        break;
+      case "semi-annual":
+        startDate = new Date(now);
+        startDate.setMonth(now.getMonth() - 6);
+        break;
+      case "annual":
+        startDate = new Date(now);
+        startDate.setFullYear(now.getFullYear() - 1);
+        break;
+      default:
+        return meals;
+    }
+
+    return meals.filter((meal) => meal.createdAt >= startDate);
+  };
+
+  const handlePeriodChange = (period: TimePeriod) => {
+    setSelectedPeriod(period);
+    calculateStats(meals, period);
+  };
+
+  const getPeriodLabel = (period: TimePeriod): string => {
+    switch (period) {
+      case "daily":
+        return "Hoy";
+      case "weekly":
+        return "Esta semana";
+      case "monthly":
+        return "Este mes";
+      case "quarterly":
+        return "Este trimestre";
+      case "semi-annual":
+        return "Este semestre";
+      case "annual":
+        return "Este año";
+      default:
+        return "Periodo";
+    }
+  };
+
+  // Unit conversion functions
+  const convertWeight = (
+    value: number,
+    fromUnit: string,
+    toUnit: string
+  ): number => {
+    if (fromUnit === toUnit) return value;
+    if (fromUnit === "kg" && toUnit === "lbs")
+      return Math.round(value * 2.20462 * 10) / 10;
+    if (fromUnit === "lbs" && toUnit === "kg")
+      return Math.round((value / 2.20462) * 10) / 10;
+    return value;
+  };
+
+  const convertHeight = (
+    value: number,
+    fromUnit: string,
+    toUnit: string
+  ): number => {
+    if (fromUnit === toUnit) return value;
+    if (fromUnit === "cm" && toUnit === "inches")
+      return Math.round((value / 2.54) * 10) / 10;
+    if (fromUnit === "inches" && toUnit === "cm")
+      return Math.round(value * 2.54 * 10) / 10;
+    return value;
+  };
+
+  const formatHeightImperial = (inches: number): string => {
+    const feet = Math.floor(inches / 12);
+    const remainingInches = Math.round(inches % 12);
+    return `${feet}'${remainingInches}"`;
+  };
+
+  const formatHeightDisplay = (heightCm: number): string => {
+    if (heightCm <= 0) return "No especificada";
+
+    const inches = Math.round(heightCm / 2.54);
+    const feet = Math.floor(inches / 12);
+    const remainingInches = inches % 12;
+
+    return `${feet}'${remainingInches}" (${heightCm}cm)`;
+  };
+
+  const formatWeightDisplay = (weightKg: number): string => {
+    if (weightKg <= 0) return "No especificado";
+
+    const lbs = Math.round(weightKg * 2.20462);
+    return `${weightKg}kg (${lbs}lbs)`;
+  };
+
+  const openEditModal = () => {
+    if (userProfile) {
+      // Auto-detect preferred units based on profile values
+      const weight = userProfile.weight || 0;
+      const height = userProfile.height || 0;
+
+      // Use imperial units if weight is > 200 lbs or height is > 100 inches (uncommon for metric)
+      const weightUnit: "kg" | "lbs" = weight > 90 ? "kg" : "lbs"; // 200 lbs = ~90 kg
+      const heightUnit: "cm" | "inches" = height > 250 ? "cm" : "inches"; // 250 cm = ~8'2"
+
+      setEditData({
+        age: userProfile.age?.toString() || "",
+        gender: userProfile.gender || "male",
+        weight: weight.toString(),
+        weightUnit,
+        height: height.toString(),
+        heightUnit,
+        activityLevel: userProfile.activityLevel || "moderate",
+      });
+    }
+    setEditModalOpen(true);
+  };
+
+  const handleSaveProfile = async () => {
+    if (!user) return;
+
+    setProfileLoading(true);
+    try {
+      // Convert values to standard units for storage
+      const weightValue = parseFloat(editData.weight) || 0;
+      const heightValue = parseFloat(editData.height) || 0;
+
+      const weightInKg = convertWeight(weightValue, editData.weightUnit, "kg");
+      const heightInCm = convertHeight(heightValue, editData.heightUnit, "cm");
+
+      await updateUserProfile(user.uid, {
+        age: parseInt(editData.age),
+        gender: editData.gender,
+        weight: weightInKg,
+        height: heightInCm,
+        activityLevel: editData.activityLevel,
+      });
+
+      // Recargar el perfil
+      const updatedProfile = await getUserProfile(user.uid);
+      setUserProfile(updatedProfile);
+      setEditModalOpen(false);
+    } catch (error) {
+      console.error("Error updating profile:", error);
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  // Handle unit changes with automatic conversion
+  const handleWeightUnitChange = (newUnit: "kg" | "lbs") => {
+    const currentValue = parseFloat(editData.weight) || 0;
+    if (currentValue <= 0) return; // Don't convert if no valid value
+
+    const convertedValue = convertWeight(
+      currentValue,
+      editData.weightUnit,
+      newUnit
+    );
+
+    setEditData((prev) => ({
+      ...prev,
+      weight: convertedValue.toString(),
+      weightUnit: newUnit,
+    }));
+  };
+
+  const handleHeightUnitChange = (newUnit: "cm" | "inches") => {
+    const currentValue = parseFloat(editData.height) || 0;
+    if (currentValue <= 0) return; // Don't convert if no valid value
+
+    const convertedValue = convertHeight(
+      currentValue,
+      editData.heightUnit,
+      newUnit
+    );
+
+    setEditData((prev) => ({
+      ...prev,
+      height: convertedValue.toString(),
+      heightUnit: newUnit,
+    }));
   };
 
   if (loading) {
@@ -151,16 +409,66 @@ export function ProfilePage() {
         {/* User Info */}
         <Card>
           <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                <Award className="h-6 w-6 text-primary" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                  <Award className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">
+                    {user?.displayName ||
+                      user?.email?.split("@")[0] ||
+                      "Usuario"}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">{user?.email}</p>
+                  {userProfile && (
+                    <div className="mt-2 space-y-1">
+                      <p className="text-xs text-muted-foreground">
+                        Edad: {userProfile.age || "No especificada"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Peso: {formatWeightDisplay(userProfile.weight || 0)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Altura: {formatHeightDisplay(userProfile.height || 0)}
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
-              <div>
-                <h3 className="font-semibold">
-                  {user?.displayName || user?.email?.split("@")[0] || "Usuario"}
-                </h3>
-                <p className="text-sm text-muted-foreground">{user?.email}</p>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={openEditModal}
+                className="p-2"
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Time Period Filter */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Periodo</span>
               </div>
+              <Select value={selectedPeriod} onValueChange={handlePeriodChange}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="daily">Diario</SelectItem>
+                  <SelectItem value="weekly">Semanal</SelectItem>
+                  <SelectItem value="monthly">Mensual</SelectItem>
+                  <SelectItem value="quarterly">Trimestral</SelectItem>
+                  <SelectItem value="semi-annual">Semestral</SelectItem>
+                  <SelectItem value="annual">Anual</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
@@ -199,12 +507,12 @@ export function ProfilePage() {
               </Card>
             </div>
 
-            {/* Weekly Stats */}
+            {/* Period Stats */}
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <CalendarDays className="h-5 w-5" />
-                  Esta semana
+                  {getPeriodLabel(selectedPeriod)}
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
@@ -307,6 +615,166 @@ export function ProfilePage() {
           </Card>
         ) : null}
       </div>
+
+      {/* Edit Profile Modal */}
+      <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Perfil</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="edit-age">Edad</Label>
+              <Input
+                id="edit-age"
+                type="number"
+                value={editData.age}
+                onChange={(e) =>
+                  setEditData((prev) => ({ ...prev, age: e.target.value }))
+                }
+                min="13"
+                max="120"
+                className="mt-1"
+              />
+            </div>
+
+            <div>
+              <Label>Sexo</Label>
+              <RadioGroup
+                value={editData.gender}
+                onValueChange={(value) =>
+                  setEditData((prev) => ({
+                    ...prev,
+                    gender: value as "male" | "female" | "other",
+                  }))
+                }
+                className="mt-2"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="male" id="edit-male" />
+                  <Label htmlFor="edit-male">Masculino</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="female" id="edit-female" />
+                  <Label htmlFor="edit-female">Femenino</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="other" id="edit-other" />
+                  <Label htmlFor="edit-other">Otro</Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            <div>
+              <Label htmlFor="edit-weight">Peso</Label>
+              <div className="flex gap-2 mt-1">
+                <Input
+                  id="edit-weight"
+                  type="number"
+                  value={editData.weight}
+                  onChange={(e) =>
+                    setEditData((prev) => ({
+                      ...prev,
+                      weight: e.target.value,
+                    }))
+                  }
+                  min={editData.weightUnit === "kg" ? "30" : "66"}
+                  max={editData.weightUnit === "kg" ? "300" : "661"}
+                  step="0.1"
+                  className="flex-1"
+                />
+                <Select
+                  value={editData.weightUnit}
+                  onValueChange={handleWeightUnitChange}
+                >
+                  <SelectTrigger className="w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="kg">kg</SelectItem>
+                    <SelectItem value="lbs">lbs</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="edit-height">Altura</Label>
+              <div className="flex gap-2 mt-1">
+                <Input
+                  id="edit-height"
+                  type="number"
+                  value={editData.height}
+                  onChange={(e) =>
+                    setEditData((prev) => ({
+                      ...prev,
+                      height: e.target.value,
+                    }))
+                  }
+                  min={editData.heightUnit === "cm" ? "100" : "39"}
+                  max={editData.heightUnit === "cm" ? "250" : "98"}
+                  step="0.1"
+                  className="flex-1"
+                />
+                <Select
+                  value={editData.heightUnit}
+                  onValueChange={handleHeightUnitChange}
+                >
+                  <SelectTrigger className="w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cm">cm</SelectItem>
+                    <SelectItem value="inches">inches</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div>
+              <Label>Nivel de Actividad</Label>
+              <Select
+                value={editData.activityLevel}
+                onValueChange={(value) =>
+                  setEditData((prev) => ({
+                    ...prev,
+                    activityLevel: value as typeof editData.activityLevel,
+                  }))
+                }
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sedentary">Sedentario</SelectItem>
+                  <SelectItem value="light">Ligero</SelectItem>
+                  <SelectItem value="moderate">Moderado</SelectItem>
+                  <SelectItem value="active">Activo</SelectItem>
+                  <SelectItem value="very_active">Muy Activo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setEditModalOpen(false)}
+              className="flex-1"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSaveProfile}
+              className="flex-1"
+              disabled={profileLoading}
+            >
+              {profileLoading ? "Guardando..." : "Guardar"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

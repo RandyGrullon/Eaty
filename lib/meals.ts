@@ -5,9 +5,12 @@ import {
   orderBy,
   getDocs,
   Timestamp,
+  doc,
+  setDoc,
+  getDoc,
 } from "firebase/firestore";
 import { db } from "./firebase";
-import type { Meal } from "@/types/meal";
+import type { Meal, UserProfile } from "@/types/meal";
 
 export async function saveMeal(
   userId: string,
@@ -167,5 +170,70 @@ export async function getMonthlyStats(
       averageCalories: 0,
       daysWithMeals: 0,
     };
+  }
+}
+
+export async function saveUserProfile(
+  userId: string,
+  profileData: Omit<UserProfile, "uid" | "createdAt" | "updatedAt">
+): Promise<void> {
+  try {
+    const userProfileRef = doc(db, "users", userId, "profile", "main");
+    const now = Timestamp.now();
+
+    await setDoc(userProfileRef, {
+      ...profileData,
+      uid: userId,
+      createdAt: now,
+      updatedAt: now,
+    });
+  } catch (error) {
+    console.error("Error saving user profile:", error);
+    throw new Error("Error al guardar el perfil del usuario");
+  }
+}
+
+export async function getUserProfile(
+  userId: string
+): Promise<UserProfile | null> {
+  try {
+    const userProfileRef = doc(db, "users", userId, "profile", "main");
+    const docSnap = await getDoc(userProfileRef);
+
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      return {
+        ...data,
+        createdAt: data.createdAt.toDate(),
+        updatedAt: data.updatedAt.toDate(),
+      } as UserProfile;
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Error fetching user profile:", error);
+    throw new Error("Error al cargar el perfil del usuario");
+  }
+}
+
+export async function updateUserProfile(
+  userId: string,
+  profileData: Partial<Omit<UserProfile, "uid" | "createdAt" | "updatedAt">>
+): Promise<void> {
+  try {
+    const userProfileRef = doc(db, "users", userId, "profile", "main");
+    const now = Timestamp.now();
+
+    await setDoc(
+      userProfileRef,
+      {
+        ...profileData,
+        updatedAt: now,
+      },
+      { merge: true }
+    );
+  } catch (error) {
+    console.error("Error updating user profile:", error);
+    throw new Error("Error al actualizar el perfil del usuario");
   }
 }

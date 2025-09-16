@@ -1,8 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useFoodAnalysis } from "@/hooks/use-food-analysis";
 import { usePWA } from "@/hooks/use-pwa";
@@ -14,6 +13,9 @@ import { ProfilePage } from "@/components/profile/profile-page";
 import { BottomNav } from "@/components/navigation/bottom-nav";
 import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { OfflineIndicator } from "@/components/pwa/offline-indicator";
+import { getUserProfile } from "@/lib/meals";
+import type { UserProfile } from "@/types/meal";
+import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
 import { AuthProvider } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 
@@ -33,10 +35,36 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState<
     "home" | "scan" | "history" | "profile"
   >("home");
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imageDescription, setImageDescription] = useState("");
 
-  if (loading) {
+  useEffect(() => {
+    if (user) {
+      loadUserProfile();
+    }
+  }, [user]);
+
+  const loadUserProfile = async () => {
+    if (!user) return;
+
+    setProfileLoading(true);
+    try {
+      const profile = await getUserProfile(user.uid);
+      setUserProfile(profile);
+    } catch (error) {
+      console.error("Error loading user profile:", error);
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  const handleOnboardingComplete = () => {
+    loadUserProfile();
+  };
+
+  if (loading || profileLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -48,6 +76,17 @@ function AppContent() {
     return (
       <>
         <AuthScreen />
+        <OfflineIndicator />
+        {!isInstalled && <InstallPrompt />}
+      </>
+    );
+  }
+
+  // Show onboarding wizard if user doesn't have a complete profile
+  if (!userProfile) {
+    return (
+      <>
+        <OnboardingWizard onComplete={handleOnboardingComplete} />
         <OfflineIndicator />
         {!isInstalled && <InstallPrompt />}
       </>
