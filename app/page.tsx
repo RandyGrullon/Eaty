@@ -1,0 +1,157 @@
+"use client"
+
+import { Button } from "@/components/ui/button"
+
+import { useState } from "react"
+import { useAuth } from "@/hooks/use-auth"
+import { useFoodAnalysis } from "@/hooks/use-food-analysis"
+import { usePWA } from "@/hooks/use-pwa"
+import { AuthScreen } from "@/components/auth/auth-screen"
+import { HomeScreen } from "@/components/home/home-screen"
+import { AnalysisResults } from "@/components/analysis/analysis-results"
+import { MealHistory } from "@/components/history/meal-history"
+import { BottomNav } from "@/components/navigation/bottom-nav"
+import { InstallPrompt } from "@/components/pwa/install-prompt"
+import { OfflineIndicator } from "@/components/pwa/offline-indicator"
+import { AuthProvider } from "@/hooks/use-auth"
+import { Loader2 } from "lucide-react"
+
+function AppContent() {
+  const { user, loading } = useAuth()
+  const { isInstalled } = usePWA()
+  const { isAnalyzing, isSaving, analysisResult, error, analyzeImage, analyzeText, saveAnalysis, clearAnalysis } =
+    useFoodAnalysis()
+  const [activeTab, setActiveTab] = useState<"home" | "scan" | "history" | "profile">("home")
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
+  if (!user) {
+    return (
+      <>
+        <AuthScreen />
+        <OfflineIndicator />
+        {!isInstalled && <InstallPrompt />}
+      </>
+    )
+  }
+
+  const handleScanFood = async (imageFile?: File, foodName?: string) => {
+    try {
+      if (imageFile) {
+        await analyzeImage(imageFile)
+      } else if (foodName) {
+        await analyzeText(foodName)
+      }
+    } catch (error) {
+      console.error("Error scanning food:", error)
+    }
+  }
+
+  const handleViewHistory = () => {
+    setActiveTab("history")
+  }
+
+  const handleSaveAnalysis = async () => {
+    await saveAnalysis()
+    // Refresh home screen stats after saving
+    setActiveTab("home")
+  }
+
+  const handleBackToHome = () => {
+    clearAnalysis()
+    setActiveTab("home")
+  }
+
+  // Show analysis results if available
+  if (analysisResult) {
+    return (
+      <>
+        <AnalysisResults
+          result={analysisResult}
+          onBack={handleBackToHome}
+          onSave={handleSaveAnalysis}
+          isSaving={isSaving}
+        />
+        <OfflineIndicator />
+      </>
+    )
+  }
+
+  // Show loading state during analysis
+  if (isAnalyzing) {
+    return (
+      <>
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-lg font-semibold text-primary">Analizando comida...</p>
+            <p className="text-sm text-muted-foreground">Esto puede tomar unos segundos</p>
+          </div>
+        </div>
+        <OfflineIndicator />
+      </>
+    )
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <>
+        <div className="min-h-screen bg-background flex items-center justify-center p-4">
+          <div className="text-center max-w-md">
+            <div className="text-destructive text-lg font-semibold mb-2">Error</div>
+            <p className="text-muted-foreground mb-4">{error}</p>
+            <Button onClick={handleBackToHome} className="w-full">
+              Volver al Inicio
+            </Button>
+          </div>
+        </div>
+        <OfflineIndicator />
+      </>
+    )
+  }
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case "home":
+      case "scan":
+        return <HomeScreen onScanFood={handleScanFood} onViewHistory={handleViewHistory} />
+      case "history":
+        return <MealHistory onBack={() => setActiveTab("home")} />
+      case "profile":
+        return (
+          <div className="min-h-screen bg-background p-4 pb-20">
+            <div className="max-w-md mx-auto">
+              <h1 className="text-2xl font-bold text-primary mb-4">Perfil</h1>
+              <p className="text-muted-foreground text-center py-8">Próximamente: configuración de perfil</p>
+            </div>
+          </div>
+        )
+      default:
+        return null
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      {renderContent()}
+      <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+      <OfflineIndicator />
+      {!isInstalled && <InstallPrompt />}
+    </div>
+  )
+}
+
+export default function Home() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  )
+}
