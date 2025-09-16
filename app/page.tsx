@@ -10,6 +10,7 @@ import { AuthScreen } from "@/components/auth/auth-screen";
 import { HomeScreen } from "@/components/home/home-screen";
 import { AnalysisResults } from "@/components/analysis/analysis-results";
 import { MealHistory } from "@/components/history/meal-history";
+import { ProfilePage } from "@/components/profile/profile-page";
 import { BottomNav } from "@/components/navigation/bottom-nav";
 import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { OfflineIndicator } from "@/components/pwa/offline-indicator";
@@ -227,16 +228,7 @@ function AppContent() {
       case "history":
         return <MealHistory onBack={() => setActiveTab("home")} />;
       case "profile":
-        return (
-          <div className="min-h-screen bg-background p-4 pb-20">
-            <div className="max-w-md mx-auto">
-              <h1 className="text-2xl font-bold text-primary mb-4">Perfil</h1>
-              <p className="text-muted-foreground text-center py-8">
-                Próximamente: configuración de perfil
-              </p>
-            </div>
-          </div>
-        );
+        return <ProfilePage />;
       default:
         return null;
     }
