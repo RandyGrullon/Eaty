@@ -1,35 +1,41 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { analyzeFood } from "@/lib/gemini"
-import { saveMeal } from "@/lib/meals"
-import { useAuth } from "./use-auth"
-import type { Meal } from "@/types/meal"
+import { useState } from "react";
+import { analyzeFood } from "@/lib/gemini";
+import { saveMeal } from "@/lib/meals";
+import { useAuth } from "./use-auth";
+import type { Meal } from "@/types/meal";
 
 export function useFoodAnalysis() {
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
-  const [analysisResult, setAnalysisResult] = useState<Omit<Meal, "id" | "createdAt"> | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<Omit<
+    Meal,
+    "id" | "createdAt"
+  > | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const { user } = useAuth()
+  const { user } = useAuth();
 
-  const analyzeImage = async (imageFile: File): Promise<void> => {
-    if (!imageFile) return
+  const analyzeImage = async (
+    imageFile: File,
+    description?: string
+  ): Promise<void> => {
+    if (!imageFile) return;
 
-    setIsAnalyzing(true)
-    setError(null)
+    setIsAnalyzing(true);
+    setError(null);
 
     try {
       // Convert image to base64
-      const base64 = await fileToBase64(imageFile)
-      const base64Data = base64.split(",")[1] // Remove data:image/jpeg;base64, prefix
+      const base64 = await fileToBase64(imageFile);
+      const base64Data = base64.split(",")[1]; // Remove data:image/jpeg;base64, prefix
 
       // Create image URL for display
-      const imageUrl = URL.createObjectURL(imageFile)
+      const imageUrl = URL.createObjectURL(imageFile);
 
       // Analyze with Gemini
-      const result = await analyzeFood(base64Data)
+      const result = await analyzeFood(base64Data, undefined, description);
 
       setAnalysisResult({
         imageUrl,
@@ -37,24 +43,24 @@ export function useFoodAnalysis() {
         calories: result.calories,
         macros: result.macros,
         recommendations: result.recommendations,
-      })
+      });
     } catch (error: any) {
-      console.error("Error analyzing image:", error)
-      setError("Error al analizar la imagen. Intenta nuevamente.")
+      console.error("Error analyzing image:", error);
+      setError("Error al analizar la imagen. Intenta nuevamente.");
     } finally {
-      setIsAnalyzing(false)
+      setIsAnalyzing(false);
     }
-  }
+  };
 
   const analyzeText = async (foodName: string): Promise<void> => {
-    if (!foodName.trim()) return
+    if (!foodName.trim()) return;
 
-    setIsAnalyzing(true)
-    setError(null)
+    setIsAnalyzing(true);
+    setError(null);
 
     try {
       // Analyze with Gemini using text only
-      const result = await analyzeFood(undefined, foodName)
+      const result = await analyzeFood(undefined, foodName);
 
       setAnalysisResult({
         imageUrl: null,
@@ -62,37 +68,37 @@ export function useFoodAnalysis() {
         calories: result.calories,
         macros: result.macros,
         recommendations: result.recommendations,
-      })
+      });
     } catch (error: any) {
-      console.error("Error analyzing text:", error)
-      setError("Error al analizar la comida. Intenta nuevamente.")
+      console.error("Error analyzing text:", error);
+      setError("Error al analizar la comida. Intenta nuevamente.");
     } finally {
-      setIsAnalyzing(false)
+      setIsAnalyzing(false);
     }
-  }
+  };
 
   const saveAnalysis = async (): Promise<void> => {
-    if (!analysisResult || !user) return
+    if (!analysisResult || !user) return;
 
-    setIsSaving(true)
-    setError(null)
+    setIsSaving(true);
+    setError(null);
 
     try {
-      await saveMeal(user.uid, analysisResult)
+      await saveMeal(user.uid, analysisResult);
       // Clear the analysis result after saving
-      setAnalysisResult(null)
+      setAnalysisResult(null);
     } catch (error: any) {
-      console.error("Error saving meal:", error)
-      setError("Error al guardar la comida. Intenta nuevamente.")
+      console.error("Error saving meal:", error);
+      setError("Error al guardar la comida. Intenta nuevamente.");
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   const clearAnalysis = () => {
-    setAnalysisResult(null)
-    setError(null)
-  }
+    setAnalysisResult(null);
+    setError(null);
+  };
 
   return {
     isAnalyzing,
@@ -103,14 +109,14 @@ export function useFoodAnalysis() {
     analyzeText,
     saveAnalysis,
     clearAnalysis,
-  }
+  };
 }
 
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.readAsDataURL(file)
-    reader.onload = () => resolve(reader.result as string)
-    reader.onerror = (error) => reject(error)
-  })
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = (error) => reject(error);
+  });
 }

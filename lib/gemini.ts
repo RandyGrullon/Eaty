@@ -1,7 +1,11 @@
-const GEMINI_API_KEY = "AIzaSyCmJZZ2Mm6i2WBv5GJVwzZ_jawJWtG8P5k"
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${GEMINI_API_KEY}`
+const GEMINI_API_KEY = "AIzaSyCmJZZ2Mm6i2WBv5GJVwzZ_jawJWtG8P5k";
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${GEMINI_API_KEY}`;
 
-export async function analyzeFood(imageBase64?: string, foodName?: string): Promise<any> {
+export async function analyzeFood(
+  imageBase64?: string,
+  foodName?: string,
+  description?: string
+): Promise<any> {
   const prompt = `Analiza esta comida y estima las calorías y macros principales (proteínas, carbohidratos, grasas, fibra, azúcar). 
   Da un resumen detallado de los nutrientes por porción y su total. 
   Luego, ofrece 2-3 recomendaciones de mejora para una próxima comida más saludable.
@@ -18,7 +22,7 @@ export async function analyzeFood(imageBase64?: string, foodName?: string): Prom
       "sugar": número
     },
     "recommendations": ["recomendación 1", "recomendación 2", "recomendación 3"]
-  }`
+  }`;
 
   const requestBody: any = {
     contents: [
@@ -26,12 +30,12 @@ export async function analyzeFood(imageBase64?: string, foodName?: string): Prom
         parts: [],
       },
     ],
-  }
+  };
 
   // Add text prompt
   requestBody.contents[0].parts.push({
     text: prompt,
-  })
+  });
 
   // Add image if provided
   if (imageBase64) {
@@ -40,14 +44,21 @@ export async function analyzeFood(imageBase64?: string, foodName?: string): Prom
         mime_type: "image/jpeg",
         data: imageBase64,
       },
-    })
+    });
   }
 
   // Add food name if provided
   if (foodName) {
     requestBody.contents[0].parts.push({
       text: `Nombre del plato: ${foodName}`,
-    })
+    });
+  }
+
+  // Add description if provided
+  if (description) {
+    requestBody.contents[0].parts.push({
+      text: `Descripción adicional: ${description}`,
+    });
   }
 
   try {
@@ -57,24 +68,24 @@ export async function analyzeFood(imageBase64?: string, foodName?: string): Prom
         "Content-Type": "application/json",
       },
       body: JSON.stringify(requestBody),
-    })
+    });
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const data = await response.json()
-    const text = data.candidates[0].content.parts[0].text
+    const data = await response.json();
+    const text = data.candidates[0].content.parts[0].text;
 
     // Extract JSON from the response
-    const jsonMatch = text.match(/\{[\s\S]*\}/)
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      return JSON.parse(jsonMatch[0])
+      return JSON.parse(jsonMatch[0]);
     }
 
-    throw new Error("No valid JSON found in response")
+    throw new Error("No valid JSON found in response");
   } catch (error) {
-    console.error("Error analyzing food:", error)
-    throw error
+    console.error("Error analyzing food:", error);
+    throw error;
   }
 }
