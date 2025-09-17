@@ -6,7 +6,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { useFoodAnalysis } from "@/hooks/use-food-analysis";
 import { usePWA } from "@/hooks/use-pwa";
 import { AuthScreen } from "@/components/auth/auth-screen";
-import { HomeScreen } from "@/components/home/home-screen";
+import { DashboardScreen } from "@/components/dashboard/dashboard-screen";
+import { ScanScreen } from "@/components/scan/scan-screen";
 import { AnalysisResults } from "@/components/analysis/analysis-results";
 import { MealHistory } from "@/components/history/meal-history";
 import { ProfilePage } from "@/components/profile/profile-page";
@@ -256,11 +257,11 @@ function AppContent() {
   const renderContent = () => {
     switch (activeTab) {
       case "home":
+        return <DashboardScreen onViewHistory={handleViewHistory} />;
       case "scan":
         return (
-          <HomeScreen
+          <ScanScreen
             onScanFood={handleScanFood}
-            onViewHistory={handleViewHistory}
             onImageSelected={handleImageSelected}
           />
         );
