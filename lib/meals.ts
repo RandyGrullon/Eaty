@@ -237,3 +237,163 @@ export async function updateUserProfile(
     throw new Error("Error al actualizar el perfil del usuario");
   }
 }
+
+export async function getRecentActivities(
+  userId: string,
+  limit: number = 5
+): Promise<Meal[]> {
+  try {
+    const mealsRef = collection(db, "users", userId, "meals");
+    const q = query(mealsRef, orderBy("createdAt", "desc"));
+    const querySnapshot = await getDocs(q);
+
+    return querySnapshot.docs.slice(0, limit).map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ...data,
+        createdAt: data.createdAt.toDate(),
+      } as Meal;
+    });
+  } catch (error) {
+    console.error("Error fetching recent activities:", error);
+    return [];
+  }
+}
+
+export async function getWeeklyProgress(userId: string): Promise<{
+  currentWeek: {
+    totalMeals: number;
+    totalCalories: number;
+    averageCalories: number;
+    daysActive: number;
+  };
+  previousWeek: {
+    totalMeals: number;
+    totalCalories: number;
+    averageCalories: number;
+    daysActive: number;
+  };
+  progress: {
+    mealsChange: number;
+    caloriesChange: number;
+    daysChange: number;
+  };
+}> {
+  try {
+    const now = new Date();
+    const currentWeekStart = new Date(now);
+    currentWeekStart.setDate(now.getDate() - now.getDay()); // Start of current week (Sunday)
+    currentWeekStart.setHours(0, 0, 0, 0);
+
+    const currentWeekEnd = new Date(currentWeekStart);
+    currentWeekEnd.setDate(currentWeekStart.getDate() + 7);
+
+    const previousWeekStart = new Date(currentWeekStart);
+    previousWeekStart.setDate(currentWeekStart.getDate() - 7);
+
+    const previousWeekEnd = new Date(currentWeekStart);
+
+    const mealsRef = collection(db, "users", userId, "meals");
+    const q = query(mealsRef, orderBy("createdAt", "desc"));
+    const querySnapshot = await getDocs(q);
+
+    let currentWeekMeals = 0;
+    let currentWeekCalories = 0;
+    let previousWeekMeals = 0;
+    let previousWeekCalories = 0;
+    const currentWeekDays = new Set<string>();
+    const previousWeekDays = new Set<string>();
+
+    querySnapshot.docs.forEach((doc) => {
+      const data = doc.data();
+      const mealDate = data.createdAt.toDate();
+
+      if (mealDate >= currentWeekStart && mealDate < currentWeekEnd) {
+        currentWeekMeals++;
+        currentWeekCalories += data.calories || 0;
+        currentWeekDays.add(mealDate.toDateString());
+      } else if (mealDate >= previousWeekStart && mealDate < previousWeekEnd) {
+        previousWeekMeals++;
+        previousWeekCalories += data.calories || 0;
+        previousWeekDays.add(mealDate.toDateString());
+      }
+    });
+
+    const currentWeek = {
+      totalMeals: currentWeekMeals,
+      totalCalories: currentWeekCalories,
+      averageCalories:
+        currentWeekMeals > 0
+          ? Math.round(currentWeekCalories / currentWeekMeals)
+          : 0,
+      daysActive: currentWeekDays.size,
+    };
+
+    const previousWeek = {
+      totalMeals: previousWeekMeals,
+      totalCalories: previousWeekCalories,
+      averageCalories:
+        previousWeekMeals > 0
+          ? Math.round(previousWeekCalories / previousWeekMeals)
+          : 0,
+      daysActive: previousWeekDays.size,
+    };
+
+    const progress = {
+      mealsChange:
+        previousWeek.totalMeals > 0
+          ? Math.round(
+              ((currentWeek.totalMeals - previousWeek.totalMeals) /
+                previousWeek.totalMeals) *
+                100
+            )
+          : currentWeek.totalMeals > 0
+          ? 100
+          : 0,
+      caloriesChange:
+        previousWeek.totalCalories > 0
+          ? Math.round(
+              ((currentWeek.totalCalories - previousWeek.totalCalories) /
+                previousWeek.totalCalories) *
+                100
+            )
+          : currentWeek.totalCalories > 0
+          ? 100
+          : 0,
+      daysChange:
+        previousWeek.daysActive > 0
+          ? Math.round(
+              ((currentWeek.daysActive - previousWeek.daysActive) /
+                previousWeek.daysActive) *
+                100
+            )
+          : currentWeek.daysActive > 0
+          ? 100
+          : 0,
+    };
+
+    return {
+      currentWeek,
+      previousWeek,
+      progress,
+    };
+  } catch (error) {
+    console.error("Error fetching weekly progress:", error);
+    return {
+      currentWeek: {
+        totalMeals: 0,
+        totalCalories: 0,
+        averageCalories: 0,
+        daysActive: 0,
+      },
+      previousWeek: {
+        totalMeals: 0,
+        totalCalories: 0,
+        averageCalories: 0,
+        daysActive: 0,
+      },
+      progress: { mealsChange: 0, caloriesChange: 0, daysChange: 0 },
+    };
+  }
+}

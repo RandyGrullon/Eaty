@@ -7,8 +7,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
-import { getTodayStats } from "@/lib/meals";
-import { Camera, Upload, Type, History, LogOut } from "lucide-react";
+import {
+  getTodayStats,
+  getRecentActivities,
+  getWeeklyProgress,
+} from "@/lib/meals";
+import type { Meal } from "@/types/meal";
+import {
+  Camera,
+  Upload,
+  Type,
+  History,
+  LogOut,
+  TrendingUp,
+  TrendingDown,
+  Activity,
+} from "lucide-react";
 
 interface HomeScreenProps {
   onScanFood: (imageFile?: File, foodName?: string) => void;
@@ -26,6 +40,26 @@ export function HomeScreen({
     mealsCount: 0,
     totalCalories: 0,
   });
+  const [recentActivities, setRecentActivities] = useState<Meal[]>([]);
+  const [weeklyProgress, setWeeklyProgress] = useState<{
+    currentWeek: {
+      totalMeals: number;
+      totalCalories: number;
+      averageCalories: number;
+      daysActive: number;
+    };
+    previousWeek: {
+      totalMeals: number;
+      totalCalories: number;
+      averageCalories: number;
+      daysActive: number;
+    };
+    progress: {
+      mealsChange: number;
+      caloriesChange: number;
+      daysChange: number;
+    };
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -34,6 +68,8 @@ export function HomeScreen({
   useEffect(() => {
     if (user) {
       loadTodayStats();
+      loadRecentActivities();
+      loadWeeklyProgress();
     }
   }, [user]);
 
@@ -44,6 +80,26 @@ export function HomeScreen({
       setTodayStats(stats);
     } catch (error) {
       console.error("Error loading today stats:", error);
+    }
+  };
+
+  const loadRecentActivities = async () => {
+    if (!user) return;
+    try {
+      const activities = await getRecentActivities(user.uid, 3);
+      setRecentActivities(activities);
+    } catch (error) {
+      console.error("Error loading recent activities:", error);
+    }
+  };
+
+  const loadWeeklyProgress = async () => {
+    if (!user) return;
+    try {
+      const progress = await getWeeklyProgress(user.uid);
+      setWeeklyProgress(progress);
+    } catch (error) {
+      console.error("Error loading weekly progress:", error);
     }
   };
 
@@ -218,6 +274,131 @@ export function HomeScreen({
               </div>
             </CardContent>
           </Card>
+
+          {/* Weekly Progress Card */}
+          {weeklyProgress && (
+            <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <TrendingUp className="h-5 w-5 text-blue-600" />
+                  <h3 className="font-semibold text-blue-900">
+                    Progreso Semanal
+                  </h3>
+                </div>
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div>
+                    <div className="text-lg font-bold text-blue-700">
+                      {weeklyProgress.currentWeek.totalMeals}
+                    </div>
+                    <div className="text-xs text-blue-600">Comidas</div>
+                    {weeklyProgress.progress.mealsChange !== 0 && (
+                      <div
+                        className={`text-xs flex items-center justify-center gap-1 mt-1 ${
+                          weeklyProgress.progress.mealsChange > 0
+                            ? "text-green-600"
+                            : "text-red-600"
+                        }`}
+                      >
+                        {weeklyProgress.progress.mealsChange > 0 ? (
+                          <TrendingUp className="h-3 w-3" />
+                        ) : (
+                          <TrendingDown className="h-3 w-3" />
+                        )}
+                        {Math.abs(weeklyProgress.progress.mealsChange)}%
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <div className="text-lg font-bold text-blue-700">
+                      {weeklyProgress.currentWeek.totalCalories}
+                    </div>
+                    <div className="text-xs text-blue-600">Calorías</div>
+                    {weeklyProgress.progress.caloriesChange !== 0 && (
+                      <div
+                        className={`text-xs flex items-center justify-center gap-1 mt-1 ${
+                          weeklyProgress.progress.caloriesChange > 0
+                            ? "text-green-600"
+                            : "text-red-600"
+                        }`}
+                      >
+                        {weeklyProgress.progress.caloriesChange > 0 ? (
+                          <TrendingUp className="h-3 w-3" />
+                        ) : (
+                          <TrendingDown className="h-3 w-3" />
+                        )}
+                        {Math.abs(weeklyProgress.progress.caloriesChange)}%
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <div className="text-lg font-bold text-blue-700">
+                      {weeklyProgress.currentWeek.daysActive}
+                    </div>
+                    <div className="text-xs text-blue-600">Días activos</div>
+                    {weeklyProgress.progress.daysChange !== 0 && (
+                      <div
+                        className={`text-xs flex items-center justify-center gap-1 mt-1 ${
+                          weeklyProgress.progress.daysChange > 0
+                            ? "text-green-600"
+                            : "text-red-600"
+                        }`}
+                      >
+                        {weeklyProgress.progress.daysChange > 0 ? (
+                          <TrendingUp className="h-3 w-3" />
+                        ) : (
+                          <TrendingDown className="h-3 w-3" />
+                        )}
+                        {Math.abs(weeklyProgress.progress.daysChange)}%
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Recent Activities Card */}
+          {recentActivities.length > 0 && (
+            <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Activity className="h-5 w-5 text-green-600" />
+                  <h3 className="font-semibold text-green-900">
+                    Actividades Recientes
+                  </h3>
+                </div>
+                <div className="space-y-3">
+                  {recentActivities.map((activity) => (
+                    <div
+                      key={activity.id}
+                      className="flex items-center justify-between p-2 bg-white/50 rounded-lg"
+                    >
+                      <div className="flex-1">
+                        <div className="font-medium text-green-800 text-sm">
+                          {activity.foodName}
+                        </div>
+                        <div className="text-xs text-green-600">
+                          {activity.createdAt.toLocaleDateString("es-ES", {
+                            weekday: "short",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-semibold text-green-700">
+                          {activity.calories} cal
+                        </div>
+                        <div className="text-xs text-green-600">
+                          {activity.macros.protein}g proteína
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Tips Card */}
           <Card className="bg-accent/5 border-accent/20">

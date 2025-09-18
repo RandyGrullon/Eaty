@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Calendar, Eye } from "lucide-react"
+import { ArrowLeft, Calendar, Eye, Filter, Clock, CalendarDays, Calendar as CalendarIcon } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import { getUserMeals } from "@/lib/meals"
 import type { Meal } from "@/types/meal"
@@ -19,6 +19,8 @@ export function MealHistory({ onBack }: MealHistoryProps) {
   const [loading, setLoading] = useState(true)
   const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [filterPeriod, setFilterPeriod] = useState<'day' | 'week' | 'month'>('week')
+  const [filteredMeals, setFilteredMeals] = useState<Meal[]>([])
 
   const { user } = useAuth()
 
@@ -27,6 +29,12 @@ export function MealHistory({ onBack }: MealHistoryProps) {
       loadMeals()
     }
   }, [user])
+
+  useEffect(() => {
+    if (meals.length > 0) {
+      applyFilter()
+    }
+  }, [meals, filterPeriod])
 
   const loadMeals = async () => {
     if (!user) return
@@ -37,11 +45,37 @@ export function MealHistory({ onBack }: MealHistoryProps) {
     try {
       const userMeals = await getUserMeals(user.uid)
       setMeals(userMeals)
+      // El filtro se aplicará automáticamente por el useEffect
     } catch (error: any) {
       setError(error.message)
     } finally {
       setLoading(false)
     }
+  }
+
+  const applyFilter = () => {
+    const now = new Date()
+    let startDate: Date
+
+    switch (filterPeriod) {
+      case 'day':
+        startDate = new Date(now)
+        startDate.setHours(0, 0, 0, 0)
+        break
+      case 'week':
+        startDate = new Date(now)
+        startDate.setDate(now.getDate() - now.getDay()) // Start of current week (Sunday)
+        startDate.setHours(0, 0, 0, 0)
+        break
+      case 'month':
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1)
+        break
+      default:
+        startDate = new Date(0) // Show all
+    }
+
+    const filtered = meals.filter(meal => meal.createdAt >= startDate)
+    setFilteredMeals(filtered)
   }
 
   const formatDate = (date: Date) => {
@@ -133,7 +167,29 @@ export function MealHistory({ onBack }: MealHistoryProps) {
     )
   }
 
-  const groupedMeals = groupMealsByDate(meals)
+  const groupedMeals = groupMealsByDate(filteredMeals)
+
+  const getFilterIcon = (period: 'day' | 'week' | 'month') => {
+    switch (period) {
+      case 'day':
+        return <Clock className="h-4 w-4" />
+      case 'week':
+        return <CalendarDays className="h-4 w-4" />
+      case 'month':
+        return <CalendarIcon className="h-4 w-4" />
+    }
+  }
+
+  const getFilterLabel = (period: 'day' | 'week' | 'month') => {
+    switch (period) {
+      case 'day':
+        return 'Hoy'
+      case 'week':
+        return 'Esta semana'
+      case 'month':
+        return 'Este mes'
+    }
+  }
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -150,21 +206,55 @@ export function MealHistory({ onBack }: MealHistoryProps) {
           </Button>
           <div className="flex-1">
             <h1 className="text-lg font-bold">Historial</h1>
-            <p className="text-sm opacity-90">{meals.length} comidas analizadas</p>
+            <p className="text-sm opacity-90">
+              {filteredMeals.length} de {meals.length} comidas en {getFilterLabel(filterPeriod).toLowerCase()}
+            </p>
           </div>
         </div>
       </div>
 
+      {/* Filter Buttons */}
+      <div className="px-4 max-w-md mx-auto">
+        <Card className="bg-secondary/5 border-secondary/20 mb-4">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium text-muted-foreground">Filtrar por:</span>
+              <div className="flex gap-2 ml-auto">
+                {(['day', 'week', 'month'] as const).map((period) => (
+                  <Button
+                    key={period}
+                    variant={filterPeriod === period ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setFilterPeriod(period)}
+                    className="h-8 px-3 text-xs"
+                  >
+                    {getFilterIcon(period)}
+                    <span className="ml-1">{getFilterLabel(period)}</span>
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Content */}
       <div className="p-4 max-w-md mx-auto">
-        {meals.length === 0 ? (
+        {filteredMeals.length === 0 ? (
           <div className="text-center py-12">
             <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
               <Calendar className="h-8 w-8 text-muted-foreground" />
             </div>
-            <h3 className="text-lg font-semibold text-foreground mb-2">Sin comidas registradas</h3>
+            <h3 className="text-lg font-semibold text-foreground mb-2">
+              {filterPeriod === 'day' ? 'Sin comidas hoy' : 
+               filterPeriod === 'week' ? 'Sin comidas esta semana' : 
+               'Sin comidas este mes'}
+            </h3>
             <p className="text-muted-foreground text-sm mb-6">
-              Comienza a escanear tus comidas para ver tu historial nutricional aquí
+              {filterPeriod === 'day' ? 'Registra tu primera comida del día' :
+               filterPeriod === 'week' ? 'Registra comidas para ver tu progreso semanal' :
+               'Registra comidas para ver tu progreso mensual'}
             </p>
             <Button onClick={onBack} className="w-full">
               Escanear Primera Comida
@@ -177,18 +267,18 @@ export function MealHistory({ onBack }: MealHistoryProps) {
               <CardContent className="p-4">
                 <div className="grid grid-cols-3 gap-4 text-center">
                   <div>
-                    <div className="text-2xl font-bold text-secondary">{meals.length}</div>
-                    <div className="text-xs text-muted-foreground">Total comidas</div>
+                    <div className="text-2xl font-bold text-secondary">{filteredMeals.length}</div>
+                    <div className="text-xs text-muted-foreground">Comidas en {getFilterLabel(filterPeriod).toLowerCase()}</div>
                   </div>
                   <div>
                     <div className="text-2xl font-bold text-secondary">
-                      {Math.round(meals.reduce((sum, meal) => sum + meal.calories, 0) / meals.length)}
+                      {filteredMeals.length > 0 ? Math.round(filteredMeals.reduce((sum, meal) => sum + meal.calories, 0) / filteredMeals.length) : 0}
                     </div>
                     <div className="text-xs text-muted-foreground">Cal promedio</div>
                   </div>
                   <div>
                     <div className="text-2xl font-bold text-secondary">
-                      {meals.reduce((sum, meal) => sum + meal.calories, 0)}
+                      {filteredMeals.reduce((sum, meal) => sum + meal.calories, 0)}
                     </div>
                     <div className="text-xs text-muted-foreground">Cal totales</div>
                   </div>
