@@ -1,57 +1,65 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { useAuth } from "@/hooks/use-auth"
-import { Loader2, Mail } from "lucide-react"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { useAuth } from "@/hooks/use-auth";
+import { Loader2, Mail, Chrome } from "lucide-react";
 
 interface LoginFormProps {
-  onToggleMode: () => void
+  onToggleMode: () => void;
 }
 
 export function LoginForm({ onToggleMode }: LoginFormProps) {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const { signIn, signInWithGoogle } = useAuth()
+  const { signIn, signInWithGoogle } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError("")
+    e.preventDefault();
+    setLoading(true);
+    setError("");
 
     try {
-      await signIn(email, password)
+      await signIn(email, password);
     } catch (error: any) {
-      setError(error.message)
+      setError(error.message);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleGoogleSignIn = async () => {
-    setLoading(true)
-    setError("")
+    setLoading(true);
+    setError("");
 
     try {
-      await signInWithGoogle()
+      await signInWithGoogle();
     } catch (error: any) {
-      setError(error.message)
+      setError(error.message);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl font-bold text-primary">Iniciar Sesión</CardTitle>
+        <CardTitle className="text-2xl font-bold text-primary">
+          Iniciar Sesión
+        </CardTitle>
         <CardDescription>Ingresa a tu cuenta de NutriScan AI</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -77,7 +85,9 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
             />
           </div>
 
-          {error && <div className="text-destructive text-sm text-center">{error}</div>}
+          {error && (
+            <div className="text-destructive text-sm text-center">{error}</div>
+          )}
 
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? (
@@ -96,22 +106,32 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
             <span className="w-full border-t" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">O continúa con</span>
+            <span className="bg-background px-2 text-muted-foreground">
+              O continúa con
+            </span>
           </div>
         </div>
 
-        <Button variant="outline" onClick={handleGoogleSignIn} disabled={loading} className="w-full bg-transparent">
-          <Mail className="mr-2 h-4 w-4" />
-          Google
+        <Button
+          variant="outline"
+          onClick={handleGoogleSignIn}
+          disabled={loading}
+          className="w-full bg-transparent hover:bg-primary/5 border-primary/20"
+        >
+          <Chrome className="mr-2 h-4 w-4 text-primary" />
+          Continuar con Google
         </Button>
 
         <div className="text-center text-sm">
           <span className="text-muted-foreground">¿No tienes cuenta? </span>
-          <button onClick={onToggleMode} className="text-primary hover:underline font-medium">
+          <button
+            onClick={onToggleMode}
+            className="text-primary hover:underline font-medium"
+          >
             Regístrate
           </button>
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

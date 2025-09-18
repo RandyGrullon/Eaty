@@ -42,7 +42,7 @@ interface OnboardingData {
 }
 
 export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<OnboardingData>({
@@ -451,6 +451,20 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
             <span className="text-sm text-muted-foreground">
               Paso {currentStep} de {totalSteps}
             </span>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={async () => {
+                try {
+                  await logout();
+                } catch (error) {
+                  console.error("Error al cerrar sesión:", error);
+                }
+              }}
+              className="text-sm text-muted-foreground hover:text-destructive"
+            >
+              Cerrar sesión
+            </Button>
           </div>
           <Progress value={progress} className="h-2" />
         </CardHeader>
