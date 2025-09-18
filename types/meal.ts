@@ -27,6 +27,7 @@ export interface UserProfile {
   weight?: number; // in kg
   height?: number; // in cm
   activityLevel?: "sedentary" | "light" | "moderate" | "active" | "very_active";
+  fitnessGoal?: "bulking" | "shedding" | "maintenance";
   createdAt: Date;
   updatedAt: Date;
 }

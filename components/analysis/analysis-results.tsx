@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, Save, Share2 } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 import type { Meal } from "@/types/meal"
 
 interface AnalysisResultsProps {
@@ -14,6 +15,8 @@ interface AnalysisResultsProps {
 }
 
 export function AnalysisResults({ result, onBack, onSave, isSaving = false }: AnalysisResultsProps) {
+  const { toast } = useToast()
+
   const macroData = [
     { name: "Proteínas", value: result.macros.protein, color: "bg-blue-500", unit: "g" },
     { name: "Carbohidratos", value: result.macros.carbs, color: "bg-orange-500", unit: "g" },
@@ -23,6 +26,44 @@ export function AnalysisResults({ result, onBack, onSave, isSaving = false }: An
   ]
 
   const totalMacros = result.macros.protein + result.macros.carbs + result.macros.fat
+
+  const shareAnalysis = async () => {
+    try {
+      const shareText = `🍽️ Análisis Nutricional - ${result.foodName}\n\n` +
+        `📊 Calorías: ${result.calories} kcal\n` +
+        `🥩 Proteínas: ${result.macros.protein}g\n` +
+        `🌾 Carbohidratos: ${result.macros.carbs}g\n` +
+        `🧈 Grasas: ${result.macros.fat}g\n` +
+        `🥦 Fibra: ${result.macros.fiber}g\n` +
+        `🍬 Azúcar: ${result.macros.sugar}g\n\n` +
+        `Analizado con NutriScan AI`
+
+      if (navigator.share) {
+        await navigator.share({
+          title: `Análisis de ${result.foodName} - NutriScan AI`,
+          text: shareText,
+          url: window.location.href,
+        })
+        toast({
+          title: "Análisis compartido",
+          description: "El análisis nutricional se compartió exitosamente",
+        })
+      } else {
+        // Fallback: copy to clipboard
+        await navigator.clipboard.writeText(shareText)
+        toast({
+          title: "Análisis copiado",
+          description: "El análisis se copió al portapapeles",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error al compartir",
+        description: "No se pudo compartir el análisis nutricional",
+        variant: "destructive",
+      })
+    }
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -40,7 +81,12 @@ export function AnalysisResults({ result, onBack, onSave, isSaving = false }: An
           <div className="flex-1">
             <h1 className="text-lg font-bold">Análisis Nutricional</h1>
           </div>
-          <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/20 p-2">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={shareAnalysis}
+            className="text-primary-foreground hover:bg-primary-foreground/20 p-2"
+          >
             <Share2 className="h-4 w-4" />
           </Button>
         </div>
