@@ -1,69 +1,101 @@
-"use client"
+"use client";
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Save, Share2 } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
-import type { Meal } from "@/types/meal"
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Save, Share2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import type { Meal } from "@/types/meal";
 
 interface AnalysisResultsProps {
-  result: Omit<Meal, "id" | "createdAt">
-  onBack: () => void
-  onSave: () => void
-  isSaving?: boolean
+  result: Omit<Meal, "id" | "createdAt">;
+  onBack: () => void;
+  onSave: () => void;
+  isSaving?: boolean;
 }
 
-export function AnalysisResults({ result, onBack, onSave, isSaving = false }: AnalysisResultsProps) {
-  const { toast } = useToast()
+export function AnalysisResults({
+  result,
+  onBack,
+  onSave,
+  isSaving = false,
+}: AnalysisResultsProps) {
+  const { toast } = useToast();
 
   const macroData = [
-    { name: "Proteínas", value: result.macros.protein, color: "bg-blue-500", unit: "g" },
-    { name: "Carbohidratos", value: result.macros.carbs, color: "bg-orange-500", unit: "g" },
-    { name: "Grasas", value: result.macros.fat, color: "bg-red-500", unit: "g" },
-    { name: "Fibra", value: result.macros.fiber, color: "bg-green-500", unit: "g" },
-    { name: "Azúcar", value: result.macros.sugar, color: "bg-purple-500", unit: "g" },
-  ]
+    {
+      name: "Proteínas",
+      value: result.macros.protein,
+      color: "bg-blue-500",
+      unit: "g",
+    },
+    {
+      name: "Carbohidratos",
+      value: result.macros.carbs,
+      color: "bg-orange-500",
+      unit: "g",
+    },
+    {
+      name: "Grasas",
+      value: result.macros.fat,
+      color: "bg-red-500",
+      unit: "g",
+    },
+    {
+      name: "Fibra",
+      value: result.macros.fiber,
+      color: "bg-green-500",
+      unit: "g",
+    },
+    {
+      name: "Azúcar",
+      value: result.macros.sugar,
+      color: "bg-purple-500",
+      unit: "g",
+    },
+  ];
 
-  const totalMacros = result.macros.protein + result.macros.carbs + result.macros.fat
+  const totalMacros =
+    result.macros.protein + result.macros.carbs + result.macros.fat;
 
   const shareAnalysis = async () => {
     try {
-      const shareText = `🍽️ Análisis Nutricional - ${result.foodName}\n\n` +
+      const shareText =
+        `🍽️ Análisis Nutricional - ${result.foodName}\n\n` +
         `📊 Calorías: ${result.calories} kcal\n` +
         `🥩 Proteínas: ${result.macros.protein}g\n` +
         `🌾 Carbohidratos: ${result.macros.carbs}g\n` +
         `🧈 Grasas: ${result.macros.fat}g\n` +
         `🥦 Fibra: ${result.macros.fiber}g\n` +
         `🍬 Azúcar: ${result.macros.sugar}g\n\n` +
-        `Analizado con NutriScan AI`
+        `Analizado con NutriScan AI`;
 
       if (navigator.share) {
         await navigator.share({
           title: `Análisis de ${result.foodName} - NutriScan AI`,
           text: shareText,
           url: window.location.href,
-        })
+        });
         toast({
           title: "Análisis compartido",
           description: "El análisis nutricional se compartió exitosamente",
-        })
+        });
       } else {
         // Fallback: copy to clipboard
-        await navigator.clipboard.writeText(shareText)
+        await navigator.clipboard.writeText(shareText);
         toast({
           title: "Análisis copiado",
           description: "El análisis se copió al portapapeles",
-        })
+        });
       }
     } catch (error) {
       toast({
         title: "Error al compartir",
         description: "No se pudo compartir el análisis nutricional",
         variant: "destructive",
-      })
+      });
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -81,9 +113,9 @@ export function AnalysisResults({ result, onBack, onSave, isSaving = false }: An
           <div className="flex-1">
             <h1 className="text-lg font-bold">Análisis Nutricional</h1>
           </div>
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={shareAnalysis}
             className="text-primary-foreground hover:bg-primary-foreground/20 p-2"
           >
@@ -106,9 +138,15 @@ export function AnalysisResults({ result, onBack, onSave, isSaving = false }: An
                 />
               </div>
             )}
-            <h2 className="text-xl font-bold text-card-foreground mb-2">{result.foodName}</h2>
-            <div className="text-3xl font-bold text-primary">{result.calories}</div>
-            <div className="text-sm text-muted-foreground">calorías por porción</div>
+            <h2 className="text-xl font-bold text-card-foreground mb-2">
+              {result.foodName}
+            </h2>
+            <div className="text-3xl font-bold text-primary">
+              {result.calories}
+            </div>
+            <div className="text-sm text-muted-foreground">
+              calorías por porción
+            </div>
           </CardContent>
         </Card>
 
@@ -119,7 +157,8 @@ export function AnalysisResults({ result, onBack, onSave, isSaving = false }: An
           </CardHeader>
           <CardContent className="space-y-4">
             {macroData.map((macro) => {
-              const percentage = totalMacros > 0 ? (macro.value / totalMacros) * 100 : 0
+              const percentage =
+                totalMacros > 0 ? (macro.value / totalMacros) * 100 : 0;
 
               return (
                 <div key={macro.name} className="space-y-2">
@@ -136,9 +175,11 @@ export function AnalysisResults({ result, onBack, onSave, isSaving = false }: An
                       style={{ width: `${Math.min(percentage, 100)}%` }}
                     />
                   </div>
-                  <div className="text-xs text-muted-foreground text-right">{percentage.toFixed(1)}%</div>
+                  <div className="text-xs text-muted-foreground text-right">
+                    {percentage.toFixed(1)}%
+                  </div>
                 </div>
-              )
+              );
             })}
           </CardContent>
         </Card>
@@ -154,7 +195,9 @@ export function AnalysisResults({ result, onBack, onSave, isSaving = false }: An
                 <Badge variant="secondary" className="mt-0.5 text-xs">
                   {index + 1}
                 </Badge>
-                <p className="text-sm text-card-foreground leading-relaxed">{recommendation}</p>
+                <p className="text-sm text-card-foreground leading-relaxed">
+                  {recommendation}
+                </p>
               </div>
             ))}
           </CardContent>
@@ -163,16 +206,22 @@ export function AnalysisResults({ result, onBack, onSave, isSaving = false }: An
         {/* Nutritional Summary */}
         <Card className="bg-accent/5 border-accent/20">
           <CardHeader>
-            <CardTitle className="text-lg text-accent">Resumen Nutricional</CardTitle>
+            <CardTitle className="text-lg text-accent">
+              Resumen Nutricional
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div className="text-center">
-                <div className="font-bold text-lg">{(result.calories / 4).toFixed(0)}</div>
+                <div className="font-bold text-lg">
+                  {(result.calories / 4).toFixed(0)}
+                </div>
                 <div className="text-muted-foreground">Cal/gramo aprox.</div>
               </div>
               <div className="text-center">
-                <div className="font-bold text-lg">{totalMacros.toFixed(1)}g</div>
+                <div className="font-bold text-lg">
+                  {totalMacros.toFixed(1)}g
+                </div>
                 <div className="text-muted-foreground">Macros totales</div>
               </div>
             </div>
@@ -181,7 +230,11 @@ export function AnalysisResults({ result, onBack, onSave, isSaving = false }: An
 
         {/* Save Button */}
         <div className="sticky bottom-4">
-          <Button onClick={onSave} disabled={isSaving} className="w-full h-12 text-lg font-semibold">
+          <Button
+            onClick={onSave}
+            disabled={isSaving}
+            className="w-full h-12 text-lg font-semibold"
+          >
             {isSaving ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground mr-2" />
@@ -197,5 +250,5 @@ export function AnalysisResults({ result, onBack, onSave, isSaving = false }: An
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -159,13 +159,17 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
 
     updateData("weightUnit", newUnit);
     updateData("heightUnit", checked ? "inches" : "cm");
-  };  const handleFeetChange = (feet: string) => {
+  };
+  const handleFeetChange = (feet: string) => {
     const feetNum = parseInt(feet) || 0;
     // Validar que los pies estén en un rango razonable (3-8 pies)
     if (feetNum >= 3 && feetNum <= 8) {
       updateData("heightFeet", feet);
       if (feet && data.heightInches) {
-        const totalInches = feetAndInchesToInches(feetNum, parseInt(data.heightInches) || 0);
+        const totalInches = feetAndInchesToInches(
+          feetNum,
+          parseInt(data.heightInches) || 0
+        );
         updateData("height", totalInches.toString());
       }
     } else if (feet === "") {
@@ -179,7 +183,10 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     if (inchesNum >= 0 && inchesNum <= 11) {
       updateData("heightInches", inches);
       if (data.heightFeet && inches) {
-        const totalInches = feetAndInchesToInches(parseInt(data.heightFeet) || 0, inchesNum);
+        const totalInches = feetAndInchesToInches(
+          parseInt(data.heightFeet) || 0,
+          inchesNum
+        );
         updateData("height", totalInches.toString());
       }
     } else if (inches === "") {
@@ -237,11 +244,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const isStepValid = () => {
     switch (currentStep) {
       case 1:
-        return (
-          data.age >= 13 &&
-          data.age <= 120 &&
-          data.gender
-        );
+        return data.age >= 13 && data.age <= 120 && data.gender;
       case 2:
         return (
           data.weight &&
@@ -357,7 +360,8 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                 Medidas Corporales
               </h2>
               <p className="text-muted-foreground">
-                Necesitamos tus medidas para calcular mejor tus necesidades calóricas
+                Necesitamos tus medidas para calcular mejor tus necesidades
+                calóricas
               </p>
             </div>
 
@@ -365,20 +369,34 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
               {/* Sistema de Unidades */}
               <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
                 <div>
-                  <Label className="text-base font-medium">Sistema de Unidades</Label>
+                  <Label className="text-base font-medium">
+                    Sistema de Unidades
+                  </Label>
                   <p className="text-sm text-muted-foreground">
                     Elige tu sistema de preferencia
                   </p>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <span className={`text-sm ${data.weightUnit === "kg" ? "font-medium text-primary" : "text-muted-foreground"}`}>
+                  <span
+                    className={`text-sm ${
+                      data.weightUnit === "kg"
+                        ? "font-medium text-primary"
+                        : "text-muted-foreground"
+                    }`}
+                  >
                     Métrico
                   </span>
                   <Switch
                     checked={data.weightUnit === "lbs"}
                     onCheckedChange={handleUnitSwitch}
                   />
-                  <span className={`text-sm ${data.weightUnit === "lbs" ? "font-medium text-primary" : "text-muted-foreground"}`}>
+                  <span
+                    className={`text-sm ${
+                      data.weightUnit === "lbs"
+                        ? "font-medium text-primary"
+                        : "text-muted-foreground"
+                    }`}
+                  >
                     Imperial
                   </span>
                 </div>
@@ -395,7 +413,9 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                 <div className="relative">
                   <Input
                     type="number"
-                    placeholder={data.weightUnit === "kg" ? "Ej: 70" : "Ej: 154"}
+                    placeholder={
+                      data.weightUnit === "kg" ? "Ej: 70" : "Ej: 154"
+                    }
                     value={data.weight}
                     onChange={(e) => updateData("weight", e.target.value)}
                     min={data.weightUnit === "kg" ? "30" : "66"}
@@ -408,10 +428,9 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {data.weightUnit === "kg" 
-                    ? "Rango recomendado: 30-300 kg" 
-                    : "Rango recomendado: 66-661 lbs"
-                  }
+                  {data.weightUnit === "kg"
+                    ? "Rango recomendado: 30-300 kg"
+                    : "Rango recomendado: 66-661 lbs"}
                 </p>
               </div>
 
@@ -423,7 +442,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                     {formatHeightDisplay()}
                   </Badge>
                 </div>
-                
+
                 {data.heightUnit === "cm" ? (
                   <div className="relative">
                     <Input
@@ -472,12 +491,11 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                     </div>
                   </div>
                 )}
-                
+
                 <p className="text-xs text-muted-foreground">
-                  {data.heightUnit === "cm" 
-                    ? "Rango recomendado: 150-200 cm" 
-                    : "Rango recomendado: 4'11\" - 6'7\""
-                  }
+                  {data.heightUnit === "cm"
+                    ? "Rango recomendado: 150-200 cm"
+                    : "Rango recomendado: 4'11\" - 6'7\""}
                 </p>
               </div>
             </div>
@@ -495,7 +513,8 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                 Nivel de Actividad
               </h2>
               <p className="text-muted-foreground">
-                ¿Qué tan activo eres físicamente? Esto nos ayuda a calcular tus calorías diarias
+                ¿Qué tan activo eres físicamente? Esto nos ayuda a calcular tus
+                calorías diarias
               </p>
             </div>
 
@@ -507,36 +526,36 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                     label: "Sedentario",
                     description: "Poco o ningún ejercicio",
                     icon: "🪑",
-                    color: "bg-gray-500"
+                    color: "bg-gray-500",
                   },
                   {
                     value: "light",
                     label: "Ligero",
                     description: "Ejercicio ligero 1-3 días/semana",
                     icon: "🚶",
-                    color: "bg-blue-500"
+                    color: "bg-blue-500",
                   },
                   {
                     value: "moderate",
                     label: "Moderado",
                     description: "Ejercicio moderado 3-5 días/semana",
                     icon: "🏃",
-                    color: "bg-green-500"
+                    color: "bg-green-500",
                   },
                   {
                     value: "active",
                     label: "Activo",
                     description: "Ejercicio intenso 6-7 días/semana",
                     icon: "💪",
-                    color: "bg-orange-500"
+                    color: "bg-orange-500",
                   },
                   {
                     value: "very_active",
                     label: "Muy Activo",
                     description: "Ejercicio muy intenso o trabajo físico",
                     icon: "🔥",
-                    color: "bg-red-500"
-                  }
+                    color: "bg-red-500",
+                  },
                 ].map((activity) => (
                   <button
                     key={activity.value}
@@ -548,12 +567,18 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                     }`}
                   >
                     <div className="flex items-center space-x-4">
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white text-xl ${activity.color}`}>
+                      <div
+                        className={`w-12 h-12 rounded-full flex items-center justify-center text-white text-xl ${activity.color}`}
+                      >
                         {activity.icon}
                       </div>
                       <div className="flex-1">
-                        <div className="font-semibold text-lg">{activity.label}</div>
-                        <div className="text-muted-foreground text-sm">{activity.description}</div>
+                        <div className="font-semibold text-lg">
+                          {activity.label}
+                        </div>
+                        <div className="text-muted-foreground text-sm">
+                          {activity.description}
+                        </div>
                       </div>
                       {data.activityLevel === activity.value && (
                         <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center">
@@ -682,9 +707,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Altura:</span>
-                  <span className="font-medium">
-                    {formatHeightDisplay()}
-                  </span>
+                  <span className="font-medium">{formatHeightDisplay()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Actividad:</span>
@@ -728,9 +751,9 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
             <span className="text-sm text-muted-foreground">
               Paso {currentStep} de {totalSteps}
             </span>
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={async () => {
                 try {
                   await logout();
@@ -743,7 +766,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
               Cerrar sesión
             </Button>
           </div>
-          
+
           {/* Indicadores de pasos visuales */}
           <div className="flex items-center justify-center space-x-2 mb-4">
             {Array.from({ length: totalSteps }, (_, i) => i + 1).map((step) => (
@@ -769,10 +792,14 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
               </div>
             ))}
           </div>
-          
+
           <Progress value={progress} className="h-2" />
-        </CardHeader>        <CardContent className="space-y-6 min-h-[400px] transition-all duration-300 ease-in-out">
-          <div key={currentStep} className="animate-in fade-in-0 slide-in-from-right-5 duration-300">
+        </CardHeader>{" "}
+        <CardContent className="space-y-6 min-h-[400px] transition-all duration-300 ease-in-out">
+          <div
+            key={currentStep}
+            className="animate-in fade-in-0 slide-in-from-right-5 duration-300"
+          >
             {renderStep()}
           </div>
 
