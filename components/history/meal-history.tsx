@@ -1,122 +1,140 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Calendar, Eye, Filter, Clock, CalendarDays, Calendar as CalendarIcon } from "lucide-react"
-import { useAuth } from "@/hooks/use-auth"
-import { getUserMeals } from "@/lib/meals"
-import type { Meal } from "@/types/meal"
-import { MealDetailModal } from "./meal-detail-modal"
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  ArrowLeft,
+  Calendar,
+  Eye,
+  Filter,
+  Clock,
+  CalendarDays,
+  Calendar as CalendarIcon,
+} from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { getUserMeals } from "@/lib/meals";
+import type { Meal } from "@/types/meal";
+import { MealDetailModal } from "./meal-detail-modal";
 
 interface MealHistoryProps {
-  onBack: () => void
+  onBack: () => void;
 }
 
 export function MealHistory({ onBack }: MealHistoryProps) {
-  const [meals, setMeals] = useState<Meal[]>([])
-  const [loading, setLoading] = useState(true)
-  const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [filterPeriod, setFilterPeriod] = useState<'day' | 'week' | 'month'>('week')
-  const [filteredMeals, setFilteredMeals] = useState<Meal[]>([])
+  const [meals, setMeals] = useState<Meal[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [filterPeriod, setFilterPeriod] = useState<"day" | "week" | "month">(
+    "week"
+  );
+  const [filteredMeals, setFilteredMeals] = useState<Meal[]>([]);
 
-  const { user } = useAuth()
+  const { user } = useAuth();
 
   useEffect(() => {
     if (user) {
-      loadMeals()
+      loadMeals();
     }
-  }, [user])
+  }, [user]);
 
   useEffect(() => {
     if (meals.length > 0) {
-      applyFilter()
+      applyFilter();
     }
-  }, [meals, filterPeriod])
+  }, [meals, filterPeriod]);
 
   const loadMeals = async () => {
-    if (!user) return
+    if (!user) return;
 
-    setLoading(true)
-    setError(null)
+    setLoading(true);
+    setError(null);
 
     try {
-      const userMeals = await getUserMeals(user.uid)
-      setMeals(userMeals)
+      const userMeals = await getUserMeals(user.uid);
+      setMeals(userMeals);
       // El filtro se aplicará automáticamente por el useEffect
     } catch (error: any) {
-      setError(error.message)
+      setError(error.message);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const applyFilter = () => {
-    const now = new Date()
-    let startDate: Date
+    const now = new Date();
+    let startDate: Date;
 
     switch (filterPeriod) {
-      case 'day':
-        startDate = new Date(now)
-        startDate.setHours(0, 0, 0, 0)
-        break
-      case 'week':
-        startDate = new Date(now)
-        startDate.setDate(now.getDate() - now.getDay()) // Start of current week (Sunday)
-        startDate.setHours(0, 0, 0, 0)
-        break
-      case 'month':
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1)
-        break
+      case "day":
+        startDate = new Date(now);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case "week":
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - now.getDay()); // Start of current week (Sunday)
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case "month":
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        break;
       default:
-        startDate = new Date(0) // Show all
+        startDate = new Date(0); // Show all
     }
 
-    const filtered = meals.filter(meal => meal.createdAt >= startDate)
-    setFilteredMeals(filtered)
-  }
+    const filtered = meals.filter((meal) => meal.createdAt >= startDate);
+    setFilteredMeals(filtered);
+  };
 
   const formatDate = (date: Date) => {
-    const today = new Date()
-    const yesterday = new Date(today)
-    yesterday.setDate(yesterday.getDate() - 1)
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
 
     if (date.toDateString() === today.toDateString()) {
-      return `Hoy, ${date.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}`
+      return `Hoy, ${date.toLocaleTimeString("es-ES", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}`;
     } else if (date.toDateString() === yesterday.toDateString()) {
-      return `Ayer, ${date.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}`
+      return `Ayer, ${date.toLocaleTimeString("es-ES", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}`;
     } else {
       return date.toLocaleDateString("es-ES", {
         day: "numeric",
         month: "short",
         hour: "2-digit",
         minute: "2-digit",
-      })
+      });
     }
-  }
+  };
 
   const getCaloriesBadgeColor = (calories: number) => {
-    if (calories < 200) return "bg-green-100 text-green-800"
-    if (calories < 400) return "bg-yellow-100 text-yellow-800"
-    if (calories < 600) return "bg-orange-100 text-orange-800"
-    return "bg-red-100 text-red-800"
-  }
+    if (calories < 200) return "bg-green-100 text-green-800";
+    if (calories < 400) return "bg-yellow-100 text-yellow-800";
+    if (calories < 600) return "bg-orange-100 text-orange-800";
+    return "bg-red-100 text-red-800";
+  };
 
   const groupMealsByDate = (meals: Meal[]) => {
-    const groups: { [key: string]: Meal[] } = {}
+    const groups: { [key: string]: Meal[] } = {};
 
     meals.forEach((meal) => {
-      const dateKey = meal.createdAt.toDateString()
+      const dateKey = meal.createdAt.toDateString();
       if (!groups[dateKey]) {
-        groups[dateKey] = []
+        groups[dateKey] = [];
       }
-      groups[dateKey].push(meal)
-    })
+      groups[dateKey].push(meal);
+    });
 
-    return Object.entries(groups).sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime())
-  }
+    return Object.entries(groups).sort(
+      ([a], [b]) => new Date(b).getTime() - new Date(a).getTime()
+    );
+  };
 
   if (loading) {
     return (
@@ -138,7 +156,7 @@ export function MealHistory({ onBack }: MealHistoryProps) {
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -164,32 +182,32 @@ export function MealHistory({ onBack }: MealHistoryProps) {
           </Button>
         </div>
       </div>
-    )
+    );
   }
 
-  const groupedMeals = groupMealsByDate(filteredMeals)
+  const groupedMeals = groupMealsByDate(filteredMeals);
 
-  const getFilterIcon = (period: 'day' | 'week' | 'month') => {
+  const getFilterIcon = (period: "day" | "week" | "month") => {
     switch (period) {
-      case 'day':
-        return <Clock className="h-4 w-4" />
-      case 'week':
-        return <CalendarDays className="h-4 w-4" />
-      case 'month':
-        return <CalendarIcon className="h-4 w-4" />
+      case "day":
+        return <Clock className="h-4 w-4" />;
+      case "week":
+        return <CalendarDays className="h-4 w-4" />;
+      case "month":
+        return <CalendarIcon className="h-4 w-4" />;
     }
-  }
+  };
 
-  const getFilterLabel = (period: 'day' | 'week' | 'month') => {
+  const getFilterLabel = (period: "day" | "week" | "month") => {
     switch (period) {
-      case 'day':
-        return 'Hoy'
-      case 'week':
-        return 'Esta semana'
-      case 'month':
-        return 'Este mes'
+      case "day":
+        return "Hoy";
+      case "week":
+        return "Esta semana";
+      case "month":
+        return "Este mes";
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -207,7 +225,8 @@ export function MealHistory({ onBack }: MealHistoryProps) {
           <div className="flex-1">
             <h1 className="text-lg font-bold">Historial</h1>
             <p className="text-sm opacity-90">
-              {filteredMeals.length} de {meals.length} comidas en {getFilterLabel(filterPeriod).toLowerCase()}
+              {filteredMeals.length} de {meals.length} comidas en{" "}
+              {getFilterLabel(filterPeriod).toLowerCase()}
             </p>
           </div>
         </div>
@@ -219,9 +238,11 @@ export function MealHistory({ onBack }: MealHistoryProps) {
           <CardContent className="p-3">
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium text-muted-foreground">Filtrar por:</span>
+              <span className="text-sm font-medium text-muted-foreground">
+                Filtrar por:
+              </span>
               <div className="flex gap-2 ml-auto">
-                {(['day', 'week', 'month'] as const).map((period) => (
+                {(["day", "week", "month"] as const).map((period) => (
                   <Button
                     key={period}
                     variant={filterPeriod === period ? "default" : "outline"}
@@ -247,14 +268,18 @@ export function MealHistory({ onBack }: MealHistoryProps) {
               <Calendar className="h-8 w-8 text-muted-foreground" />
             </div>
             <h3 className="text-lg font-semibold text-foreground mb-2">
-              {filterPeriod === 'day' ? 'Sin comidas hoy' : 
-               filterPeriod === 'week' ? 'Sin comidas esta semana' : 
-               'Sin comidas este mes'}
+              {filterPeriod === "day"
+                ? "Sin comidas hoy"
+                : filterPeriod === "week"
+                ? "Sin comidas esta semana"
+                : "Sin comidas este mes"}
             </h3>
             <p className="text-muted-foreground text-sm mb-6">
-              {filterPeriod === 'day' ? 'Registra tu primera comida del día' :
-               filterPeriod === 'week' ? 'Registra comidas para ver tu progreso semanal' :
-               'Registra comidas para ver tu progreso mensual'}
+              {filterPeriod === "day"
+                ? "Registra tu primera comida del día"
+                : filterPeriod === "week"
+                ? "Registra comidas para ver tu progreso semanal"
+                : "Registra comidas para ver tu progreso mensual"}
             </p>
             <Button onClick={onBack} className="w-full">
               Escanear Primera Comida
@@ -267,20 +292,38 @@ export function MealHistory({ onBack }: MealHistoryProps) {
               <CardContent className="p-4">
                 <div className="grid grid-cols-3 gap-4 text-center">
                   <div>
-                    <div className="text-2xl font-bold text-secondary">{filteredMeals.length}</div>
-                    <div className="text-xs text-muted-foreground">Comidas en {getFilterLabel(filterPeriod).toLowerCase()}</div>
+                    <div className="text-2xl font-bold text-secondary">
+                      {filteredMeals.length}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Comidas en {getFilterLabel(filterPeriod).toLowerCase()}
+                    </div>
                   </div>
                   <div>
                     <div className="text-2xl font-bold text-secondary">
-                      {filteredMeals.length > 0 ? Math.round(filteredMeals.reduce((sum, meal) => sum + meal.calories, 0) / filteredMeals.length) : 0}
+                      {filteredMeals.length > 0
+                        ? Math.round(
+                            filteredMeals.reduce(
+                              (sum, meal) => sum + meal.calories,
+                              0
+                            ) / filteredMeals.length
+                          )
+                        : 0}
                     </div>
-                    <div className="text-xs text-muted-foreground">Cal promedio</div>
+                    <div className="text-xs text-muted-foreground">
+                      Cal promedio
+                    </div>
                   </div>
                   <div>
                     <div className="text-2xl font-bold text-secondary">
-                      {filteredMeals.reduce((sum, meal) => sum + meal.calories, 0)}
+                      {filteredMeals.reduce(
+                        (sum, meal) => sum + meal.calories,
+                        0
+                      )}
                     </div>
-                    <div className="text-xs text-muted-foreground">Cal totales</div>
+                    <div className="text-xs text-muted-foreground">
+                      Cal totales
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -288,8 +331,11 @@ export function MealHistory({ onBack }: MealHistoryProps) {
 
             {/* Grouped Meals */}
             {groupedMeals.map(([dateString, dayMeals]) => {
-              const date = new Date(dateString)
-              const dayCalories = dayMeals.reduce((sum, meal) => sum + meal.calories, 0)
+              const date = new Date(dateString);
+              const dayCalories = dayMeals.reduce(
+                (sum, meal) => sum + meal.calories,
+                0
+              );
 
               return (
                 <div key={dateString} className="space-y-3">
@@ -310,7 +356,10 @@ export function MealHistory({ onBack }: MealHistoryProps) {
                   {/* Meals for this date */}
                   <div className="space-y-2">
                     {dayMeals.map((meal) => (
-                      <Card key={meal.id} className="hover:shadow-md transition-shadow">
+                      <Card
+                        key={meal.id}
+                        className="hover:shadow-md transition-shadow"
+                      >
                         <CardContent className="p-4">
                           <div className="flex items-center gap-3">
                             {/* Meal Image */}
@@ -330,14 +379,23 @@ export function MealHistory({ onBack }: MealHistoryProps) {
 
                             {/* Meal Info */}
                             <div className="flex-1 min-w-0">
-                              <h4 className="font-medium text-foreground truncate">{meal.foodName}</h4>
-                              <p className="text-sm text-muted-foreground">{formatDate(meal.createdAt)}</p>
+                              <h4 className="font-medium text-foreground truncate">
+                                {meal.foodName}
+                              </h4>
+                              <p className="text-sm text-muted-foreground">
+                                {formatDate(meal.createdAt)}
+                              </p>
                               <div className="flex items-center gap-2 mt-1">
-                                <Badge className={`text-xs ${getCaloriesBadgeColor(meal.calories)}`}>
+                                <Badge
+                                  className={`text-xs ${getCaloriesBadgeColor(
+                                    meal.calories
+                                  )}`}
+                                >
                                   {meal.calories} cal
                                 </Badge>
                                 <span className="text-xs text-muted-foreground">
-                                  P: {meal.macros.protein}g • C: {meal.macros.carbs}g • G: {meal.macros.fat}g
+                                  P: {meal.macros.protein}g • C:{" "}
+                                  {meal.macros.carbs}g • G: {meal.macros.fat}g
                                 </span>
                               </div>
                             </div>
@@ -357,7 +415,7 @@ export function MealHistory({ onBack }: MealHistoryProps) {
                     ))}
                   </div>
                 </div>
-              )
+              );
             })}
           </div>
         )}
@@ -365,8 +423,12 @@ export function MealHistory({ onBack }: MealHistoryProps) {
 
       {/* Meal Detail Modal */}
       {selectedMeal && (
-        <MealDetailModal meal={selectedMeal} onClose={() => setSelectedMeal(null)} onDelete={loadMeals} />
+        <MealDetailModal
+          meal={selectedMeal}
+          onClose={() => setSelectedMeal(null)}
+          onDelete={loadMeals}
+        />
       )}
     </div>
-  )
+  );
 }
