@@ -67,9 +67,9 @@ export function TipsCarousel({ className }: TipsCarouselProps) {
 
     // Progress bar animation
     const progressInterval = setInterval(() => {
-      setProgress(prev => {
+      setProgress((prev) => {
         if (prev >= 100) return 0;
-        return prev + (100 / 50); // 50 steps for 5 seconds
+        return prev + 100 / 50; // 50 steps for 5 seconds
       });
     }, 100);
 
@@ -88,7 +88,7 @@ export function TipsCarousel({ className }: TipsCarouselProps) {
       // Get today's meals and stats
       const [meals, stats] = await Promise.all([
         getUserMeals(user.uid),
-        getTodayStats(user.uid)
+        getTodayStats(user.uid),
       ]);
 
       // Filter today's meals
@@ -97,7 +97,7 @@ export function TipsCarousel({ className }: TipsCarouselProps) {
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
 
-      const todayMeals = meals.filter(meal => {
+      const todayMeals = meals.filter((meal) => {
         const mealDate = meal.createdAt;
         return mealDate >= today && mealDate < tomorrow;
       });
@@ -105,10 +105,10 @@ export function TipsCarousel({ className }: TipsCarouselProps) {
       // Generate tips if we have meals
       if (todayMeals.length > 0) {
         const generatedTips = await generateNutritionTips(
-          todayMeals.map(meal => ({
+          todayMeals.map((meal) => ({
             foodName: meal.foodName,
             calories: meal.calories,
-            macros: meal.macros
+            macros: meal.macros,
           })),
           stats.totalCalories
         );
@@ -119,7 +119,7 @@ export function TipsCarousel({ className }: TipsCarouselProps) {
           "¡Comienza tu día con una comida balanceada!",
           "Recuerda incluir verduras en cada comida",
           "Mantén un horario regular de comidas",
-          "Bebe suficiente agua durante el día"
+          "Bebe suficiente agua durante el día",
         ]);
       }
     } catch (error) {
@@ -127,63 +127,69 @@ export function TipsCarousel({ className }: TipsCarouselProps) {
       setTips([
         "Mantén un equilibrio nutricional en tus comidas",
         "Incluye proteínas magras en cada comida",
-        "No olvides las frutas y verduras"
+        "No olvides las frutas y verduras",
       ]);
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleFavorite = useCallback((index: number) => {
-    setFavorites(prev => {
-      const newFavorites = new Set(prev);
-      const wasFavorite = newFavorites.has(index);
+  const toggleFavorite = useCallback(
+    (index: number) => {
+      setFavorites((prev) => {
+        const newFavorites = new Set(prev);
+        const wasFavorite = newFavorites.has(index);
 
-      if (wasFavorite) {
-        newFavorites.delete(index);
-        toast({
-          title: "Consejo removido de favoritos",
-          description: "Ya no verás este consejo como favorito",
-        });
-      } else {
-        newFavorites.add(index);
-        toast({
-          title: "¡Consejo agregado a favoritos! ❤️",
-          description: "Podrás revisar este consejo más tarde",
-        });
-      }
-      return newFavorites;
-    });
-  }, [toast]);
-
-  const shareTip = useCallback(async (tip: string) => {
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: 'Consejo Nutricional - NutriScan AI',
-          text: tip,
-          url: window.location.href,
-        });
-        toast({
-          title: "Consejo compartido",
-          description: "El consejo se compartió exitosamente",
-        });
-      } else {
-        // Fallback: copy to clipboard
-        await navigator.clipboard.writeText(tip);
-        toast({
-          title: "Consejo copiado",
-          description: "El consejo se copió al portapapeles",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error al compartir",
-        description: "No se pudo compartir el consejo",
-        variant: "destructive",
+        if (wasFavorite) {
+          newFavorites.delete(index);
+          toast({
+            title: "Consejo removido de favoritos",
+            description: "Ya no verás este consejo como favorito",
+          });
+        } else {
+          newFavorites.add(index);
+          toast({
+            title: "¡Consejo agregado a favoritos! ❤️",
+            description: "Podrás revisar este consejo más tarde",
+          });
+        }
+        return newFavorites;
       });
-    }
-  }, [toast]);
+    },
+    [toast]
+  );
+
+  const shareTip = useCallback(
+    async (tip: string) => {
+      try {
+        if (navigator.share) {
+          await navigator.share({
+            title: "Consejo Nutricional - NutriScan AI",
+            text: tip,
+            url: window.location.href,
+          });
+          toast({
+            title: "Consejo compartido",
+            description: "El consejo se compartió exitosamente",
+          });
+        } else {
+          // Fallback: copy to clipboard
+          await navigator.clipboard.writeText(tip);
+          toast({
+            title: "Consejo copiado",
+            description: "El consejo se copió al portapapeles",
+          });
+        }
+      } catch (error) {
+        toast({
+          title: "Error al compartir",
+          description: "No se pudo compartir el consejo",
+          variant: "destructive",
+        });
+      }
+    },
+    [toast]
+  );
 
   if (loading) {
     return (
@@ -191,7 +197,9 @@ export function TipsCarousel({ className }: TipsCarouselProps) {
         <CardContent className="p-4">
           <div className="flex items-center justify-center gap-2">
             <Loader2 className="h-4 w-4 animate-spin" />
-            <span className="text-sm text-muted-foreground">Cargando consejos...</span>
+            <span className="text-sm text-muted-foreground">
+              Cargando consejos...
+            </span>
           </div>
         </CardContent>
       </Card>
@@ -217,7 +225,11 @@ export function TipsCarousel({ className }: TipsCarouselProps) {
             size="sm"
             onClick={() => setIsAutoPlaying(!isAutoPlaying)}
             className="h-8 w-8 p-0 hover:bg-amber-100"
-            title={isAutoPlaying ? "Pausar auto-reproducción" : "Iniciar auto-reproducción"}
+            title={
+              isAutoPlaying
+                ? "Pausar auto-reproducción"
+                : "Iniciar auto-reproducción"
+            }
           >
             {isAutoPlaying ? (
               <Pause className="h-4 w-4 text-amber-600" />
@@ -252,7 +264,8 @@ export function TipsCarousel({ className }: TipsCarouselProps) {
                         onClick={() => toggleFavorite(index)}
                         className={cn(
                           "h-8 w-8 p-0 hover:bg-amber-100 transition-colors",
-                          favorites.has(index) && "text-red-500 hover:text-red-600"
+                          favorites.has(index) &&
+                            "text-red-500 hover:text-red-600"
                         )}
                       >
                         <Heart

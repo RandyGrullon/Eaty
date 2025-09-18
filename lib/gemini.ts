@@ -91,17 +91,26 @@ export async function analyzeFood(
 }
 
 export async function generateNutritionTips(
-  meals: Array<{ foodName: string; calories: number; macros: { protein: number; carbs: number; fat: number } }>,
+  meals: Array<{
+    foodName: string;
+    calories: number;
+    macros: { protein: number; carbs: number; fat: number };
+  }>,
   totalCalories: number,
   dailyGoal?: number
 ): Promise<string[]> {
   const prompt = `Basado en las comidas consumidas por el usuario hoy, genera 3-5 consejos nutricionales personalizados y útiles. 
 
 Comidas consumidas:
-${meals.map(meal => `- ${meal.foodName}: ${meal.calories} calorías (${meal.macros.protein}g proteína, ${meal.macros.carbs}g carbohidratos, ${meal.macros.fat}g grasa)`).join('\n')}
+${meals
+  .map(
+    (meal) =>
+      `- ${meal.foodName}: ${meal.calories} calorías (${meal.macros.protein}g proteína, ${meal.macros.carbs}g carbohidratos, ${meal.macros.fat}g grasa)`
+  )
+  .join("\n")}
 
 Total de calorías consumidas: ${totalCalories}
-${dailyGoal ? `Meta diaria de calorías: ${dailyGoal}` : ''}
+${dailyGoal ? `Meta diaria de calorías: ${dailyGoal}` : ""}
 
 Los consejos deben ser:
 1. Personalizados basados en las comidas específicas
@@ -151,14 +160,19 @@ Ejemplo de respuesta:
     }
 
     // Fallback: extract individual tips from text
-    const lines = text.split('\n').filter((line: string) => line.trim().length > 0 && !line.includes('[') && !line.includes(']'));
+    const lines = text
+      .split("\n")
+      .filter(
+        (line: string) =>
+          line.trim().length > 0 && !line.includes("[") && !line.includes("]")
+      );
     return lines.slice(0, 5);
   } catch (error) {
     console.error("Error generating nutrition tips:", error);
     return [
       "Mantén un equilibrio entre proteínas, carbohidratos y grasas saludables",
       "Incluye verduras en cada comida para mejorar la nutrición",
-      "Bebe suficiente agua durante el día"
+      "Bebe suficiente agua durante el día",
     ];
   }
 }
