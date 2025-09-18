@@ -60,6 +60,7 @@ export default function RootLayout({
       <body
         className={`font-sans ${spaceGrotesk.variable} ${dmSans.variable} antialiased`}
       >
+        hola
         <Suspense fallback={null}>{children}</Suspense>
         <Analytics />
       </body>
