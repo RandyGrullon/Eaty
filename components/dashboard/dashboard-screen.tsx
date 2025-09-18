@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
 import { getTodayStats } from "@/lib/meals";
+import { TipsCarousel } from "../home/tips-carousel";
 import { History, LogOut, TrendingUp, Calendar, Camera } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -106,6 +107,9 @@ export function DashboardScreen({
               </CardContent>
             </Card>
           </div>
+
+          {/* Tips Carousel */}
+          <TipsCarousel />
 
           {/* Recent Activity */}
           <Card>
