@@ -12,6 +12,7 @@ import {
   Clock,
   CalendarDays,
   Calendar as CalendarIcon,
+  Camera,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { getUserMeals } from "@/lib/meals";
@@ -140,7 +141,7 @@ export function MealHistory({ onBack }: MealHistoryProps) {
     return (
       <div className="min-h-screen bg-background">
         <div className="bg-primary text-primary-foreground p-4">
-          <div className="max-w-md mx-auto flex items-center gap-3">
+          <div className="max-w-4xl mx-auto flex items-center gap-3">
             <Button
               variant="ghost"
               size="sm"
@@ -163,7 +164,7 @@ export function MealHistory({ onBack }: MealHistoryProps) {
     return (
       <div className="min-h-screen bg-background">
         <div className="bg-primary text-primary-foreground p-4">
-          <div className="max-w-md mx-auto flex items-center gap-3">
+          <div className="max-w-4xl mx-auto flex items-center gap-3">
             <Button
               variant="ghost"
               size="sm"
@@ -175,7 +176,7 @@ export function MealHistory({ onBack }: MealHistoryProps) {
             <h1 className="text-lg font-bold">Historial</h1>
           </div>
         </div>
-        <div className="p-4 max-w-md mx-auto text-center py-12">
+        <div className="p-4 max-w-4xl mx-auto text-center py-12">
           <p className="text-destructive mb-4">{error}</p>
           <Button onClick={loadMeals} variant="outline">
             Reintentar
@@ -213,7 +214,7 @@ export function MealHistory({ onBack }: MealHistoryProps) {
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
       <div className="bg-primary text-primary-foreground p-4">
-        <div className="max-w-md mx-auto flex items-center gap-3">
+        <div className="max-w-4xl mx-auto flex items-center gap-3">
           <Button
             variant="ghost"
             size="sm"
@@ -233,7 +234,7 @@ export function MealHistory({ onBack }: MealHistoryProps) {
       </div>
 
       {/* Filter Buttons */}
-      <div className="px-4 max-w-md mx-auto">
+      <div className="px-4 max-w-4xl mx-auto">
         <Card className="bg-secondary/5 border-secondary/20 mb-4">
           <CardContent className="p-3">
             <div className="flex items-center gap-2">
@@ -261,7 +262,7 @@ export function MealHistory({ onBack }: MealHistoryProps) {
       </div>
 
       {/* Content */}
-      <div className="p-4 max-w-md mx-auto">
+      <div className="p-4 max-w-4xl mx-auto">
         {filteredMeals.length === 0 ? (
           <div className="text-center py-12">
             <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
@@ -372,7 +373,7 @@ export function MealHistory({ onBack }: MealHistoryProps) {
                                 />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center">
-                                  <Calendar className="h-6 w-6 text-muted-foreground" />
+                                  <Camera className="h-6 w-6 text-muted-foreground" />
                                 </div>
                               )}
                             </div>

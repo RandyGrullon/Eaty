@@ -375,7 +375,7 @@ export function ProfilePage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background p-4 pb-20">
-        <div className="max-w-md mx-auto">
+        <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
@@ -387,7 +387,7 @@ export function ProfilePage() {
   if (error) {
     return (
       <div className="min-h-screen bg-background p-4 pb-20">
-        <div className="max-w-md mx-auto text-center py-12">
+        <div className="max-w-4xl mx-auto text-center py-12">
           <p className="text-destructive mb-4">{error}</p>
           <Button onClick={loadMealsAndStats} variant="outline">
             Reintentar
@@ -399,7 +399,7 @@ export function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-background p-4 pb-20">
-      <div className="max-w-md mx-auto space-y-6">
+      <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <div className="text-center">
           <h1 className="text-2xl font-bold text-primary mb-2">Mi Perfil</h1>
@@ -618,7 +618,7 @@ export function ProfilePage() {
 
       {/* Edit Profile Modal */}
       <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Editar Perfil</DialogTitle>
           </DialogHeader>

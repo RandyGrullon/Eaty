@@ -745,7 +745,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md shadow-2xl border-0 bg-card/95 backdrop-blur-sm">
+      <Card className="w-full max-w-4xl shadow-2xl border-0 bg-card/95 backdrop-blur-sm">
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between mb-6">
             <span className="text-sm text-muted-foreground">

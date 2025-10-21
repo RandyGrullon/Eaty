@@ -38,7 +38,7 @@ export function useFoodAnalysis() {
       const result = await analyzeFood(base64Data, undefined, description);
 
       setAnalysisResult({
-        imageUrl,
+        imageUrl: null, // Don't save blob URL as it's temporary
         foodName: result.foodName,
         calories: result.calories,
         macros: result.macros,

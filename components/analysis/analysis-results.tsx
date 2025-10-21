@@ -68,11 +68,11 @@ export function AnalysisResults({
         `🧈 Grasas: ${result.macros.fat}g\n` +
         `🥦 Fibra: ${result.macros.fiber}g\n` +
         `🍬 Azúcar: ${result.macros.sugar}g\n\n` +
-        `Analizado con NutriScan AI`;
+        `Analizado con Eaty`;
 
       if (navigator.share) {
         await navigator.share({
-          title: `Análisis de ${result.foodName} - NutriScan AI`,
+          title: `Análisis de ${result.foodName} - Eaty`,
           text: shareText,
           url: window.location.href,
         });
@@ -101,7 +101,7 @@ export function AnalysisResults({
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="bg-primary text-primary-foreground p-4">
-        <div className="max-w-md mx-auto flex items-center gap-3">
+        <div className="max-w-4xl mx-auto flex items-center gap-3">
           <Button
             variant="ghost"
             size="sm"
@@ -125,7 +125,7 @@ export function AnalysisResults({
       </div>
 
       {/* Content */}
-      <div className="p-4 max-w-md mx-auto space-y-6 pb-20">
+      <div className="p-4 max-w-4xl mx-auto space-y-6 pb-20">
         {/* Food Image and Name */}
         <Card>
           <CardContent className="p-6 text-center">

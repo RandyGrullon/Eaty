@@ -1,4 +1,4 @@
-const GEMINI_API_KEY = "AIzaSyCmJZZ2Mm6i2WBv5GJVwzZ_jawJWtG8P5k";
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "AIzaSyCBSN-F1jGQurbG9SMHOhOZ3X-s9LrNylo";
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${GEMINI_API_KEY}`;
 
 export async function analyzeFood(

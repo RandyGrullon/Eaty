@@ -46,7 +46,7 @@ export function ScanScreen({ onScanFood, onImageSelected }: ScanScreenProps) {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="bg-primary text-primary-foreground p-4">
-        <div className="max-w-md mx-auto">
+        <div className="max-w-4xl mx-auto">
           <h1 className="text-xl font-bold">Escanear Alimento</h1>
           <p className="text-sm opacity-90">
             Toma una foto o escribe el nombre de tu plato
@@ -55,7 +55,7 @@ export function ScanScreen({ onScanFood, onImageSelected }: ScanScreenProps) {
       </div>
 
       {/* Main Content */}
-      <div className="p-4 max-w-md mx-auto">
+      <div className="p-4 max-w-4xl mx-auto">
         <div className="space-y-6">
           {/* Welcome Card */}
           <Card className="bg-card">
@@ -76,7 +76,7 @@ export function ScanScreen({ onScanFood, onImageSelected }: ScanScreenProps) {
           </Card>
 
           {/* Scan Options */}
-          <div className="space-y-4">
+          <div className="grid md:grid-cols-2 gap-4">
             {/* Camera Scan */}
             <Button
               onClick={handleCameraCapture}
@@ -95,33 +95,33 @@ export function ScanScreen({ onScanFood, onImageSelected }: ScanScreenProps) {
               <Upload className="mr-3 h-6 w-6" />
               Subir desde Galería
             </Button>
+          </div>
 
-            {/* Text Input Alternative */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="flex-1 h-px bg-border"></div>
-                <span className="text-sm text-muted-foreground px-2">
-                  O escribe el nombre
-                </span>
-                <div className="flex-1 h-px bg-border"></div>
-              </div>
+          {/* Text Input Alternative */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="flex-1 h-px bg-border"></div>
+              <span className="text-sm text-muted-foreground px-2 whitespace-nowrap">
+                O escribe el nombre
+              </span>
+              <div className="flex-1 h-px bg-border"></div>
+            </div>
 
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Ej: Pizza margarita, ensalada césar..."
-                  value={foodName}
-                  onChange={(e) => setFoodName(e.target.value)}
-                  className="flex-1"
-                  onKeyPress={(e) => e.key === "Enter" && handleTextAnalysis()}
-                />
-                <Button
-                  onClick={handleTextAnalysis}
-                  disabled={!foodName.trim()}
-                  className="px-4"
-                >
-                  <Type className="h-4 w-4" />
-                </Button>
-              </div>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Ej: Pizza margarita, ensalada césar..."
+                value={foodName}
+                onChange={(e) => setFoodName(e.target.value)}
+                className="flex-1"
+                onKeyPress={(e) => e.key === "Enter" && handleTextAnalysis()}
+              />
+              <Button
+                onClick={handleTextAnalysis}
+                disabled={!foodName.trim()}
+                className="px-4 shrink-0"
+              >
+                <Type className="h-4 w-4" />
+              </Button>
             </div>
           </div>
 

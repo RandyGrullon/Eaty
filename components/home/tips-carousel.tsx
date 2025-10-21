@@ -164,7 +164,7 @@ export function TipsCarousel({ className }: TipsCarouselProps) {
       try {
         if (navigator.share) {
           await navigator.share({
-            title: "Consejo Nutricional - NutriScan AI",
+            title: "Consejo Nutricional - Eaty",
             text: tip,
             url: window.location.href,
           });

@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useFoodAnalysis } from "@/hooks/use-food-analysis";
 import { usePWA } from "@/hooks/use-pwa";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { AuthScreen } from "@/components/auth/auth-screen";
 import { DashboardScreen } from "@/components/dashboard/dashboard-screen";
 import { ScanScreen } from "@/components/scan/scan-screen";
@@ -12,6 +13,7 @@ import { AnalysisResults } from "@/components/analysis/analysis-results";
 import { MealHistory } from "@/components/history/meal-history";
 import { ProfilePage } from "@/components/profile/profile-page";
 import { BottomNav } from "@/components/navigation/bottom-nav";
+import { SidebarNav } from "@/components/navigation/sidebar-nav";
 import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { OfflineIndicator } from "@/components/pwa/offline-indicator";
 import { getUserProfile } from "@/lib/meals";
@@ -23,6 +25,7 @@ import { Loader2 } from "lucide-react";
 function AppContent() {
   const { user, loading } = useAuth();
   const { isInstalled } = usePWA();
+  const isMobile = useIsMobile();
   const {
     isAnalyzing,
     isSaving,
@@ -40,6 +43,7 @@ function AppContent() {
   const [profileLoading, setProfileLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imageDescription, setImageDescription] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     if (user) {
@@ -117,6 +121,7 @@ function AppContent() {
   const handleSaveAnalysis = async () => {
     await saveAnalysis();
     // Refresh home screen stats after saving
+    setRefreshKey(prev => prev + 1);
     setActiveTab("home");
   };
 
@@ -148,14 +153,14 @@ function AppContent() {
       <>
         <div className="min-h-screen bg-background flex flex-col">
           <div className="bg-primary text-primary-foreground p-4">
-            <div className="max-w-md mx-auto">
+            <div className="max-w-4xl mx-auto">
               <h1 className="text-xl font-bold">Agregar Descripción</h1>
               <p className="text-sm opacity-90">
                 Agrega contexto adicional para un mejor análisis
               </p>
             </div>
           </div>
-          <div className="flex-1 p-4 max-w-md mx-auto w-full">
+          <div className="flex-1 p-4 max-w-4xl mx-auto w-full">
             <div className="space-y-4">
               <div className="bg-card rounded-lg p-4">
                 <img
@@ -239,7 +244,7 @@ function AppContent() {
     return (
       <>
         <div className="min-h-screen bg-background flex items-center justify-center p-4">
-          <div className="text-center max-w-md">
+          <div className="text-center max-w-4xl">
             <div className="text-destructive text-lg font-semibold mb-2">
               Error
             </div>
@@ -257,7 +262,7 @@ function AppContent() {
   const renderContent = () => {
     switch (activeTab) {
       case "home":
-        return <DashboardScreen onViewHistory={handleViewHistory} />;
+        return <DashboardScreen key={refreshKey} onViewHistory={handleViewHistory} />;
       case "scan":
         return (
           <ScanScreen
@@ -276,8 +281,15 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-background">
-      {renderContent()}
-      <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+      {!isMobile && (
+        <SidebarNav activeTab={activeTab} onTabChange={setActiveTab} />
+      )}
+      <div className={`${!isMobile ? 'ml-64' : ''} min-h-screen`}>
+        {renderContent()}
+      </div>
+      {isMobile && (
+        <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+      )}
       <OfflineIndicator />
       {!isInstalled && <InstallPrompt />}
     </div>

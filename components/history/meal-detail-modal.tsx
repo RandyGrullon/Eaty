@@ -60,7 +60,7 @@ export function MealDetailModal({ meal, onClose, onDelete }: MealDetailModalProp
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-background rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-background rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-lg font-bold text-foreground">Detalle de Comida</h2>

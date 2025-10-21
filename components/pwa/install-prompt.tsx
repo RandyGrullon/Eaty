@@ -72,7 +72,7 @@ export function InstallPrompt() {
               <Download className="h-5 w-5" />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-sm">Instalar NutriScan AI</h3>
+              <h3 className="font-semibold text-sm">Instalar Eaty</h3>
               <p className="text-xs opacity-90">Accede más rápido desde tu pantalla de inicio</p>
             </div>
             <div className="flex items-center gap-2">

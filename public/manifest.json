@@ -1,6 +1,6 @@
 {
-  "name": "NutriScan AI",
-  "short_name": "NutriScan",
+  "name": "Eaty",
+  "short_name": "Eaty",
   "description": "Analiza tu comida con inteligencia artificial",
   "start_url": "/",
   "display": "standalone",

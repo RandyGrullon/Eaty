@@ -62,10 +62,10 @@ export function RegisterForm({ onToggleMode }: RegisterFormProps) {
   }
 
   return (
-    <Card className="w-full max-w-md mx-auto">
+    <Card className="w-full max-w-4xl mx-auto">
       <CardHeader className="text-center">
         <CardTitle className="text-2xl font-bold text-primary">Crear Cuenta</CardTitle>
-        <CardDescription>Únete a NutriScan AI y comienza a analizar tu comida</CardDescription>
+        <CardDescription>Únete a Eaty y comienza a analizar tu comida</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <form onSubmit={handleSubmit} className="space-y-4">

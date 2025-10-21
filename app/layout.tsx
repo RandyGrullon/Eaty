@@ -18,7 +18,7 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "NutriScan AI - Analiza tu comida con IA",
+  title: "Eaty - Analiza tu comida con IA",
   description:
     "Escanea tu comida y obtén análisis nutricional completo con inteligencia artificial",
   generator: "v0.app",
@@ -26,13 +26,13 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "NutriScan AI",
+    title: "Eaty",
   },
   other: {
     "mobile-web-app-capable": "yes",
     "apple-mobile-web-app-capable": "yes",
     "apple-mobile-web-app-status-bar-style": "default",
-    "apple-mobile-web-app-title": "NutriScan AI",
+    "apple-mobile-web-app-title": "Eaty",
   },
 };
 

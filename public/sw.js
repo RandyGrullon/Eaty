@@ -1,5 +1,5 @@
 // Basic Service Worker for PWA functionality
-const CACHE_NAME = "nutriscan-ai-v1";
+const CACHE_NAME = "eaty-v1";
 
 // Install event
 self.addEventListener("install", (event) => {

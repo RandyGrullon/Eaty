@@ -55,12 +55,12 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto">
+    <Card className="w-full max-w-4xl mx-auto">
       <CardHeader className="text-center">
         <CardTitle className="text-2xl font-bold text-primary">
           Iniciar Sesión
         </CardTitle>
-        <CardDescription>Ingresa a tu cuenta de NutriScan AI</CardDescription>
+        <CardDescription>Ingresa a tu cuenta de Eaty</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <form onSubmit={handleSubmit} className="space-y-4">
