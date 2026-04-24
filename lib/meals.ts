@@ -10,7 +10,11 @@ import {
   getDoc,
   updateDoc,
 } from "firebase/firestore";
-import { db } from "./firebase";
+import { appFirebase } from "./firebase";
+import { uploadUserMealImage } from "@/lib/meal-image-storage";
+import { logger } from "@/lib/logger";
+
+const getDb = () => appFirebase.db;
 import { normalizeBirthDateFromFirestore } from "./age-from-birthdate";
 import type { Meal, UserProfile } from "@/types/meal";
 
@@ -20,6 +24,7 @@ export type MealUpdatePayload = {
   macros: Meal["macros"];
   recommendations: string[];
   imageUrl: string | null;
+  aiContext?: Meal["aiContext"];
 };
 
 export async function updateMeal(
@@ -28,13 +33,14 @@ export async function updateMeal(
   data: MealUpdatePayload
 ): Promise<void> {
   try {
-    const mealRef = doc(db, "users", userId, "meals", mealId);
+    const mealRef = doc(getDb(), "users", userId, "meals", mealId);
     await updateDoc(mealRef, {
       foodName: data.foodName,
       calories: data.calories,
       macros: data.macros,
       recommendations: data.recommendations,
       imageUrl: data.imageUrl,
+      ...(data.aiContext !== undefined ? { aiContext: data.aiContext } : {}),
     });
   } catch (error) {
     console.error("Error updating meal:", error);
@@ -42,17 +48,44 @@ export async function updateMeal(
   }
 }
 
+export type SaveMealOptions = {
+  /** Foto usada en el análisis; se sube a Storage y se guarda `imageUrl` en el documento. */
+  imageFile?: File;
+};
+
+export type SaveMealResult = {
+  mealId: string;
+  /** `true` si se pidió subir imagen y la subida y el update tuvieron éxito. */
+  imageStored: boolean;
+};
+
 export async function saveMeal(
   userId: string,
-  mealData: Omit<Meal, "id" | "createdAt">
-): Promise<string> {
+  mealData: Omit<Meal, "id" | "createdAt">,
+  options?: SaveMealOptions
+): Promise<SaveMealResult> {
   try {
-    const mealsRef = collection(db, "users", userId, "meals");
+    const mealsRef = collection(getDb(), "users", userId, "meals");
     const docRef = await addDoc(mealsRef, {
       ...mealData,
+      imageUrl: mealData.imageUrl ?? null,
       createdAt: Timestamp.now(),
     });
-    return docRef.id;
+    let imageStored = false;
+    if (options?.imageFile) {
+      try {
+        const url = await uploadUserMealImage(
+          userId,
+          docRef.id,
+          options.imageFile
+        );
+        await updateDoc(docRef, { imageUrl: url });
+        imageStored = true;
+      } catch (e) {
+        logger.error("saveMeal: subida de imagen (comida guardada sin foto)", e);
+      }
+    }
+    return { mealId: docRef.id, imageStored };
   } catch (error) {
     console.error("Error saving meal:", error);
     throw new Error("Error al guardar la comida");
@@ -61,7 +94,7 @@ export async function saveMeal(
 
 export async function getUserMeals(userId: string): Promise<Meal[]> {
   try {
-    const mealsRef = collection(db, "users", userId, "meals");
+    const mealsRef = collection(getDb(), "users", userId, "meals");
     const q = query(mealsRef, orderBy("createdAt", "desc"));
     const querySnapshot = await getDocs(q);
 
@@ -88,7 +121,7 @@ export async function getTodayStats(
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    const mealsRef = collection(db, "users", userId, "meals");
+    const mealsRef = collection(getDb(), "users", userId, "meals");
     const q = query(mealsRef, orderBy("createdAt", "desc"));
     const querySnapshot = await getDocs(q);
 
@@ -118,7 +151,7 @@ export async function getMealsGroupedByDate(
   endDate?: Date
 ): Promise<{ [key: string]: Meal[] }> {
   try {
-    const mealsRef = collection(db, "users", userId, "meals");
+    const mealsRef = collection(getDb(), "users", userId, "meals");
     const q = query(mealsRef, orderBy("createdAt", "desc"));
     const querySnapshot = await getDocs(q);
 
@@ -164,7 +197,7 @@ export async function getMonthlyStats(
     const startDate = new Date(year, month, 1);
     const endDate = new Date(year, month + 1, 1);
 
-    const mealsRef = collection(db, "users", userId, "meals");
+    const mealsRef = collection(getDb(), "users", userId, "meals");
     const q = query(mealsRef, orderBy("createdAt", "desc"));
     const querySnapshot = await getDocs(q);
 
@@ -208,7 +241,7 @@ export async function saveUserProfile(
   profileData: Omit<UserProfile, "uid" | "createdAt" | "updatedAt">
 ): Promise<void> {
   try {
-    const userProfileRef = doc(db, "users", userId, "profile", "main");
+    const userProfileRef = doc(getDb(), "users", userId, "profile", "main");
     const now = Timestamp.now();
 
     await setDoc(userProfileRef, {
@@ -227,7 +260,7 @@ export async function getUserProfile(
   userId: string
 ): Promise<UserProfile | null> {
   try {
-    const userProfileRef = doc(db, "users", userId, "profile", "main");
+    const userProfileRef = doc(getDb(), "users", userId, "profile", "main");
     const docSnap = await getDoc(userProfileRef);
 
     if (docSnap.exists()) {
@@ -253,7 +286,7 @@ export async function updateUserProfile(
   profileData: Partial<Omit<UserProfile, "uid" | "createdAt" | "updatedAt">>
 ): Promise<void> {
   try {
-    const userProfileRef = doc(db, "users", userId, "profile", "main");
+    const userProfileRef = doc(getDb(), "users", userId, "profile", "main");
     const now = Timestamp.now();
 
     await setDoc(
@@ -275,7 +308,7 @@ export async function getRecentActivities(
   limit: number = 5
 ): Promise<Meal[]> {
   try {
-    const mealsRef = collection(db, "users", userId, "meals");
+    const mealsRef = collection(getDb(), "users", userId, "meals");
     const q = query(mealsRef, orderBy("createdAt", "desc"));
     const querySnapshot = await getDocs(q);
 
@@ -326,7 +359,7 @@ export async function getWeeklyProgress(userId: string): Promise<{
 
     const previousWeekEnd = new Date(currentWeekStart);
 
-    const mealsRef = collection(db, "users", userId, "meals");
+    const mealsRef = collection(getDb(), "users", userId, "meals");
     const q = query(mealsRef, orderBy("createdAt", "desc"));
     const querySnapshot = await getDocs(q);
 

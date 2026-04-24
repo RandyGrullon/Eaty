@@ -1,3 +1,5 @@
+import type { FoodAnalysisAiContext } from "@/lib/food-analysis-schema";
+
 export interface Meal {
   id: string;
   imageUrl: string | null;
@@ -11,6 +13,8 @@ export interface Meal {
     sugar: number;
   };
   recommendations: string[];
+  /** Qué vio/interpretó el modelo (descripción, confianza, porción, etc.). */
+  aiContext?: FoodAnalysisAiContext;
   createdAt: Date;
 }
 

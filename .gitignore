@@ -25,3 +25,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Firebase Admin SDK key
+eaty-cd6c6-firebase-adminsdk-*.json
+firebase-auth.json

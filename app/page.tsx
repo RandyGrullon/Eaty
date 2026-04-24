@@ -1,5 +1,7 @@
 "use client";
 
+import { FirebaseEnvErrorScreen } from "@/components/app/firebase-env-error";
+import { isFirebaseConfigReady } from "@/lib/firebase-config";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
@@ -15,6 +17,7 @@ import {
 import { AuthScreen } from "@/components/auth/auth-screen";
 import { DashboardScreen } from "@/components/dashboard/dashboard-screen";
 import { AnalysisResults } from "@/components/analysis/analysis-results";
+import { ImageAnalysisFailure } from "@/components/analysis/image-analysis-failure";
 import type { MainTab } from "@/lib/main-tab";
 import { logger } from "@/lib/logger";
 import { BottomNav } from "@/components/navigation/bottom-nav";
@@ -35,9 +38,12 @@ function AppContent() {
     isAnalyzing,
     isSaving,
     analysisResult,
-    error,
+    imagePreviewUrl,
+    imageAnalysisError,
     analyzeImage,
     analyzeText,
+    retryImageAnalysis,
+    dismissImageAnalysisError,
     saveAnalysis,
     clearAnalysis,
   } = useFoodAnalysis();
@@ -80,7 +86,7 @@ function AppContent() {
     selectedImage === null &&
     !analysisResult &&
     !isAnalyzing &&
-    !error;
+    !imageAnalysisError;
 
   const { scrollRef } = useMainTabScroll(
     mainTabsVisible,
@@ -150,6 +156,7 @@ function AppContent() {
   };
 
   const handleImageSelected = (file: File) => {
+    dismissImageAnalysisError();
     setSelectedImage(file);
   };
 
@@ -175,7 +182,8 @@ function AppContent() {
             <div className="max-w-4xl mx-auto">
               <h1 className="text-xl font-bold">Agregar Descripción</h1>
               <p className="text-sm opacity-90">
-                Agrega contexto adicional para un mejor análisis
+                Puedes dejar la descripción vacía: la IA nombra el plato y estima
+                según la foto. Un texto extra mejora la precisión.
               </p>
             </div>
           </div>
@@ -229,6 +237,7 @@ function AppContent() {
       <>
         <AnalysisResults
           result={analysisResult}
+          imagePreviewUrl={imagePreviewUrl}
           onBack={handleBackToHome}
           onSave={handleSaveAnalysis}
           isSaving={isSaving}
@@ -258,21 +267,18 @@ function AppContent() {
     );
   }
 
-  // Show error state
-  if (error) {
+  if (imageAnalysisError) {
     return (
       <>
-        <div className="min-h-screen bg-background flex items-center justify-center p-4">
-          <div className="text-center max-w-4xl">
-            <div className="text-destructive text-lg font-semibold mb-2">
-              Error
-            </div>
-            <p className="text-muted-foreground mb-4">{error}</p>
-            <Button onClick={handleBackToHome} className="w-full">
-              Volver al Inicio
-            </Button>
-          </div>
-        </div>
+        <ImageAnalysisFailure
+          message={imageAnalysisError}
+          imagePreviewUrl={imagePreviewUrl}
+          onRetry={retryImageAnalysis}
+          onDismiss={() => {
+            dismissImageAnalysisError();
+            setActiveTab("home");
+          }}
+        />
         <OfflineIndicator />
       </>
     );
@@ -336,6 +342,10 @@ function AppContent() {
 }
 
 export default function Home() {
+  if (!isFirebaseConfigReady()) {
+    return <FirebaseEnvErrorScreen />;
+  }
+
   return (
     <AuthProvider>
       <AppContent />

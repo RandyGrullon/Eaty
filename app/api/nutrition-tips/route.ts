@@ -51,13 +51,15 @@ export async function POST(req: Request) {
       e instanceof Error &&
       (e.message.includes("FIREBASE_SERVICE_ACCOUNT_JSON") ||
         e.message.includes("GOOGLE_APPLICATION_CREDENTIALS") ||
+        e.message.includes("cuenta de servicio") ||
         e.message.includes("Configura FIREBASE"))
     ) {
       logger.error("Firebase Admin no configurado", e.message);
       return NextResponse.json(
         {
-          error:
-            "Servidor sin credenciales de administrador. Configura FIREBASE_SERVICE_ACCOUNT_JSON.",
+          error: e.message.startsWith("FIREBASE_")
+            ? e.message
+            : "Falta credencial de servicio. Añade FIREBASE_SERVICE_ACCOUNT_JSON (mismo proyecto que el cliente) y reinicia el servidor.",
         },
         { status: 503 }
       );

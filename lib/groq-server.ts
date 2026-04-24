@@ -1,16 +1,18 @@
 import {
   buildFoodAnalysisUserPrompt,
+  buildFoodTextRetryUserPrompt,
+  buildFoodVisionRetryUserPrompt,
   buildNutritionTipsUserPrompt,
   SYSTEM_FOOD_ANALYSIS,
+  SYSTEM_FOOD_TEXT_RETRY,
+  SYSTEM_FOOD_VISION_RETRY,
   SYSTEM_JSON_REPAIR,
   SYSTEM_NUTRITION_TIPS,
 } from "@/lib/food-analysis-prompts";
-import { buildFoodAnalysisFallback } from "@/lib/food-analysis-fallback";
 import {
+  buildMealFromAnalyzedRaw,
   foodAnalysisRawSchema,
-  isMacroCalorieCoherent,
   nutritionTipsResponseSchema,
-  toMealFields,
   type FoodAnalysisMealFields,
   type FoodAnalysisRaw,
 } from "@/lib/food-analysis-schema";
@@ -112,24 +114,43 @@ function validateFoodAnalysis(raw: unknown): FoodAnalysisRaw {
   return foodAnalysisRawSchema.parse(raw);
 }
 
-function validateMealCoherence(
-  parsed: FoodAnalysisRaw
-): FoodAnalysisMealFields {
-  const meal = toMealFields(parsed);
-  if (!isMacroCalorieCoherent(meal.calories, meal.macros)) {
-    throw new Error("Incoherencia entre calorías y macros.");
-  }
-  return meal;
+function imageDataUrl(
+  imageBase64: string,
+  imageMimeType: string | undefined
+): string {
+  const mime = imageMimeType?.startsWith("image/")
+    ? imageMimeType
+    : "image/jpeg";
+  return `data:${mime};base64,${imageBase64}`;
 }
 
-async function repairFoodJson(invalidJson: string): Promise<FoodAnalysisMealFields> {
+/**
+ * Repara JSON: si hubo imagen, el modelo vuelve a verla (no solo el texto roto).
+ */
+async function repairFoodJson(
+  invalidJson: string,
+  vision: { imageBase64: string; imageMimeType?: string } | null
+): Promise<FoodAnalysisMealFields> {
+  const baseText = `El siguiente JSON no cumple el esquema o faltan campos. ${
+    vision
+      ? "Mira de nuevo la IMAGEN del plato y rehace el JSON completo con estimaciones acordes a lo que ves (cada plato es distinto)."
+      : "Devuelve un JSON válido."
+  } (calorías coherentes con 4P+4C+9G+2×fibra). Claves: visibleComponents, dishDescription, portionHypothesis, confidence, foodName, calories, macros, recommendations. Textos en español.\n\nEntrada:\n${invalidJson.slice(0, 12000)}`;
+
+  const userContent: ChatContentPart[] = vision
+    ? [
+        { type: "text", text: baseText },
+        {
+          type: "image_url",
+          image_url: { url: imageDataUrl(vision.imageBase64, vision.imageMimeType) },
+        },
+      ]
+    : [{ type: "text", text: baseText }];
+
   const content = await groqChatCompletion({
     messages: [
       { role: "system", content: SYSTEM_JSON_REPAIR },
-      {
-        role: "user",
-        content: `El siguiente JSON no cumple el esquema o la coherencia nutricional (calorías ≈ 4P+4C+9F+2*fibra con tolerancia ~35%). Devuelve un único objeto JSON válido con: visibleComponents, dishDescription, portionHypothesis (objeto con relativeSize small|medium|large y notes opcional, o un string con la hipótesis), confidence, foodName, calories, macros {protein,carbs,fat,fiber,sugar}, recommendations. Textos al usuario en español.\n\nEntrada:\n${invalidJson.slice(0, 12000)}`,
-      },
+      { role: "user", content: userContent },
     ],
     responseFormatJson: true,
     temperature: 0.2,
@@ -137,13 +158,82 @@ async function repairFoodJson(invalidJson: string): Promise<FoodAnalysisMealFiel
   });
   const obj = parseJsonObject<unknown>(content);
   const parsed = validateFoodAnalysis(obj);
-  return validateMealCoherence(parsed);
+  return buildMealFromAnalyzedRaw(parsed);
 }
 
 function parseFoodAnalysisContent(content: string): FoodAnalysisMealFields {
   const obj = parseJsonObject<unknown>(content);
   const parsed = validateFoodAnalysis(obj);
-  return validateMealCoherence(parsed);
+  return buildMealFromAnalyzedRaw(parsed);
+}
+
+function buildImageUserContent(params: {
+  systemForUser: string;
+  imageBase64: string;
+  imageMimeType?: string;
+}): ChatContentPart[] {
+  return [
+    { type: "text", text: params.systemForUser },
+    {
+      type: "image_url",
+      image_url: {
+        url: imageDataUrl(params.imageBase64, params.imageMimeType),
+      },
+    },
+  ];
+}
+
+async function runVisionRetryPass(params: {
+  imageBase64: string;
+  imageMimeType?: string;
+}): Promise<FoodAnalysisMealFields> {
+  const userContent = buildImageUserContent({
+    systemForUser: buildFoodVisionRetryUserPrompt(),
+    imageBase64: params.imageBase64,
+    imageMimeType: params.imageMimeType,
+  });
+  const content = await groqChatCompletion({
+    messages: [
+      { role: "system", content: SYSTEM_FOOD_VISION_RETRY },
+      { role: "user", content: userContent },
+    ],
+    responseFormatJson: true,
+    temperature: 0.3,
+    maxTokens: 2048,
+  });
+  return parseFoodAnalysisContent(content);
+}
+
+async function runTextRetryPass(params: {
+  foodName?: string;
+  description?: string;
+}): Promise<FoodAnalysisMealFields> {
+  const userText = buildFoodTextRetryUserPrompt({
+    foodName: params.foodName,
+    description: params.description,
+  });
+  const content = await groqChatCompletion({
+    messages: [
+      { role: "system", content: SYSTEM_FOOD_TEXT_RETRY },
+      { role: "user", content: userText },
+    ],
+    responseFormatJson: true,
+    temperature: 0.3,
+    maxTokens: 2048,
+  });
+  return parseFoodAnalysisContent(content);
+}
+
+export class FoodAnalysisExhaustedError extends Error {
+  constructor(cause?: unknown) {
+    super(
+      "No se pudo obtener un análisis nutricional. Reintenta o comprueba GROQ_API_KEY y el tamaño de la imagen."
+    );
+    this.name = "FoodAnalysisExhaustedError";
+    if (cause && cause instanceof Error) {
+      this.cause = cause;
+    }
+  }
 }
 
 export async function runFoodAnalysisGroq(params: {
@@ -152,29 +242,31 @@ export async function runFoodAnalysisGroq(params: {
   foodName?: string;
   description?: string;
 }): Promise<FoodAnalysisMealFields> {
+  const hasImage = Boolean(params.imageBase64?.trim());
+  const userText = buildFoodAnalysisUserPrompt({
+    hasImage,
+    foodName: params.foodName,
+    description: params.description,
+  });
+
+  const userContent: ChatContentPart[] = hasImage
+    ? buildImageUserContent({
+        systemForUser: userText,
+        imageBase64: params.imageBase64!,
+        imageMimeType: params.imageMimeType,
+      })
+    : [{ type: "text", text: userText }];
+
+  const visionForRepair = hasImage
+    ? {
+        imageBase64: params.imageBase64!,
+        imageMimeType: params.imageMimeType,
+      }
+    : null;
+
+  let content: string;
   try {
-    const hasImage = Boolean(params.imageBase64);
-    const userText = buildFoodAnalysisUserPrompt({
-      hasImage,
-      foodName: params.foodName,
-      description: params.description,
-    });
-
-    const userContent: ChatContentPart[] = [{ type: "text", text: userText }];
-
-    if (params.imageBase64) {
-      const mime = params.imageMimeType?.startsWith("image/")
-        ? params.imageMimeType
-        : "image/jpeg";
-      userContent.push({
-        type: "image_url",
-        image_url: {
-          url: `data:${mime};base64,${params.imageBase64}`,
-        },
-      });
-    }
-
-    const content = await groqChatCompletion({
+    content = await groqChatCompletion({
       messages: [
         { role: "system", content: SYSTEM_FOOD_ANALYSIS },
         { role: "user", content: userContent },
@@ -183,22 +275,64 @@ export async function runFoodAnalysisGroq(params: {
       temperature: 0.35,
       maxTokens: 2048,
     });
-
-    try {
-      return parseFoodAnalysisContent(content);
-    } catch (firstErr) {
+  } catch (e) {
+    logger.error("Análisis Groq: primera llamada", e);
+    if (hasImage) {
       try {
-        return await repairFoodJson(content);
-      } catch (repairErr) {
-        const primary =
-          firstErr instanceof Error ? firstErr : new Error(String(firstErr));
-        logger.error("Análisis: reparar JSON", repairErr);
-        return buildFoodAnalysisFallback(params, primary);
+        return await runVisionRetryPass({
+          imageBase64: params.imageBase64!,
+          imageMimeType: params.imageMimeType,
+        });
+      } catch (e2) {
+        logger.error("Análisis Groq: reintento visión", e2);
+        throw new FoodAnalysisExhaustedError(e2);
       }
     }
-  } catch (e) {
-    logger.error("Análisis Groq", e);
-    return buildFoodAnalysisFallback(params, e);
+    try {
+      return await runTextRetryPass({
+        foodName: params.foodName,
+        description: params.description,
+      });
+    } catch (e2) {
+      throw new FoodAnalysisExhaustedError(e);
+    }
+  }
+
+  try {
+    return parseFoodAnalysisContent(content);
+  } catch (firstErr) {
+    try {
+      return await repairFoodJson(content, visionForRepair);
+    } catch (repairErr) {
+      logger.error("Análisis: reparar JSON", repairErr);
+      if (hasImage) {
+        try {
+          return await runVisionRetryPass({
+            imageBase64: params.imageBase64!,
+            imageMimeType: params.imageMimeType,
+          });
+        } catch (retryVisErr) {
+          logger.error("Análisis: reintento visión", retryVisErr);
+        }
+      } else {
+        const hasTextInput = Boolean(
+          params.foodName?.trim() || params.description?.trim()
+        );
+        if (hasTextInput) {
+          try {
+            return await runTextRetryPass({
+              foodName: params.foodName,
+              description: params.description,
+            });
+          } catch (retryTextErr) {
+            logger.error("Análisis: reintento texto", retryTextErr);
+          }
+        }
+      }
+      const primary =
+        firstErr instanceof Error ? firstErr : new Error(String(firstErr));
+      throw new FoodAnalysisExhaustedError(primary);
+    }
   }
 }
 

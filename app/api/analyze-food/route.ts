@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { runFoodAnalysisGroq } from "@/lib/groq-server";
+import { FoodAnalysisExhaustedError, runFoodAnalysisGroq } from "@/lib/groq-server";
 import {
   HttpApiError,
   enforceDailyQuota,
@@ -28,7 +28,6 @@ const bodySchema = z
 export async function POST(req: Request) {
   try {
     const uid = await requireUidFromRequest(req);
-    await enforceDailyQuota(uid, "analyze");
 
     const json: unknown = await req.json();
     const body = bodySchema.parse(json);
@@ -40,22 +39,29 @@ export async function POST(req: Request) {
       description: body.description?.trim(),
     });
 
+    await enforceDailyQuota(uid, "analyze");
+
     return NextResponse.json(result);
   } catch (e) {
     if (e instanceof HttpApiError) {
       return NextResponse.json({ error: e.message }, { status: e.status });
     }
+    if (e instanceof FoodAnalysisExhaustedError) {
+      return NextResponse.json({ error: e.message }, { status: 503 });
+    }
     if (
       e instanceof Error &&
       (e.message.includes("FIREBASE_SERVICE_ACCOUNT_JSON") ||
         e.message.includes("GOOGLE_APPLICATION_CREDENTIALS") ||
+        e.message.includes("cuenta de servicio") ||
         e.message.includes("Configura FIREBASE"))
     ) {
       logger.error("Firebase Admin no configurado", e.message);
       return NextResponse.json(
         {
-          error:
-            "Servidor sin credenciales de administrador. Configura FIREBASE_SERVICE_ACCOUNT_JSON.",
+          error: e.message.startsWith("FIREBASE_")
+            ? e.message
+            : "Falta credencial de servicio. En Firebase: Project settings > Service accounts, genera la clave JSON, una línea en .env: FIREBASE_SERVICE_ACCOUNT_JSON=... (mismo proyecto que NEXT_PUBLIC_FIREBASE_PROJECT_ID). Luego reinicia pnpm dev.",
         },
         { status: 503 }
       );

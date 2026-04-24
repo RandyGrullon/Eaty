@@ -18,7 +18,7 @@ export function userMessageForGroqError(err: unknown): string {
       return err.message;
     }
     if (err.status === 503) {
-      return "El servicio no está disponible temporalmente. Inténtalo más tarde.";
+      return err.message;
     }
     return err.message;
   }

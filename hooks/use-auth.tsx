@@ -11,7 +11,7 @@ import {
   signOut,
   onAuthStateChanged,
 } from "firebase/auth"
-import { auth, googleProvider } from "@/lib/firebase"
+import { appFirebase, googleProvider } from "@/lib/firebase"
 
 interface AuthContextType {
   user: User | null
@@ -29,6 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    const auth = appFirebase.auth
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user)
       setLoading(false)
@@ -62,6 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user, loading])
 
   const signIn = async (email: string, password: string) => {
+    const auth = appFirebase.auth
     try {
       await signInWithEmailAndPassword(auth, email, password)
     } catch (error: any) {
@@ -70,6 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signUp = async (email: string, password: string) => {
+    const auth = appFirebase.auth
     try {
       await createUserWithEmailAndPassword(auth, email, password)
     } catch (error: any) {
@@ -78,6 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signInWithGoogle = async () => {
+    const auth = appFirebase.auth
     try {
       await signInWithPopup(auth, googleProvider)
     } catch (error: any) {
@@ -86,6 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const logout = async () => {
+    const auth = appFirebase.auth
     try {
       await fetch("/api/auth/session", {
         method: "DELETE",

@@ -57,6 +57,18 @@ export async function POST(req: Request) {
     return res;
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
+    if (
+      e instanceof Error &&
+      (message.includes("FIREBASE_SERVICE_ACCOUNT_JSON") ||
+        message.includes("cuenta de servicio") ||
+        message.includes("project_id"))
+    ) {
+      logger.error("createSessionCookie (Admin no configurado)", message);
+      return NextResponse.json(
+        { error: message.startsWith("FIREBASE_") ? message : "Configura FIREBASE_SERVICE_ACCOUNT_JSON en .env (mismo proyecto que el cliente web)." },
+        { status: 503 }
+      );
+    }
     const code =
       typeof e === "object" &&
       e !== null &&

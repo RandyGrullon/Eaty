@@ -3,6 +3,7 @@ import {
   getAdminAppProjectIdForDiagnostics,
   getAdminAuth,
   getAdminFirestore,
+  isFirebaseServiceAccountJsonConfigured,
 } from "@/lib/firebase-admin";
 import { logger } from "@/lib/logger";
 import { getCookieValueFromRequest } from "@/lib/parse-cookie-header";
@@ -78,15 +79,13 @@ export async function requireUidFromRequest(req: Request): Promise<string> {
   if (process.env.NODE_ENV === "development") {
     const adminP = getAdminAppProjectIdForDiagnostics();
     const fromEnv = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.trim();
-    const hint = [
-      " (modo dev)",
-      `API Firebase (cuenta de servicio): projectId ≈ ${adminP ?? "?"}.`,
-      fromEnv
-        ? `Cliente: NEXT_PUBLIC_FIREBASE_PROJECT_ID=${fromEnv}. Deben ser el MISMO proyecto.`
-        : `No está NEXT_PUBLIC_FIREBASE_* en .env: el cliente web usa el fallback de lib/firebase.ts; el Admin debe ser la cuenta de servicio de ESE mismo proyecto (consola > Project settings > Service account).`,
-      "Sin eso, verifyIdToken/verifySessionCookie fallan aunque tengas sesión en el navegador.",
-    ].join(" ");
-    throw new HttpApiError(401, `${base} ${hint}`);
+    const hasServiceJson = isFirebaseServiceAccountJsonConfigured();
+    const hint = !hasServiceJson
+      ? " (dev) Falta FIREBASE_SERVICE_ACCOUNT_JSON en .env: el backend no valida el token. Consola: Service accounts > generar clave, pegar en .env, reiniciar dev."
+      : fromEnv && adminP && fromEnv !== adminP
+        ? ` (dev) Cuenta de servicio: project_id=${adminP} ≠ NEXT_PUBLIC=${fromEnv} — usan el mismo JSON y cliente.`
+        : ` (dev) Revisa el log "verifyIdToken" / "verifySessionCookie"; el Admin está en project_id=${adminP ?? "?"}.`;
+    throw new HttpApiError(401, `${base}${hint}`);
   }
 
   throw new HttpApiError(401, base);
@@ -103,8 +102,8 @@ function usageDayKeyUtc(): string {
 }
 
 function dailyAnalyzeLimit(): number {
-  const n = parseInt(process.env.DAILY_ANALYZE_LIMIT ?? "60", 10);
-  return Number.isFinite(n) && n > 0 ? n : 60;
+  const n = parseInt(process.env.DAILY_ANALYZE_LIMIT ?? "120", 10);
+  return Number.isFinite(n) && n > 0 ? n : 120;
 }
 
 function dailyTipsLimit(): number {
@@ -140,7 +139,7 @@ export async function enforceDailyQuota(
       if (analyzeCount >= analyzeLimit) {
         throw new HttpApiError(
           429,
-          `Límite diario de análisis (${analyzeLimit}) alcanzado. Vuelve mañana.`
+          `Límite diario de análisis completados con éxito (${analyzeLimit}) alcanzado. Los reintentos fallidos no cuentan. Vuelve mañana (UTC) o sube DAILY_ANALYZE_LIMIT en el servidor.`
         );
       }
       tx.set(

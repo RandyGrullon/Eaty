@@ -15,13 +15,22 @@ import {
 } from "@/components/ui/drawer";
 import { useAuth } from "@/hooks/use-auth";
 import { updateMeal } from "@/lib/meals";
-import { db } from "@/lib/firebase";
+import { appFirebase } from "@/lib/firebase";
 import type { Meal } from "@/types/meal";
 import { doc, deleteDoc } from "firebase/firestore";
 import { Loader2, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
 import { cn } from "@/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type MealDetailDrawerProps = {
   meal: Meal | null;
@@ -48,6 +57,8 @@ export function MealDetailDrawer({
   const [recommendationsText, setRecommendationsText] = useState("");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [saveConfirmOpen, setSaveConfirmOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   useEffect(() => {
     if (!meal) return;
@@ -61,8 +72,40 @@ export function MealDetailDrawer({
     setRecommendationsText(meal.recommendations.join("\n"));
   }, [meal]);
 
-  const handleSave = async () => {
+  /** Cierre del drawer: limpia "Guardando" si se quedó colgado o se cerró durante un guardado. */
+  useEffect(() => {
+    if (!open) {
+      setSaving(false);
+      setDeleting(false);
+      setSaveConfirmOpen(false);
+    }
+  }, [open]);
+
+  /** Otra comida: no arrastrar estado de botones de la ficha anterior. */
+  useEffect(() => {
+    if (!meal) return;
+    setSaving(false);
+    setDeleting(false);
+    setSaveConfirmOpen(false);
+  }, [meal?.id]);
+
+  const requestSaveConfirm = () => {
     if (!user || !meal) return;
+    if (!foodName.trim()) {
+      toast({
+        title: "Nombre requerido",
+        description: "Indica el nombre del plato.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setSaveConfirmOpen(true);
+  };
+
+  const performSave = async () => {
+    if (!user || !meal) {
+      return;
+    }
 
     const cals = Math.round(parseFloat(calories) || 0);
     const round1 = (v: string) =>
@@ -81,7 +124,11 @@ export function MealDetailDrawer({
       });
       return;
     }
+    if (saving) {
+      return;
+    }
 
+    setSaveConfirmOpen(false);
     setSaving(true);
     try {
       await updateMeal(user.uid, meal.id, {
@@ -99,15 +146,19 @@ export function MealDetailDrawer({
           .map((s) => s.trim())
           .filter(Boolean),
         imageUrl: meal.imageUrl,
+        aiContext: meal.aiContext,
       });
-      toast({ title: "Guardado", description: "Los cambios se aplicaron." });
+      toast({
+        title: "Cambios guardados",
+        description: "La comida se actualizó en el historial.",
+      });
       onMealUpdated();
       onOpenChange(false);
     } catch (err) {
       logger.error("meal-detail-drawer save", err);
       toast({
-        title: "Error",
-        description: "No se pudo guardar la comida.",
+        title: "No se pudo guardar",
+        description: "Revisa la conexión o inténtalo otra vez.",
         variant: "destructive",
       });
     } finally {
@@ -115,21 +166,25 @@ export function MealDetailDrawer({
     }
   };
 
-  const handleDelete = async () => {
+  const performDelete = async () => {
     if (!user || !meal) return;
-    if (!confirm("¿Eliminar esta comida del historial?")) return;
-
+    setDeleteOpen(false);
     setDeleting(true);
     try {
-      await deleteDoc(doc(db, "users", user.uid, "meals", meal.id));
-      toast({ title: "Eliminada", description: "La comida se quitó del historial." });
+      await deleteDoc(
+        doc(appFirebase.db, "users", user.uid, "meals", meal.id)
+      );
+      toast({
+        title: "Comida eliminada",
+        description: "Se quitó de tu historial.",
+      });
       onMealUpdated();
       onOpenChange(false);
     } catch (err) {
       logger.error("meal-detail-drawer delete", err);
       toast({
-        title: "Error",
-        description: "No se pudo eliminar.",
+        title: "No se pudo eliminar",
+        description: "Revisa la conexión o inténtalo otra vez.",
         variant: "destructive",
       });
     } finally {
@@ -162,16 +217,16 @@ export function MealDetailDrawer({
 
             <div className="flex max-h-[calc(min(58vh,560px)-8rem)] flex-col gap-4 overflow-y-auto px-4 py-3">
               {meal.imageUrl ? (
-                <div className="mx-auto w-full max-w-xs overflow-hidden rounded-xl border border-border bg-muted">
+                <div className="w-full overflow-hidden rounded-xl border border-border bg-muted">
                   <img
                     src={meal.imageUrl}
-                    alt=""
-                    className="aspect-[4/3] w-full object-cover"
+                    alt={meal.foodName}
+                    className="max-h-[min(40vh,280px)] w-full object-contain"
                   />
                 </div>
               ) : (
                 <p className="text-center text-xs text-muted-foreground">
-                  Sin imagen guardada
+                  Sin imagen en el registro.
                 </p>
               )}
 
@@ -284,7 +339,7 @@ export function MealDetailDrawer({
                 size="sm"
                 className="gap-1.5"
                 disabled={deleting || saving}
-                onClick={handleDelete}
+                onClick={() => setDeleteOpen(true)}
               >
                 {deleting ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -303,7 +358,7 @@ export function MealDetailDrawer({
                 size="sm"
                 className="ml-auto"
                 disabled={saving || deleting}
-                onClick={handleSave}
+                onClick={requestSaveConfirm}
               >
                 {saving ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -315,6 +370,52 @@ export function MealDetailDrawer({
           </>
         ) : null}
       </DrawerContent>
+
+      <AlertDialog open={saveConfirmOpen} onOpenChange={setSaveConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Guardar los cambios?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se actualizarán nombre, calorías, macros y recomendaciones de esta
+              entrada.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <Button
+              type="button"
+              onClick={() => {
+                void performSave();
+              }}
+            >
+              Guardar
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar esta comida?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se borrará del historial. Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => {
+                void performDelete();
+              }}
+            >
+              Eliminar
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Drawer>
   );
 }
