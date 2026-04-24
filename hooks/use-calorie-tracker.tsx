@@ -3,9 +3,9 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "./use-auth";
 import { getUserProfile } from "@/lib/meals";
-import { calculateTDEEPrecise } from "@/lib/gemini";
+import { calculateTDEEPrecise } from "@/lib/tdee";
 import { getTodayStats } from "@/lib/meals";
-import type { UserProfile } from "@/types/meal";
+import { getProfileDisplayAge } from "@/lib/age-from-birthdate";
 
 interface CalorieData {
   dailyGoal: number;
@@ -47,9 +47,11 @@ export function useCalorieTracker() {
         return;
       }
 
+      const displayAge = getProfileDisplayAge(profile);
+
       // Check if profile has required fields for TDEE calculation
       if (
-        !profile.age ||
+        displayAge == null ||
         !profile.weight ||
         !profile.height ||
         !profile.activityLevel ||
@@ -61,9 +63,8 @@ export function useCalorieTracker() {
         return;
       }
 
-      // Calculate TDEE using Gemini
-      const tdeeData = await calculateTDEEPrecise({
-        age: profile.age,
+      const tdeeData = calculateTDEEPrecise({
+        age: displayAge,
         gender: profile.gender || "other",
         weight: profile.weight,
         height: profile.height,

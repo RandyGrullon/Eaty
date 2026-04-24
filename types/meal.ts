@@ -22,10 +22,16 @@ export interface User {
 
 export interface UserProfile {
   uid: string;
+  /** ISO local date YYYY-MM-DD; si existe, la edad mostrada se deriva de aquí. */
+  birthDate?: string;
   age?: number;
   gender?: "male" | "female" | "other";
   weight?: number; // in kg
   height?: number; // in cm
+  /** Unidad preferida en la UI; el peso en Firestore sigue en kg. */
+  weightUnit?: "kg" | "lbs";
+  /** Unidad preferida en la UI; la altura en Firestore sigue en cm. */
+  heightUnit?: "cm" | "inches";
   activityLevel?: "sedentary" | "light" | "moderate" | "active" | "very_active";
   fitnessGoal?: "bulking" | "shedding" | "maintenance";
   createdAt: Date;

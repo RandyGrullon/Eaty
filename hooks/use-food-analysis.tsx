@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { analyzeFood } from "@/lib/gemini";
+import { analyzeFood } from "@/lib/groq";
+import { prepareImageForGroq } from "@/lib/image-for-llm";
 import { saveMeal } from "@/lib/meals";
 import { useAuth } from "./use-auth";
 import type { Meal } from "@/types/meal";
@@ -27,25 +28,24 @@ export function useFoodAnalysis() {
     setError(null);
 
     try {
-      // Convert image to base64
-      const base64 = await fileToBase64(imageFile);
-      const base64Data = base64.split(",")[1]; // Remove data:image/jpeg;base64, prefix
+      const { base64WithoutPrefix, mimeType } =
+        await prepareImageForGroq(imageFile);
 
-      // Create image URL for display
-      const imageUrl = URL.createObjectURL(imageFile);
-
-      // Analyze with Gemini
-      const result = await analyzeFood(base64Data, undefined, description);
+      const result = await analyzeFood({
+        imageBase64: base64WithoutPrefix,
+        imageMimeType: mimeType,
+        description,
+      });
 
       setAnalysisResult({
-        imageUrl: null, // Don't save blob URL as it's temporary
+        imageUrl: null,
         foodName: result.foodName,
         calories: result.calories,
         macros: result.macros,
         recommendations: result.recommendations,
       });
-    } catch (error: any) {
-      console.error("Error analyzing image:", error);
+    } catch (err: unknown) {
+      console.error("Error analyzing image:", err);
       setError("Error al analizar la imagen. Intenta nuevamente.");
     } finally {
       setIsAnalyzing(false);
@@ -59,8 +59,7 @@ export function useFoodAnalysis() {
     setError(null);
 
     try {
-      // Analyze with Gemini using text only
-      const result = await analyzeFood(undefined, foodName);
+      const result = await analyzeFood({ foodName: foodName.trim() });
 
       setAnalysisResult({
         imageUrl: null,
@@ -69,8 +68,8 @@ export function useFoodAnalysis() {
         macros: result.macros,
         recommendations: result.recommendations,
       });
-    } catch (error: any) {
-      console.error("Error analyzing text:", error);
+    } catch (err: unknown) {
+      console.error("Error analyzing text:", err);
       setError("Error al analizar la comida. Intenta nuevamente.");
     } finally {
       setIsAnalyzing(false);
@@ -85,10 +84,9 @@ export function useFoodAnalysis() {
 
     try {
       await saveMeal(user.uid, analysisResult);
-      // Clear the analysis result after saving
       setAnalysisResult(null);
-    } catch (error: any) {
-      console.error("Error saving meal:", error);
+    } catch (err: unknown) {
+      console.error("Error saving meal:", err);
       setError("Error al guardar la comida. Intenta nuevamente.");
     } finally {
       setIsSaving(false);
@@ -110,13 +108,4 @@ export function useFoodAnalysis() {
     saveAnalysis,
     clearAnalysis,
   };
-}
-
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = (error) => reject(error);
-  });
 }

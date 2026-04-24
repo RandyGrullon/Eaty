@@ -26,31 +26,31 @@ export function AnalysisResults({
     {
       name: "Proteínas",
       value: result.macros.protein,
-      color: "bg-blue-500",
+      color: "bg-chart-1",
       unit: "g",
     },
     {
       name: "Carbohidratos",
       value: result.macros.carbs,
-      color: "bg-orange-500",
+      color: "bg-chart-2",
       unit: "g",
     },
     {
       name: "Grasas",
       value: result.macros.fat,
-      color: "bg-red-500",
+      color: "bg-chart-4",
       unit: "g",
     },
     {
       name: "Fibra",
       value: result.macros.fiber,
-      color: "bg-green-500",
+      color: "bg-chart-3",
       unit: "g",
     },
     {
       name: "Azúcar",
       value: result.macros.sugar,
-      color: "bg-purple-500",
+      color: "bg-chart-5",
       unit: "g",
     },
   ];

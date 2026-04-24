@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,16 +8,17 @@ import {
   ArrowLeft,
   Calendar,
   Eye,
-  Filter,
   Clock,
   CalendarDays,
   Calendar as CalendarIcon,
   Camera,
+  UtensilsCrossed,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { getUserMeals } from "@/lib/meals";
 import type { Meal } from "@/types/meal";
 import { MealDetailModal } from "./meal-detail-modal";
+import { cn } from "@/lib/utils";
 
 interface MealHistoryProps {
   onBack: () => void;
@@ -35,36 +36,11 @@ export function MealHistory({ onBack }: MealHistoryProps) {
 
   const { user } = useAuth();
 
-  useEffect(() => {
-    if (user) {
-      loadMeals();
+  const applyFilter = useCallback(() => {
+    if (meals.length === 0) {
+      setFilteredMeals([]);
+      return;
     }
-  }, [user]);
-
-  useEffect(() => {
-    if (meals.length > 0) {
-      applyFilter();
-    }
-  }, [meals, filterPeriod]);
-
-  const loadMeals = async () => {
-    if (!user) return;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const userMeals = await getUserMeals(user.uid);
-      setMeals(userMeals);
-      // El filtro se aplicará automáticamente por el useEffect
-    } catch (error: any) {
-      setError(error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const applyFilter = () => {
     const now = new Date();
     let startDate: Date;
 
@@ -75,18 +51,43 @@ export function MealHistory({ onBack }: MealHistoryProps) {
         break;
       case "week":
         startDate = new Date(now);
-        startDate.setDate(now.getDate() - now.getDay()); // Start of current week (Sunday)
+        startDate.setDate(now.getDate() - now.getDay());
         startDate.setHours(0, 0, 0, 0);
         break;
       case "month":
         startDate = new Date(now.getFullYear(), now.getMonth(), 1);
         break;
       default:
-        startDate = new Date(0); // Show all
+        startDate = new Date(0);
     }
 
-    const filtered = meals.filter((meal) => meal.createdAt >= startDate);
-    setFilteredMeals(filtered);
+    setFilteredMeals(meals.filter((meal) => meal.createdAt >= startDate));
+  }, [meals, filterPeriod]);
+
+  useEffect(() => {
+    if (user) {
+      loadMeals();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    applyFilter();
+  }, [applyFilter]);
+
+  const loadMeals = async () => {
+    if (!user) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const userMeals = await getUserMeals(user.uid);
+      setMeals(userMeals);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Error al cargar");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const formatDate = (date: Date) => {
@@ -99,103 +100,51 @@ export function MealHistory({ onBack }: MealHistoryProps) {
         hour: "2-digit",
         minute: "2-digit",
       })}`;
-    } else if (date.toDateString() === yesterday.toDateString()) {
+    }
+    if (date.toDateString() === yesterday.toDateString()) {
       return `Ayer, ${date.toLocaleTimeString("es-ES", {
         hour: "2-digit",
         minute: "2-digit",
       })}`;
-    } else {
-      return date.toLocaleDateString("es-ES", {
-        day: "numeric",
-        month: "short",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
     }
+    return date.toLocaleDateString("es-ES", {
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   const getCaloriesBadgeColor = (calories: number) => {
-    if (calories < 200) return "bg-green-100 text-green-800";
-    if (calories < 400) return "bg-yellow-100 text-yellow-800";
-    if (calories < 600) return "bg-orange-100 text-orange-800";
-    return "bg-red-100 text-red-800";
+    if (calories < 200)
+      return "bg-chart-3/15 text-chart-3 border border-chart-3/25";
+    if (calories < 400)
+      return "bg-chart-4/15 text-chart-4 border border-chart-4/25";
+    if (calories < 600)
+      return "bg-warning/20 text-warning-foreground border border-warning/30";
+    return "bg-destructive/10 text-destructive border border-destructive/25";
   };
 
-  const groupMealsByDate = (meals: Meal[]) => {
+  const groupMealsByDate = (list: Meal[]) => {
     const groups: { [key: string]: Meal[] } = {};
-
-    meals.forEach((meal) => {
+    list.forEach((meal) => {
       const dateKey = meal.createdAt.toDateString();
-      if (!groups[dateKey]) {
-        groups[dateKey] = [];
-      }
+      if (!groups[dateKey]) groups[dateKey] = [];
       groups[dateKey].push(meal);
     });
-
     return Object.entries(groups).sort(
       ([a], [b]) => new Date(b).getTime() - new Date(a).getTime()
     );
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <div className="bg-primary text-primary-foreground p-4">
-          <div className="max-w-4xl mx-auto flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onBack}
-              className="text-primary-foreground hover:bg-primary-foreground/20 p-2"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <h1 className="text-lg font-bold">Historial</h1>
-          </div>
-        </div>
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-background">
-        <div className="bg-primary text-primary-foreground p-4">
-          <div className="max-w-4xl mx-auto flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onBack}
-              className="text-primary-foreground hover:bg-primary-foreground/20 p-2"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <h1 className="text-lg font-bold">Historial</h1>
-          </div>
-        </div>
-        <div className="p-4 max-w-4xl mx-auto text-center py-12">
-          <p className="text-destructive mb-4">{error}</p>
-          <Button onClick={loadMeals} variant="outline">
-            Reintentar
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  const groupedMeals = groupMealsByDate(filteredMeals);
-
   const getFilterIcon = (period: "day" | "week" | "month") => {
     switch (period) {
       case "day":
-        return <Clock className="h-4 w-4" />;
+        return <Clock className="h-3.5 w-3.5" />;
       case "week":
-        return <CalendarDays className="h-4 w-4" />;
+        return <CalendarDays className="h-3.5 w-3.5" />;
       case "month":
-        return <CalendarIcon className="h-4 w-4" />;
+        return <CalendarIcon className="h-3.5 w-3.5" />;
     }
   };
 
@@ -204,232 +153,259 @@ export function MealHistory({ onBack }: MealHistoryProps) {
       case "day":
         return "Hoy";
       case "week":
-        return "Esta semana";
+        return "Semana";
       case "month":
-        return "Este mes";
+        return "Mes";
     }
   };
 
-  return (
-    <div className="min-h-screen bg-background pb-20">
-      {/* Header */}
-      <div className="bg-primary text-primary-foreground p-4">
-        <div className="max-w-4xl mx-auto flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onBack}
-            className="text-primary-foreground hover:bg-primary-foreground/20 p-2"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex-1">
-            <h1 className="text-lg font-bold">Historial</h1>
-            <p className="text-sm opacity-90">
-              {filteredMeals.length} de {meals.length} comidas en{" "}
-              {getFilterLabel(filterPeriod).toLowerCase()}
-            </p>
-          </div>
+  const header = (
+    <div className="relative z-10 mx-auto flex max-w-3xl items-center gap-3 px-4 pt-8 pb-6 sm:px-6">
+      <Button
+        variant="outline"
+        size="icon"
+        onClick={onBack}
+        className="h-10 w-10 shrink-0 rounded-xl border-border/80 bg-card/90 shadow-sm backdrop-blur-sm"
+        aria-label="Volver"
+      >
+        <ArrowLeft className="h-5 w-5" />
+      </Button>
+      <div className="min-w-0">
+        <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+          Historial
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          {filteredMeals.length} de {meals.length} en{" "}
+          {getFilterLabel(filterPeriod).toLowerCase()}
+        </p>
+      </div>
+    </div>
+  );
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background pb-28 md:pb-10">
+        <section className="relative overflow-hidden border-b border-border/60">
+          <div
+            className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/[0.07] via-background to-chart-2/[0.06]"
+            aria-hidden
+          />
+          {header}
+        </section>
+        <div className="flex justify-center py-20">
+          <div className="h-9 w-9 animate-spin rounded-full border-2 border-primary border-t-transparent" />
         </div>
       </div>
+    );
+  }
 
-      {/* Filter Buttons */}
-      <div className="px-4 max-w-4xl mx-auto">
-        <Card className="bg-secondary/5 border-secondary/20 mb-4">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium text-muted-foreground">
-                Filtrar por:
-              </span>
-              <div className="flex gap-2 ml-auto">
-                {(["day", "week", "month"] as const).map((period) => (
-                  <Button
-                    key={period}
-                    variant={filterPeriod === period ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setFilterPeriod(period)}
-                    className="h-8 px-3 text-xs"
-                  >
-                    {getFilterIcon(period)}
-                    <span className="ml-1">{getFilterLabel(period)}</span>
-                  </Button>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background pb-28 md:pb-10">
+        <section className="relative overflow-hidden border-b border-border/60">
+          <div
+            className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/[0.07] via-background to-chart-2/[0.06]"
+            aria-hidden
+          />
+          {header}
+        </section>
+        <div className="mx-auto max-w-md px-4 py-16 text-center">
+          <p className="text-destructive text-sm font-medium">{error}</p>
+          <Button onClick={loadMeals} variant="outline" className="mt-6 rounded-xl">
+            Reintentar
+          </Button>
+        </div>
       </div>
+    );
+  }
 
-      {/* Content */}
-      <div className="p-4 max-w-4xl mx-auto">
+  const groupedMeals = groupMealsByDate(filteredMeals);
+  const totalCal = filteredMeals.reduce((s, m) => s + m.calories, 0);
+  const avgCal =
+    filteredMeals.length > 0
+      ? Math.round(totalCal / filteredMeals.length)
+      : 0;
+
+  return (
+    <div className="min-h-screen bg-background pb-28 md:pb-10">
+      <section className="relative overflow-hidden border-b border-border/60">
+        <div
+          className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/[0.07] via-background to-chart-2/[0.06]"
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute bottom-0 left-1/4 h-48 w-48 rounded-full bg-primary/15 blur-3xl"
+          aria-hidden
+        />
+        {header}
+      </section>
+
+      <div className="mx-auto max-w-3xl space-y-8 px-4 py-8 sm:px-6">
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {(["day", "week", "month"] as const).map((period) => (
+            <button
+              key={period}
+              type="button"
+              onClick={() => setFilterPeriod(period)}
+              className={cn(
+                "inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-all",
+                filterPeriod === period
+                  ? "border-primary bg-primary text-primary-foreground shadow-md"
+                  : "border-border/80 bg-card/90 text-muted-foreground hover:border-primary/25 hover:text-foreground"
+              )}
+            >
+              {getFilterIcon(period)}
+              {getFilterLabel(period)}
+            </button>
+          ))}
+        </div>
+
         {filteredMeals.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="rounded-3xl border border-dashed border-border bg-muted/20 px-6 py-16 text-center">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
               <Calendar className="h-8 w-8 text-muted-foreground" />
             </div>
-            <h3 className="text-lg font-semibold text-foreground mb-2">
+            <h3 className="mt-5 text-lg font-semibold text-foreground">
               {filterPeriod === "day"
                 ? "Sin comidas hoy"
                 : filterPeriod === "week"
-                ? "Sin comidas esta semana"
-                : "Sin comidas este mes"}
+                  ? "Sin comidas esta semana"
+                  : "Sin comidas este mes"}
             </h3>
-            <p className="text-muted-foreground text-sm mb-6">
-              {filterPeriod === "day"
-                ? "Registra tu primera comida del día"
-                : filterPeriod === "week"
-                ? "Registra comidas para ver tu progreso semanal"
-                : "Registra comidas para ver tu progreso mensual"}
+            <p className="mt-2 text-sm text-muted-foreground">
+              Registra platos desde Escanear para verlos aquí.
             </p>
-            <Button onClick={onBack} className="w-full">
-              Escanear Primera Comida
+            <Button onClick={onBack} className="mt-8 rounded-xl">
+              Ir a escanear
             </Button>
           </div>
         ) : (
-          <div className="space-y-6">
-            {/* Summary Stats */}
-            <Card className="bg-secondary/10 border-secondary/20">
-              <CardContent className="p-4">
-                <div className="grid grid-cols-3 gap-4 text-center">
-                  <div>
-                    <div className="text-2xl font-bold text-secondary">
-                      {filteredMeals.length}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      Comidas en {getFilterLabel(filterPeriod).toLowerCase()}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-secondary">
-                      {filteredMeals.length > 0
-                        ? Math.round(
-                            filteredMeals.reduce(
-                              (sum, meal) => sum + meal.calories,
-                              0
-                            ) / filteredMeals.length
-                          )
-                        : 0}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      Cal promedio
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-secondary">
-                      {filteredMeals.reduce(
-                        (sum, meal) => sum + meal.calories,
-                        0
-                      )}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      Cal totales
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          <>
+            <div className="grid grid-cols-3 gap-3 sm:gap-4">
+              <div className="rounded-2xl border border-border/80 bg-card/90 p-4 text-center shadow-sm">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Registros
+                </p>
+                <p className="mt-1 text-2xl font-bold tabular-nums text-primary">
+                  {filteredMeals.length}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-border/80 bg-card/90 p-4 text-center shadow-sm">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Promedio
+                </p>
+                <p className="mt-1 text-2xl font-bold tabular-nums text-chart-2">
+                  {avgCal}
+                </p>
+                <p className="text-[10px] text-muted-foreground">kcal</p>
+              </div>
+              <div className="rounded-2xl border border-border/80 bg-card/90 p-4 text-center shadow-sm">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Total
+                </p>
+                <p className="mt-1 text-2xl font-bold tabular-nums text-chart-3">
+                  {totalCal}
+                </p>
+                <p className="text-[10px] text-muted-foreground">kcal</p>
+              </div>
+            </div>
 
-            {/* Grouped Meals */}
-            {groupedMeals.map(([dateString, dayMeals]) => {
-              const date = new Date(dateString);
-              const dayCalories = dayMeals.reduce(
-                (sum, meal) => sum + meal.calories,
-                0
-              );
+            <div className="space-y-10">
+              {groupedMeals.map(([dateString, dayMeals]) => {
+                const date = new Date(dateString);
+                const dayCalories = dayMeals.reduce((s, m) => s + m.calories, 0);
 
-              return (
-                <div key={dateString} className="space-y-3">
-                  {/* Date Header */}
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-foreground">
-                      {date.toLocaleDateString("es-ES", {
-                        weekday: "long",
-                        day: "numeric",
-                        month: "long",
-                      })}
-                    </h3>
-                    <Badge variant="secondary" className="text-xs">
-                      {dayCalories} cal
-                    </Badge>
-                  </div>
-
-                  {/* Meals for this date */}
-                  <div className="space-y-2">
-                    {dayMeals.map((meal) => (
-                      <Card
-                        key={meal.id}
-                        className="hover:shadow-md transition-shadow"
+                return (
+                  <div key={dateString}>
+                    <div className="mb-4 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <UtensilsCrossed className="h-4 w-4 shrink-0 text-primary" />
+                        <h3 className="truncate text-sm font-semibold capitalize text-foreground sm:text-base">
+                          {date.toLocaleDateString("es-ES", {
+                            weekday: "long",
+                            day: "numeric",
+                            month: "long",
+                          })}
+                        </h3>
+                      </div>
+                      <Badge
+                        variant="secondary"
+                        className="shrink-0 rounded-full px-3 font-mono text-xs"
                       >
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-3">
-                            {/* Meal Image */}
-                            <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0">
-                              {meal.imageUrl ? (
-                                <img
-                                  src={meal.imageUrl || "/placeholder.svg"}
-                                  alt={meal.foodName}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center">
-                                  <Camera className="h-6 w-6 text-muted-foreground" />
+                        {dayCalories} kcal
+                      </Badge>
+                    </div>
+
+                    <ul className="space-y-2">
+                      {dayMeals.map((meal) => (
+                        <li key={meal.id}>
+                          <Card className="overflow-hidden border-border/70 transition-shadow hover:shadow-md">
+                            <CardContent className="p-0">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedMeal(meal)}
+                                className="flex w-full items-center gap-4 p-4 text-left transition-colors hover:bg-muted/30"
+                              >
+                                <div className="h-14 w-14 shrink-0 overflow-hidden rounded-2xl border border-border/60 bg-muted">
+                                  {meal.imageUrl ? (
+                                    <img
+                                      src={meal.imageUrl}
+                                      alt=""
+                                      className="h-full w-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="flex h-full w-full items-center justify-center">
+                                      <Camera className="h-6 w-6 text-muted-foreground" />
+                                    </div>
+                                  )}
                                 </div>
-                              )}
-                            </div>
-
-                            {/* Meal Info */}
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-medium text-foreground truncate">
-                                {meal.foodName}
-                              </h4>
-                              <p className="text-sm text-muted-foreground">
-                                {formatDate(meal.createdAt)}
-                              </p>
-                              <div className="flex items-center gap-2 mt-1">
-                                <Badge
-                                  className={`text-xs ${getCaloriesBadgeColor(
-                                    meal.calories
-                                  )}`}
-                                >
-                                  {meal.calories} cal
-                                </Badge>
-                                <span className="text-xs text-muted-foreground">
-                                  P: {meal.macros.protein}g • C:{" "}
-                                  {meal.macros.carbs}g • G: {meal.macros.fat}g
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* Actions */}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setSelectedMeal(meal)}
-                              className="flex-shrink-0 p-2"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                                <div className="min-w-0 flex-1">
+                                  <p className="font-medium leading-snug text-foreground line-clamp-2">
+                                    {meal.foodName}
+                                  </p>
+                                  <p className="mt-0.5 text-xs text-muted-foreground">
+                                    {formatDate(meal.createdAt)}
+                                  </p>
+                                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                                    <span
+                                      className={cn(
+                                        "inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold",
+                                        getCaloriesBadgeColor(meal.calories)
+                                      )}
+                                    >
+                                      {meal.calories} kcal
+                                    </span>
+                                    <span className="text-[11px] text-muted-foreground">
+                                      P {meal.macros.protein}g · C{" "}
+                                      {meal.macros.carbs}g · G {meal.macros.fat}g
+                                    </span>
+                                  </div>
+                                </div>
+                                <Eye
+                                  className="h-5 w-5 shrink-0 text-muted-foreground"
+                                  aria-hidden
+                                />
+                              </button>
+                            </CardContent>
+                          </Card>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
 
-      {/* Meal Detail Modal */}
-      {selectedMeal && (
+      {selectedMeal ? (
         <MealDetailModal
           meal={selectedMeal}
           onClose={() => setSelectedMeal(null)}
           onDelete={loadMeals}
         />
-      )}
+      ) : null}
     </div>
   );
 }

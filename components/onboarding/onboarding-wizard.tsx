@@ -228,6 +228,8 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
           gender: data.gender,
           weight: Math.round(weightInKg * 10) / 10, // Redondear a 1 decimal
           height: Math.round(heightInCm * 10) / 10, // Redondear a 1 decimal
+          weightUnit: data.weightUnit,
+          heightUnit: data.heightUnit,
           activityLevel: data.activityLevel,
           fitnessGoal: data.fitnessGoal,
         };
@@ -526,35 +528,35 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
                     label: "Sedentario",
                     description: "Poco o ningún ejercicio",
                     icon: "🪑",
-                    color: "bg-gray-500",
+                    color: "bg-muted-foreground",
                   },
                   {
                     value: "light",
                     label: "Ligero",
                     description: "Ejercicio ligero 1-3 días/semana",
                     icon: "🚶",
-                    color: "bg-blue-500",
+                    color: "bg-chart-2",
                   },
                   {
                     value: "moderate",
                     label: "Moderado",
                     description: "Ejercicio moderado 3-5 días/semana",
                     icon: "🏃",
-                    color: "bg-green-500",
+                    color: "bg-chart-3",
                   },
                   {
                     value: "active",
                     label: "Activo",
                     description: "Ejercicio intenso 6-7 días/semana",
                     icon: "💪",
-                    color: "bg-orange-500",
+                    color: "bg-warning",
                   },
                   {
                     value: "very_active",
                     label: "Muy Activo",
                     description: "Ejercicio muy intenso o trabajo físico",
                     icon: "🔥",
-                    color: "bg-red-500",
+                    color: "bg-destructive",
                   },
                 ].map((activity) => (
                   <button

@@ -8,9 +8,39 @@ import {
   doc,
   setDoc,
   getDoc,
+  updateDoc,
 } from "firebase/firestore";
 import { db } from "./firebase";
+import { normalizeBirthDateFromFirestore } from "./age-from-birthdate";
 import type { Meal, UserProfile } from "@/types/meal";
+
+export type MealUpdatePayload = {
+  foodName: string;
+  calories: number;
+  macros: Meal["macros"];
+  recommendations: string[];
+  imageUrl: string | null;
+};
+
+export async function updateMeal(
+  userId: string,
+  mealId: string,
+  data: MealUpdatePayload
+): Promise<void> {
+  try {
+    const mealRef = doc(db, "users", userId, "meals", mealId);
+    await updateDoc(mealRef, {
+      foodName: data.foodName,
+      calories: data.calories,
+      macros: data.macros,
+      recommendations: data.recommendations,
+      imageUrl: data.imageUrl,
+    });
+  } catch (error) {
+    console.error("Error updating meal:", error);
+    throw new Error("Error al actualizar la comida");
+  }
+}
 
 export async function saveMeal(
   userId: string,
@@ -202,10 +232,12 @@ export async function getUserProfile(
 
     if (docSnap.exists()) {
       const data = docSnap.data();
+      const { birthDate: rawBirth, createdAt, updatedAt, ...rest } = data;
       return {
-        ...data,
-        createdAt: data.createdAt.toDate(),
-        updatedAt: data.updatedAt.toDate(),
+        ...rest,
+        birthDate: normalizeBirthDateFromFirestore(rawBirth),
+        createdAt: createdAt.toDate(),
+        updatedAt: updatedAt.toDate(),
       } as UserProfile;
     }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useFoodAnalysis } from "@/hooks/use-food-analysis";
 import { usePWA } from "@/hooks/use-pwa";
@@ -22,6 +22,13 @@ import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
 import { AuthProvider } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 
+const MAIN_TAB_ORDER = ["home", "scan", "history", "profile"] as const;
+type MainTab = (typeof MAIN_TAB_ORDER)[number];
+
+function getMainTabIndex(tab: MainTab): number {
+  return MAIN_TAB_ORDER.indexOf(tab);
+}
+
 function AppContent() {
   const { user, loading } = useAuth();
   const { isInstalled } = usePWA();
@@ -36,9 +43,10 @@ function AppContent() {
     saveAnalysis,
     clearAnalysis,
   } = useFoodAnalysis();
-  const [activeTab, setActiveTab] = useState<
-    "home" | "scan" | "history" | "profile"
-  >("home");
+  const [activeTab, setActiveTab] = useState<MainTab>("home");
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const activeTabRef = useRef<MainTab>(activeTab);
+  activeTabRef.current = activeTab;
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -68,6 +76,72 @@ function AppContent() {
   const handleOnboardingComplete = () => {
     loadUserProfile();
   };
+
+  const mainTabsVisible =
+    !loading &&
+    !profileLoading &&
+    user != null &&
+    userProfile != null &&
+    selectedImage === null &&
+    !analysisResult &&
+    !isAnalyzing &&
+    !error;
+
+  const scrollToTab = useCallback((tab: MainTab) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const w = el.clientWidth;
+    if (w <= 0) return;
+    const idx = getMainTabIndex(tab);
+    const target = idx * w;
+    if (Math.abs(el.scrollLeft - target) > 1) {
+      el.scrollTo({ left: target, behavior: "smooth" });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!mainTabsVisible) return;
+    scrollToTab(activeTab);
+  }, [activeTab, scrollToTab, mainTabsVisible]);
+
+  useEffect(() => {
+    if (!mainTabsVisible) return;
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const syncTabFromScroll = () => {
+      const w = el.clientWidth;
+      if (w <= 0) return;
+      const idx = Math.round(el.scrollLeft / w);
+      const clamped = Math.max(0, Math.min(MAIN_TAB_ORDER.length - 1, idx));
+      const next = MAIN_TAB_ORDER[clamped];
+      setActiveTab((prev) => (prev !== next ? next : prev));
+    };
+
+    let scrollEndTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const onScroll = () => {
+      if (scrollEndTimer) clearTimeout(scrollEndTimer);
+      scrollEndTimer = setTimeout(syncTabFromScroll, 100);
+    };
+
+    el.addEventListener("scrollend", syncTabFromScroll);
+    el.addEventListener("scroll", onScroll, { passive: true });
+
+    const ro = new ResizeObserver(() => {
+      const tab = activeTabRef.current;
+      const idx = getMainTabIndex(tab);
+      el.scrollLeft = idx * el.clientWidth;
+    });
+    ro.observe(el);
+
+    return () => {
+      el.removeEventListener("scrollend", syncTabFromScroll);
+      el.removeEventListener("scroll", onScroll);
+      ro.disconnect();
+      if (scrollEndTimer) clearTimeout(scrollEndTimer);
+    };
+  }, [mainTabsVisible]);
 
   if (loading || profileLoading) {
     return (
@@ -259,33 +333,53 @@ function AppContent() {
     );
   }
 
-  const renderContent = () => {
-    switch (activeTab) {
-      case "home":
-        return <DashboardScreen key={refreshKey} onViewHistory={handleViewHistory} />;
-      case "scan":
-        return (
-          <ScanScreen
-            onScanFood={handleScanFood}
-            onImageSelected={handleImageSelected}
-          />
-        );
-      case "history":
-        return <MealHistory onBack={() => setActiveTab("home")} />;
-      case "profile":
-        return <ProfilePage />;
-      default:
-        return null;
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex h-[100dvh] min-h-0 flex-col overflow-hidden bg-background">
       {!isMobile && (
         <SidebarNav activeTab={activeTab} onTabChange={setActiveTab} />
       )}
-      <div className={`${!isMobile ? 'ml-64' : ''} min-h-screen`}>
-        {renderContent()}
+      <div
+        className={`flex min-h-0 flex-1 flex-col ${!isMobile ? "ml-64" : "w-full"}`}
+      >
+        <div
+          ref={scrollRef}
+          className="flex min-h-0 flex-1 w-full snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          <section
+            aria-hidden={activeTab !== "home"}
+            inert={activeTab !== "home" ? true : undefined}
+            className="flex min-h-0 w-full min-w-full shrink-0 snap-start [scroll-snap-stop:always] flex-col overflow-y-auto overscroll-y-contain"
+          >
+            <DashboardScreen
+              key={refreshKey}
+              onViewHistory={handleViewHistory}
+            />
+          </section>
+          <section
+            aria-hidden={activeTab !== "scan"}
+            inert={activeTab !== "scan" ? true : undefined}
+            className="flex min-h-0 w-full min-w-full shrink-0 snap-start [scroll-snap-stop:always] flex-col overflow-y-auto overscroll-y-contain"
+          >
+            <ScanScreen
+              onScanFood={handleScanFood}
+              onImageSelected={handleImageSelected}
+            />
+          </section>
+          <section
+            aria-hidden={activeTab !== "history"}
+            inert={activeTab !== "history" ? true : undefined}
+            className="flex min-h-0 w-full min-w-full shrink-0 snap-start [scroll-snap-stop:always] flex-col overflow-y-auto overscroll-y-contain"
+          >
+            <MealHistory onBack={() => setActiveTab("home")} />
+          </section>
+          <section
+            aria-hidden={activeTab !== "profile"}
+            inert={activeTab !== "profile" ? true : undefined}
+            className="flex min-h-0 w-full min-w-full shrink-0 snap-start [scroll-snap-stop:always] flex-col overflow-y-auto overscroll-y-contain"
+          >
+            <ProfilePage />
+          </section>
+        </div>
       </div>
       {isMobile && (
         <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />

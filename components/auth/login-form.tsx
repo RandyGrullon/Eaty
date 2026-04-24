@@ -1,10 +1,10 @@
 "use client";
 
 import type React from "react";
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -13,7 +13,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
-import { Loader2, Mail, Chrome } from "lucide-react";
+import { Loader2, Chrome, Lock, Mail } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface LoginFormProps {
   onToggleMode: () => void;
@@ -34,8 +35,8 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
 
     try {
       await signIn(email, password);
-    } catch (error: any) {
-      setError(error.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Error al iniciar sesión.");
     } finally {
       setLoading(false);
     }
@@ -47,90 +48,120 @@ export function LoginForm({ onToggleMode }: LoginFormProps) {
 
     try {
       await signInWithGoogle();
-    } catch (error: any) {
-      setError(error.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Error con Google.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Card className="w-full max-w-4xl mx-auto">
-      <CardHeader className="text-center">
-        <CardTitle className="text-2xl font-bold text-primary">
-          Iniciar Sesión
+    <Card className="border-primary/10 shadow-lg shadow-primary/5">
+      <CardHeader className="space-y-1 pb-4">
+        <CardTitle className="text-xl font-semibold text-foreground">
+          Iniciar sesión
         </CardTitle>
-        <CardDescription>Ingresa a tu cuenta de Eaty</CardDescription>
+        <CardDescription className="text-base">
+          Usa tu correo o Google para continuar.
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-6">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Input
-              type="email"
-              placeholder="Correo electrónico"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              disabled={loading}
-            />
+            <Label htmlFor="login-email">Correo electrónico</Label>
+            <div className="relative">
+              <Mail
+                className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none"
+                aria-hidden
+              />
+              <Input
+                id="login-email"
+                type="email"
+                autoComplete="email"
+                placeholder="tu@correo.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={loading}
+                className="h-11 pl-10"
+              />
+            </div>
           </div>
           <div className="space-y-2">
-            <Input
-              type="password"
-              placeholder="Contraseña"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              disabled={loading}
-            />
+            <Label htmlFor="login-password">Contraseña</Label>
+            <div className="relative">
+              <Lock
+                className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none"
+                aria-hidden
+              />
+              <Input
+                id="login-password"
+                type="password"
+                autoComplete="current-password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={loading}
+                className="h-11 pl-10"
+              />
+            </div>
           </div>
 
-          {error && (
-            <div className="text-destructive text-sm text-center">{error}</div>
-          )}
+          {error ? (
+            <div
+              role="alert"
+              className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
+            >
+              {error}
+            </div>
+          ) : null}
 
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button type="submit" className="w-full h-11 text-base" disabled={loading}>
             {loading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Iniciando sesión...
+                Iniciando sesión…
               </>
             ) : (
-              "Iniciar Sesión"
+              "Entrar"
             )}
           </Button>
         </form>
 
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t" />
+            <span className="w-full border-t border-border" />
           </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">
-              O continúa con
-            </span>
+          <div className="relative flex justify-center text-xs font-medium uppercase tracking-wide">
+            <span className="bg-card px-3 text-muted-foreground">o</span>
           </div>
         </div>
 
         <Button
+          type="button"
           variant="outline"
           onClick={handleGoogleSignIn}
           disabled={loading}
-          className="w-full bg-transparent hover:bg-primary/5 border-primary/20"
+          className={cn(
+            "w-full h-11 text-base border-primary/20 bg-background",
+            "hover:bg-primary/5 hover:border-primary/30"
+          )}
         >
-          <Chrome className="mr-2 h-4 w-4 text-primary" />
+          <Chrome className="mr-2 h-4 w-4 text-primary shrink-0" aria-hidden />
           Continuar con Google
         </Button>
 
-        <div className="text-center text-sm">
-          <span className="text-muted-foreground">¿No tienes cuenta? </span>
+        <p className="text-center text-sm text-muted-foreground">
+          ¿No tienes cuenta?{" "}
           <button
+            type="button"
             onClick={onToggleMode}
-            className="text-primary hover:underline font-medium"
+            className="font-semibold text-primary hover:underline underline-offset-4"
           >
             Regístrate
           </button>
-        </div>
+        </p>
       </CardContent>
     </Card>
   );

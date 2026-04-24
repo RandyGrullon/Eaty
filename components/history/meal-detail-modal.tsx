@@ -21,11 +21,11 @@ export function MealDetailModal({ meal, onClose, onDelete }: MealDetailModalProp
   const { user } = useAuth()
 
   const macroData = [
-    { name: "Proteínas", value: meal.macros.protein, color: "bg-blue-500", unit: "g" },
-    { name: "Carbohidratos", value: meal.macros.carbs, color: "bg-orange-500", unit: "g" },
-    { name: "Grasas", value: meal.macros.fat, color: "bg-red-500", unit: "g" },
-    { name: "Fibra", value: meal.macros.fiber, color: "bg-green-500", unit: "g" },
-    { name: "Azúcar", value: meal.macros.sugar, color: "bg-purple-500", unit: "g" },
+    { name: "Proteínas", value: meal.macros.protein, color: "bg-chart-1", unit: "g" },
+    { name: "Carbohidratos", value: meal.macros.carbs, color: "bg-chart-2", unit: "g" },
+    { name: "Grasas", value: meal.macros.fat, color: "bg-chart-4", unit: "g" },
+    { name: "Fibra", value: meal.macros.fiber, color: "bg-chart-3", unit: "g" },
+    { name: "Azúcar", value: meal.macros.sugar, color: "bg-chart-5", unit: "g" },
   ]
 
   const totalMacros = meal.macros.protein + meal.macros.carbs + meal.macros.fat

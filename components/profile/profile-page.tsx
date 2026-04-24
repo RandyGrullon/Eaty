@@ -9,7 +9,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,17 +21,36 @@ import {
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
-  Calendar,
+  Calendar as CalendarIcon,
   TrendingUp,
   Target,
   Award,
   CalendarDays,
   Edit,
+  Flame,
 } from "lucide-react";
+import { format } from "date-fns";
+import { es as esLocale } from "date-fns/locale";
+import { isAfter, isBefore, startOfDay, subYears } from "date-fns";
+import { cn } from "@/lib/utils";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  calculateAgeFromBirthDateString,
+  formatDateOnlyLocal,
+  getProfileDisplayAge,
+  parseISODateLocal,
+} from "@/lib/age-from-birthdate";
+import { useToast } from "@/hooks/use-toast";
 import { MealCalendar } from "./meal-calendar";
 import { useAuth } from "@/hooks/use-auth";
 import { getUserMeals, getUserProfile, updateUserProfile } from "@/lib/meals";
 import type { Meal, UserProfile } from "@/types/meal";
+
+/** Radix Dialog trata el Select (portal) como “fuera”; sin esto no recibe clic/foco. */
+function isRadixPortalLayerTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false;
+  return Boolean(target.closest('[data-slot="select-content"]'));
+}
 
 interface ProfileStats {
   totalMeals: number;
@@ -64,8 +82,21 @@ export function ProfilePage() {
   const [profileLoading, setProfileLoading] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>("weekly");
-  const [editData, setEditData] = useState({
-    age: "",
+  const [editData, setEditData] = useState<{
+    birthDate: Date | undefined;
+    gender: "male" | "female" | "other";
+    weight: string;
+    weightUnit: "kg" | "lbs";
+    height: string;
+    heightUnit: "cm" | "inches";
+    activityLevel:
+      | "sedentary"
+      | "light"
+      | "moderate"
+      | "active"
+      | "very_active";
+  }>({
+    birthDate: undefined,
     gender: "male" as "male" | "female" | "other",
     weight: "",
     weightUnit: "kg" as "kg" | "lbs",
@@ -79,6 +110,7 @@ export function ProfilePage() {
       | "very_active",
   });
   const { user } = useAuth();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (user) {
@@ -101,8 +133,8 @@ export function ProfilePage() {
       setMeals(userMeals);
       setUserProfile(profile);
       calculateStats(userMeals, selectedPeriod);
-    } catch (error: any) {
-      setError(error.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Error al cargar");
     } finally {
       setLoading(false);
     }
@@ -285,20 +317,38 @@ export function ProfilePage() {
 
   const openEditModal = () => {
     if (userProfile) {
-      // Auto-detect preferred units based on profile values
-      const weight = userProfile.weight || 0;
-      const height = userProfile.height || 0;
+      const weightKg = userProfile.weight || 0;
+      const heightCm = userProfile.height || 0;
 
-      // Use imperial units if weight is > 200 lbs or height is > 100 inches (uncommon for metric)
-      const weightUnit: "kg" | "lbs" = weight > 90 ? "kg" : "lbs"; // 200 lbs = ~90 kg
-      const heightUnit: "cm" | "inches" = height > 250 ? "cm" : "inches"; // 250 cm = ~8'2"
+      const weightUnit: "kg" | "lbs" = userProfile.weightUnit ?? "kg";
+      const heightUnit: "cm" | "inches" = userProfile.heightUnit ?? "cm";
+
+      const weightDisplay =
+        weightUnit === "lbs"
+          ? Math.round(weightKg * 2.20462 * 10) / 10
+          : weightKg;
+      const heightDisplay =
+        heightUnit === "inches"
+          ? Math.round((heightCm / 2.54) * 10) / 10
+          : heightCm;
+
+      let birthDate: Date | undefined;
+      if (userProfile.birthDate) {
+        birthDate = parseISODateLocal(userProfile.birthDate) ?? undefined;
+      } else if (
+        userProfile.age != null &&
+        userProfile.age > 0 &&
+        userProfile.age <= 120
+      ) {
+        birthDate = subYears(new Date(), userProfile.age);
+      }
 
       setEditData({
-        age: userProfile.age?.toString() || "",
+        birthDate,
         gender: userProfile.gender || "male",
-        weight: weight.toString(),
+        weight: weightDisplay ? weightDisplay.toString() : "",
         weightUnit,
-        height: height.toString(),
+        height: heightDisplay ? heightDisplay.toString() : "",
         heightUnit,
         activityLevel: userProfile.activityLevel || "moderate",
       });
@@ -308,6 +358,30 @@ export function ProfilePage() {
 
   const handleSaveProfile = async () => {
     if (!user) return;
+
+    if (!editData.birthDate) {
+      toast({
+        title: "Fecha de nacimiento",
+        description: "Selecciona tu fecha de nacimiento.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const birthIso = formatDateOnlyLocal(editData.birthDate);
+    const computedAge = calculateAgeFromBirthDateString(birthIso);
+    if (
+      computedAge === null ||
+      computedAge < 13 ||
+      computedAge > 120
+    ) {
+      toast({
+        title: "Fecha no válida",
+        description: "La edad debe estar entre 13 y 120 años.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setProfileLoading(true);
     try {
@@ -319,10 +393,13 @@ export function ProfilePage() {
       const heightInCm = convertHeight(heightValue, editData.heightUnit, "cm");
 
       await updateUserProfile(user.uid, {
-        age: parseInt(editData.age),
+        birthDate: birthIso,
+        age: computedAge,
         gender: editData.gender,
         weight: weightInKg,
         height: heightInCm,
+        weightUnit: editData.weightUnit,
+        heightUnit: editData.heightUnit,
         activityLevel: editData.activityLevel,
       });
 
@@ -340,7 +417,10 @@ export function ProfilePage() {
   // Handle unit changes with automatic conversion
   const handleWeightUnitChange = (newUnit: "kg" | "lbs") => {
     const currentValue = parseFloat(editData.weight) || 0;
-    if (currentValue <= 0) return; // Don't convert if no valid value
+    if (currentValue <= 0) {
+      setEditData((prev) => ({ ...prev, weightUnit: newUnit }));
+      return;
+    }
 
     const convertedValue = convertWeight(
       currentValue,
@@ -357,7 +437,10 @@ export function ProfilePage() {
 
   const handleHeightUnitChange = (newUnit: "cm" | "inches") => {
     const currentValue = parseFloat(editData.height) || 0;
-    if (currentValue <= 0) return; // Don't convert if no valid value
+    if (currentValue <= 0) {
+      setEditData((prev) => ({ ...prev, heightUnit: newUnit }));
+      return;
+    }
 
     const convertedValue = convertHeight(
       currentValue,
@@ -372,13 +455,30 @@ export function ProfilePage() {
     }));
   };
 
+  const displayName =
+    user?.displayName || user?.email?.split("@")[0] || "Usuario";
+  const initials = displayName
+    .split(/\s+/)
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  const periodOptions: { value: TimePeriod; label: string }[] = [
+    { value: "daily", label: "Hoy" },
+    { value: "weekly", label: "7 días" },
+    { value: "monthly", label: "30 días" },
+    { value: "quarterly", label: "Trim." },
+    { value: "semi-annual", label: "Sem." },
+    { value: "annual", label: "Año" },
+  ];
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-background p-4 pb-20">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
+      <div className="min-h-screen bg-background pb-28 md:pb-10">
+        <div className="h-40 border-b border-border/60 bg-muted/30" />
+        <div className="flex justify-center py-24">
+          <div className="h-9 w-9 animate-spin rounded-full border-2 border-primary border-t-transparent" />
         </div>
       </div>
     );
@@ -386,257 +486,315 @@ export function ProfilePage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background p-4 pb-20">
-        <div className="max-w-4xl mx-auto text-center py-12">
-          <p className="text-destructive mb-4">{error}</p>
-          <Button onClick={loadMealsAndStats} variant="outline">
-            Reintentar
-          </Button>
-        </div>
+      <div className="min-h-screen bg-background px-4 pb-28 pt-16 text-center md:pb-10">
+        <p className="text-sm font-medium text-destructive">{error}</p>
+        <Button
+          onClick={loadMealsAndStats}
+          variant="outline"
+          className="mt-6 rounded-xl"
+        >
+          Reintentar
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 pb-20">
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-primary mb-2">Mi Perfil</h1>
-          <p className="text-muted-foreground">Tu progreso nutricional</p>
+    <div className="min-h-screen bg-background pb-28 md:pb-10">
+      <section className="relative overflow-hidden border-b border-border/60">
+        <div
+          className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/[0.09] via-background to-chart-2/[0.07]"
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute right-0 top-0 h-72 w-72 translate-x-1/4 rounded-full bg-primary/20 blur-3xl"
+          aria-hidden
+        />
+
+        <div className="relative z-10 mx-auto max-w-3xl px-4 pb-10 pt-10 sm:px-6">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex min-w-0 items-start gap-4">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-primary text-lg font-bold text-primary-foreground shadow-lg shadow-primary/25">
+                {initials}
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                  Perfil
+                </p>
+                <h1 className="mt-1 truncate text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+                  {displayName}
+                </h1>
+                <p className="mt-1 truncate text-sm text-muted-foreground">
+                  {user?.email}
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              onClick={openEditModal}
+              className="shrink-0 gap-2 self-start rounded-xl border-border/80 bg-card/90 shadow-sm sm:self-auto"
+            >
+              <Edit className="h-4 w-4" />
+              Editar datos
+            </Button>
+          </div>
+
+          {userProfile ? (
+            <div className="mt-8 grid gap-2 sm:grid-cols-3">
+              <div className="rounded-2xl border border-border/70 bg-card/80 px-4 py-3 text-sm">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Edad
+                </p>
+                <p className="mt-0.5 font-medium text-foreground">
+                  {getProfileDisplayAge(userProfile) ?? "—"} años
+                </p>
+              </div>
+              <div className="rounded-2xl border border-border/70 bg-card/80 px-4 py-3 text-sm">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Peso
+                </p>
+                <p className="mt-0.5 font-medium text-foreground">
+                  {formatWeightDisplay(userProfile.weight || 0)}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-border/70 bg-card/80 px-4 py-3 text-sm">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Altura
+                </p>
+                <p className="mt-0.5 font-medium text-foreground">
+                  {formatHeightDisplay(userProfile.height || 0)}
+                </p>
+              </div>
+            </div>
+          ) : null}
         </div>
+      </section>
 
-        {/* User Info */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                  <Award className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <h3 className="font-semibold">
-                    {user?.displayName ||
-                      user?.email?.split("@")[0] ||
-                      "Usuario"}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">{user?.email}</p>
-                  {userProfile && (
-                    <div className="mt-2 space-y-1">
-                      <p className="text-xs text-muted-foreground">
-                        Edad: {userProfile.age || "No especificada"}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Peso: {formatWeightDisplay(userProfile.weight || 0)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Altura: {formatHeightDisplay(userProfile.height || 0)}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={openEditModal}
-                className="p-2"
+      <div className="mx-auto max-w-3xl space-y-10 px-4 py-10 sm:px-6">
+        <div>
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Rango de estadísticas
+          </p>
+          <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {periodOptions.map(({ value, label }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => handlePeriodChange(value)}
+                className={cn(
+                  "shrink-0 rounded-full border px-4 py-2 text-sm font-medium transition-all",
+                  selectedPeriod === value
+                    ? "border-primary bg-primary text-primary-foreground shadow-md"
+                    : "border-border/80 bg-card/90 text-muted-foreground hover:border-primary/25 hover:text-foreground"
+                )}
               >
-                <Edit className="h-4 w-4" />
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Time Period Filter */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">Periodo</span>
-              </div>
-              <Select value={selectedPeriod} onValueChange={handlePeriodChange}>
-                <SelectTrigger className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="daily">Diario</SelectItem>
-                  <SelectItem value="weekly">Semanal</SelectItem>
-                  <SelectItem value="monthly">Mensual</SelectItem>
-                  <SelectItem value="quarterly">Trimestral</SelectItem>
-                  <SelectItem value="semi-annual">Semestral</SelectItem>
-                  <SelectItem value="annual">Anual</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
 
         {/* Statistics Cards */}
         {stats && (
           <>
-            {/* Main Stats */}
-            <div className="grid grid-cols-2 gap-4">
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                    <Target className="h-4 w-4 text-blue-600" />
-                  </div>
-                  <div className="text-2xl font-bold text-blue-600">
-                    {stats.totalMeals}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    Comidas totales
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                    <TrendingUp className="h-4 w-4 text-green-600" />
-                  </div>
-                  <div className="text-2xl font-bold text-green-600">
-                    {stats.averageCalories}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    Cal promedio
-                  </div>
-                </CardContent>
-              </Card>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="rounded-2xl border border-border/80 bg-card/90 p-4 text-center shadow-sm sm:p-5">
+                <Target className="mx-auto mb-2 h-4 w-4 text-chart-1" />
+                <p className="text-2xl font-bold tabular-nums text-chart-1">
+                  {stats.totalMeals}
+                </p>
+                <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                  Comidas
+                </p>
+              </div>
+              <div className="rounded-2xl border border-border/80 bg-card/90 p-4 text-center shadow-sm sm:p-5">
+                <TrendingUp className="mx-auto mb-2 h-4 w-4 text-chart-3" />
+                <p className="text-2xl font-bold tabular-nums text-chart-3">
+                  {stats.averageCalories}
+                </p>
+                <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                  Kcal media
+                </p>
+              </div>
+              <div className="rounded-2xl border border-border/80 bg-card/90 p-4 text-center shadow-sm sm:p-5">
+                <Flame className="mx-auto mb-2 h-4 w-4 text-primary" />
+                <p className="text-2xl font-bold tabular-nums text-primary">
+                  {stats.totalCalories.toLocaleString()}
+                </p>
+                <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                  Kcal totales
+                </p>
+              </div>
+              <div className="rounded-2xl border border-border/80 bg-card/90 p-4 text-center shadow-sm sm:p-5">
+                <CalendarIcon className="mx-auto mb-2 h-4 w-4 text-chart-2" />
+                <p className="text-2xl font-bold tabular-nums text-chart-2">
+                  {stats.weeklyMeals}
+                </p>
+                <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                  En período
+                </p>
+              </div>
             </div>
 
-            {/* Period Stats */}
-            <Card>
+            <Card className="border-primary/10 shadow-md shadow-primary/5">
               <CardHeader className="pb-2">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <CalendarDays className="h-5 w-5" />
+                <CardTitle className="flex items-center gap-2 text-base font-semibold sm:text-lg">
+                  <CalendarDays className="h-5 w-5 text-primary" />
                   {getPeriodLabel(selectedPeriod)}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="pt-0">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center">
-                    <div className="text-xl font-bold text-primary">
-                      {stats.weeklyMeals}
-                    </div>
-                    <div className="text-xs text-muted-foreground">Comidas</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-xl font-bold text-primary">
-                      {stats.weeklyCalories}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      Calorías
-                    </div>
-                  </div>
+              <CardContent className="grid grid-cols-2 gap-6 pt-0 sm:gap-8">
+                <div className="rounded-xl bg-muted/30 p-4 text-center">
+                  <p className="text-xs text-muted-foreground">Comidas</p>
+                  <p className="mt-1 text-3xl font-bold tabular-nums text-foreground">
+                    {stats.weeklyMeals}
+                  </p>
+                </div>
+                <div className="rounded-xl bg-muted/30 p-4 text-center">
+                  <p className="text-xs text-muted-foreground">Calorías</p>
+                  <p className="mt-1 text-3xl font-bold tabular-nums text-foreground">
+                    {stats.weeklyCalories.toLocaleString()}
+                  </p>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Total Stats */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">Estadísticas Totales</CardTitle>
+            <Card className="overflow-hidden border-border/80 shadow-sm">
+              <CardHeader className="border-b border-border/60 bg-muted/20 pb-3">
+                <CardTitle className="text-base font-semibold">
+                  Acumulado en el período
+                </CardTitle>
               </CardHeader>
-              <CardContent className="pt-0 space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">
-                    Calorías totales
-                  </span>
-                  <Badge variant="secondary">
-                    {stats.totalCalories.toLocaleString()} cal
-                  </Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">
-                    Proteína total
-                  </span>
-                  <Badge variant="secondary">
-                    {Math.round(stats.totalProtein)}g
-                  </Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">
-                    Carbohidratos totales
-                  </span>
-                  <Badge variant="secondary">
-                    {Math.round(stats.totalCarbs)}g
-                  </Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">
-                    Grasas totales
-                  </span>
-                  <Badge variant="secondary">
-                    {Math.round(stats.totalFat)}g
-                  </Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">
-                    Fibra total
-                  </span>
-                  <Badge variant="secondary">
-                    {Math.round(stats.totalFiber)}g
-                  </Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">
-                    Azúcar total
-                  </span>
-                  <Badge variant="secondary">
-                    {Math.round(stats.totalSugar)}g
-                  </Badge>
-                </div>
+              <CardContent className="grid gap-0 divide-y divide-border/60 p-0 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+                {[
+                  {
+                    label: "Calorías",
+                    value: `${stats.totalCalories.toLocaleString()} kcal`,
+                  },
+                  {
+                    label: "Proteína",
+                    value: `${Math.round(stats.totalProtein)} g`,
+                  },
+                  {
+                    label: "Carbohidratos",
+                    value: `${Math.round(stats.totalCarbs)} g`,
+                  },
+                  { label: "Grasas", value: `${Math.round(stats.totalFat)} g` },
+                  {
+                    label: "Fibra",
+                    value: `${Math.round(stats.totalFiber)} g`,
+                  },
+                  {
+                    label: "Azúcar",
+                    value: `${Math.round(stats.totalSugar)} g`,
+                  },
+                ].map((row) => (
+                  <div
+                    key={row.label}
+                    className="flex items-center justify-between gap-4 px-4 py-3.5 sm:px-5"
+                  >
+                    <span className="text-sm text-muted-foreground">
+                      {row.label}
+                    </span>
+                    <Badge variant="secondary" className="font-mono text-xs">
+                      {row.value}
+                    </Badge>
+                  </div>
+                ))}
               </CardContent>
             </Card>
 
-            {/* Calendar */}
             <MealCalendar />
           </>
         )}
 
-        {/* Empty State */}
         {!stats || stats.totalMeals === 0 ? (
-          <Card>
-            <CardContent className="p-6 text-center">
-              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-                <Award className="h-8 w-8 text-muted-foreground" />
-              </div>
-              <h3 className="text-lg font-semibold text-foreground mb-2">
-                Sin datos aún
-              </h3>
-              <p className="text-muted-foreground text-sm mb-4">
-                Comienza a escanear tus comidas para ver tus estadísticas aquí
-              </p>
-              <Button className="w-full">Escanear Primera Comida</Button>
-            </CardContent>
-          </Card>
+          <div className="rounded-3xl border border-dashed border-border bg-muted/20 px-6 py-14 text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-muted">
+              <Award className="h-7 w-7 text-muted-foreground" />
+            </div>
+            <h3 className="mt-5 text-lg font-semibold text-foreground">
+              Sin datos en este rango
+            </h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Registra comidas desde Escanear para ver métricas y calendario.
+            </p>
+          </div>
         ) : null}
       </div>
 
       {/* Edit Profile Modal */}
       <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent
+          className="sm:max-w-lg"
+          onInteractOutside={(event) => {
+            if (isRadixPortalLayerTarget(event.target)) {
+              event.preventDefault();
+            }
+          }}
+          onPointerDownOutside={(event) => {
+            if (isRadixPortalLayerTarget(event.target)) {
+              event.preventDefault();
+            }
+          }}
+          onFocusOutside={(event) => {
+            if (isRadixPortalLayerTarget(event.target)) {
+              event.preventDefault();
+            }
+          }}
+        >
           <DialogHeader>
             <DialogTitle>Editar Perfil</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
             <div>
-              <Label htmlFor="edit-age">Edad</Label>
-              <Input
-                id="edit-age"
-                type="number"
-                value={editData.age}
-                onChange={(e) =>
-                  setEditData((prev) => ({ ...prev, age: e.target.value }))
-                }
-                min="13"
-                max="120"
-                className="mt-1"
-              />
+              <Label>Fecha de nacimiento</Label>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Elige el día en el calendario.
+              </p>
+              <div className="mt-2 max-h-[min(340px,45vh)] overflow-y-auto overflow-x-hidden rounded-lg border border-border bg-card p-2">
+                <Calendar
+                  mode="single"
+                  locale={esLocale}
+                  selected={editData.birthDate}
+                  defaultMonth={
+                    editData.birthDate ?? subYears(new Date(), 25)
+                  }
+                  onSelect={(d) =>
+                    setEditData((prev) => ({
+                      ...prev,
+                      birthDate: d ?? prev.birthDate,
+                    }))
+                  }
+                  disabled={(date) => {
+                    const d = startOfDay(date);
+                    const todayStart = startOfDay(new Date());
+                    const youngestBirth = startOfDay(subYears(todayStart, 13));
+                    const oldestBirth = startOfDay(subYears(todayStart, 120));
+                    return (
+                      isAfter(d, youngestBirth) || isBefore(d, oldestBirth)
+                    );
+                  }}
+                  captionLayout="dropdown"
+                  fromYear={new Date().getFullYear() - 120}
+                  toYear={new Date().getFullYear() - 13}
+                  className="mx-auto w-fit"
+                />
+              </div>
+              {editData.birthDate ? (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">
+                    {format(editData.birthDate, "PPP", { locale: esLocale })}
+                  </span>
+                  {" · "}
+                  Edad calculada:{" "}
+                  {calculateAgeFromBirthDateString(
+                    formatDateOnlyLocal(editData.birthDate)
+                  ) ?? "—"}{" "}
+                  años
+                </p>
+              ) : null}
             </div>
 
             <div>

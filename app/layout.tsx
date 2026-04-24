@@ -20,7 +20,7 @@ const dmSans = DM_Sans({
 export const metadata: Metadata = {
   title: "Eaty - Analiza tu comida con IA",
   description:
-    "Escanea tu comida y obtén análisis nutricional completo con inteligencia artificial",
+    "Escanea tu comida y obtén análisis nutricional con modelos de lenguaje y visión por computador",
   generator: "v0.app",
   manifest: "/manifest.json",
   appleWebApp: {
@@ -42,7 +42,7 @@ export function generateViewport(): Viewport {
     initialScale: 1,
     maximumScale: 1,
     userScalable: false,
-    themeColor: "#059669",
+    themeColor: "#4f46e5",
   };
 }
 

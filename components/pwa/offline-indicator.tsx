@@ -47,7 +47,9 @@ export function OfflineIndicator() {
 
   return (
     <div className="fixed top-4 left-4 right-4 z-50">
-      <Card className={`${isOnline ? "bg-green-500" : "bg-orange-500"} text-white border-none`}>
+      <Card
+        className={`${isOnline ? "bg-success text-success-foreground" : "bg-warning text-warning-foreground"} border-none`}
+      >
         <CardContent className="p-3">
           <div className="flex items-center gap-2 justify-center">
             {isOnline ? (

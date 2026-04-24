@@ -11,11 +11,10 @@ import {
 } from "@/components/ui/carousel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Lightbulb, Loader2, Heart, Share2, Play, Pause } from "lucide-react";
-import { generateNutritionTips } from "@/lib/gemini";
+import { generateNutritionTips } from "@/lib/groq";
 import { getUserMeals, getTodayStats } from "@/lib/meals";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import type { Meal } from "@/types/meal";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -104,13 +103,26 @@ export function TipsCarousel({ className }: TipsCarouselProps) {
 
       // Generate tips if we have meals
       if (todayMeals.length > 0) {
+        const sorted = [...todayMeals].sort(
+          (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+        );
+        const recentSummary = sorted[0]
+          ? `Última comida registrada: ${sorted[0].foodName}`
+          : undefined;
+
         const generatedTips = await generateNutritionTips(
           todayMeals.map((meal) => ({
             foodName: meal.foodName,
             calories: meal.calories,
-            macros: meal.macros,
+            macros: {
+              protein: meal.macros.protein,
+              carbs: meal.macros.carbs,
+              fat: meal.macros.fat,
+            },
           })),
-          stats.totalCalories
+          stats.totalCalories,
+          undefined,
+          { recentSummary }
         );
         setTips(generatedTips);
       } else {
@@ -215,16 +227,16 @@ export function TipsCarousel({ className }: TipsCarouselProps) {
       <CardContent className="p-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <Lightbulb className="h-5 w-5 text-amber-500" />
-            <h3 className="font-semibold text-amber-900">
-              Consejos Personalizados
+            <Lightbulb className="h-5 w-5 text-primary" />
+            <h3 className="font-semibold text-foreground">
+              Consejos personalizados
             </h3>
           </div>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setIsAutoPlaying(!isAutoPlaying)}
-            className="h-8 w-8 p-0 hover:bg-amber-100"
+            className="h-8 w-8 p-0 hover:bg-primary/10"
             title={
               isAutoPlaying
                 ? "Pausar auto-reproducción"
@@ -232,9 +244,9 @@ export function TipsCarousel({ className }: TipsCarouselProps) {
             }
           >
             {isAutoPlaying ? (
-              <Pause className="h-4 w-4 text-amber-600" />
+              <Pause className="h-4 w-4 text-primary" />
             ) : (
-              <Play className="h-4 w-4 text-amber-600" />
+              <Play className="h-4 w-4 text-primary" />
             )}
           </Button>
         </div>
@@ -243,29 +255,29 @@ export function TipsCarousel({ className }: TipsCarouselProps) {
           <CarouselContent>
             {tips.map((tip, index) => (
               <CarouselItem key={index}>
-                <div className="relative p-4 sm:p-6 bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 rounded-xl border border-amber-200 shadow-sm animate-in fade-in-0 slide-in-from-bottom-4 duration-500">
+                <div className="relative p-4 sm:p-6 bg-gradient-to-br from-primary/8 via-secondary to-accent/40 rounded-xl border border-primary/20 shadow-sm animate-in fade-in-0 slide-in-from-bottom-4 duration-500">
                   <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center animate-pulse">
-                      <Lightbulb className="h-4 w-4 text-amber-600" />
+                    <div className="flex-shrink-0 w-8 h-8 bg-primary/15 rounded-full flex items-center justify-center animate-pulse">
+                      <Lightbulb className="h-4 w-4 text-primary" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm sm:text-base text-amber-900 leading-relaxed font-medium break-words">
+                      <p className="text-sm sm:text-base text-card-foreground leading-relaxed font-medium break-words">
                         {tip}
                       </p>
                     </div>
                   </div>
 
                   {/* Action buttons */}
-                  <div className="flex items-center justify-between mt-4 pt-3 border-t border-amber-200">
+                  <div className="flex items-center justify-between mt-4 pt-3 border-t border-primary/15">
                     <div className="flex items-center gap-1 sm:gap-2">
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => toggleFavorite(index)}
                         className={cn(
-                          "h-8 w-8 p-0 hover:bg-amber-100 transition-colors",
+                          "h-8 w-8 p-0 hover:bg-primary/10 transition-colors",
                           favorites.has(index) &&
-                            "text-red-500 hover:text-red-600"
+                            "text-destructive hover:text-destructive/90"
                         )}
                       >
                         <Heart
@@ -279,12 +291,12 @@ export function TipsCarousel({ className }: TipsCarouselProps) {
                         variant="ghost"
                         size="sm"
                         onClick={() => shareTip(tip)}
-                        className="h-8 w-8 p-0 hover:bg-amber-100 transition-colors"
+                        className="h-8 w-8 p-0 hover:bg-primary/10 transition-colors"
                       >
                         <Share2 className="h-4 w-4" />
                       </Button>
                     </div>
-                    <span className="text-xs text-amber-600 font-medium bg-amber-100 px-2 py-1 rounded-full">
+                    <span className="text-xs text-primary font-medium bg-primary/10 px-2 py-1 rounded-full">
                       {current}/{count}
                     </span>
                   </div>
@@ -302,8 +314,8 @@ export function TipsCarousel({ className }: TipsCarouselProps) {
                 className={cn(
                   "w-2 h-2 rounded-full transition-all duration-300",
                   current === index + 1
-                    ? "bg-amber-500 scale-125"
-                    : "bg-amber-200 hover:bg-amber-300"
+                    ? "bg-primary scale-125"
+                    : "bg-primary/25 hover:bg-primary/40"
                 )}
                 aria-label={`Go to slide ${index + 1}`}
               />
@@ -312,9 +324,9 @@ export function TipsCarousel({ className }: TipsCarouselProps) {
 
           {/* Progress bar for auto-play */}
           {isAutoPlaying && tips.length > 1 && (
-            <div className="mt-3 w-full bg-amber-100 rounded-full h-1 overflow-hidden">
+            <div className="mt-3 w-full bg-primary/15 rounded-full h-1 overflow-hidden">
               <div
-                className="h-full bg-amber-500 transition-all duration-100 ease-linear rounded-full"
+                className="h-full bg-primary transition-all duration-100 ease-linear rounded-full"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -322,8 +334,8 @@ export function TipsCarousel({ className }: TipsCarouselProps) {
 
           {tips.length > 1 && (
             <>
-              <CarouselPrevious className="left-2 bg-white/80 hover:bg-white border-amber-200" />
-              <CarouselNext className="right-2 bg-white/80 hover:bg-white border-amber-200" />
+              <CarouselPrevious className="left-2 bg-card/90 hover:bg-card border-primary/20" />
+              <CarouselNext className="right-2 bg-card/90 hover:bg-card border-primary/20" />
             </>
           )}
         </Carousel>

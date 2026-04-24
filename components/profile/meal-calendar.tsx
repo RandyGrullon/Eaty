@@ -127,7 +127,7 @@ export function MealCalendar({ onDateSelect }: MealCalendarProps) {
     } else if (isToday) {
       classes += " bg-primary/20 text-primary border-2 border-primary";
     } else if (hasMeals) {
-      classes += " bg-green-50 text-green-700 border border-green-200";
+      classes += " bg-primary/10 text-primary border border-primary/25";
     } else {
       classes += " text-foreground hover:bg-muted";
     }
@@ -231,7 +231,7 @@ export function MealCalendar({ onDateSelect }: MealCalendarProps) {
             <span className="text-xs text-muted-foreground">Hoy</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-green-50 border border-green-200 rounded"></div>
+            <div className="w-3 h-3 bg-primary/10 border border-primary/25 rounded"></div>
             <span className="text-xs text-muted-foreground">Con comidas</span>
           </div>
           <div className="flex items-center gap-2">
