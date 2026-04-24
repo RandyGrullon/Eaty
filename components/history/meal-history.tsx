@@ -13,6 +13,7 @@ import {
   Calendar as CalendarIcon,
   Camera,
   UtensilsCrossed,
+  Download,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { getUserMeals } from "@/lib/meals";
@@ -159,6 +160,38 @@ export function MealHistory({ onBack }: MealHistoryProps) {
     }
   };
 
+  const exportFilteredJson = () => {
+    const payload = filteredMeals.map((m) => ({
+      id: m.id,
+      foodName: m.foodName,
+      calories: m.calories,
+      macros: m.macros,
+      recommendations: m.recommendations,
+      imageUrl: m.imageUrl,
+      createdAt: m.createdAt.toISOString(),
+    }));
+    const blob = new Blob(
+      [
+        JSON.stringify(
+          {
+            exportedAt: new Date().toISOString(),
+            filter: filterPeriod,
+            meals: payload,
+          },
+          null,
+          2
+        ),
+      ],
+      { type: "application/json;charset=utf-8" }
+    );
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `eaty-historial-${filterPeriod}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const header = (
     <div className="relative z-10 mx-auto flex max-w-3xl items-center gap-3 px-4 pt-8 pb-6 sm:px-6">
       <Button
@@ -170,7 +203,7 @@ export function MealHistory({ onBack }: MealHistoryProps) {
       >
         <ArrowLeft className="h-5 w-5" />
       </Button>
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
           Historial
         </h1>
@@ -179,6 +212,17 @@ export function MealHistory({ onBack }: MealHistoryProps) {
           {getFilterLabel(filterPeriod).toLowerCase()}
         </p>
       </div>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="shrink-0 gap-1.5 rounded-xl"
+        onClick={exportFilteredJson}
+        disabled={filteredMeals.length === 0}
+      >
+        <Download className="h-4 w-4" />
+        Exportar JSON
+      </Button>
     </div>
   );
 

@@ -5,6 +5,7 @@ import {
   SYSTEM_JSON_REPAIR,
   SYSTEM_NUTRITION_TIPS,
 } from "@/lib/food-analysis-prompts";
+import { buildFoodAnalysisFallback } from "@/lib/food-analysis-fallback";
 import {
   foodAnalysisRawSchema,
   isMacroCalorieCoherent,
@@ -13,6 +14,7 @@ import {
   type FoodAnalysisMealFields,
   type FoodAnalysisRaw,
 } from "@/lib/food-analysis-schema";
+import { logger } from "@/lib/logger";
 
 const GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions";
 
@@ -150,45 +152,53 @@ export async function runFoodAnalysisGroq(params: {
   foodName?: string;
   description?: string;
 }): Promise<FoodAnalysisMealFields> {
-  const hasImage = Boolean(params.imageBase64);
-  const userText = buildFoodAnalysisUserPrompt({
-    hasImage,
-    foodName: params.foodName,
-    description: params.description,
-  });
-
-  const userContent: ChatContentPart[] = [{ type: "text", text: userText }];
-
-  if (params.imageBase64) {
-    const mime = params.imageMimeType?.startsWith("image/")
-      ? params.imageMimeType
-      : "image/jpeg";
-    userContent.push({
-      type: "image_url",
-      image_url: {
-        url: `data:${mime};base64,${params.imageBase64}`,
-      },
-    });
-  }
-
-  const content = await groqChatCompletion({
-    messages: [
-      { role: "system", content: SYSTEM_FOOD_ANALYSIS },
-      { role: "user", content: userContent },
-    ],
-    responseFormatJson: true,
-    temperature: 0.35,
-    maxTokens: 2048,
-  });
-
   try {
-    return parseFoodAnalysisContent(content);
-  } catch (firstErr) {
-    try {
-      return await repairFoodJson(content);
-    } catch {
-      throw firstErr instanceof Error ? firstErr : new Error(String(firstErr));
+    const hasImage = Boolean(params.imageBase64);
+    const userText = buildFoodAnalysisUserPrompt({
+      hasImage,
+      foodName: params.foodName,
+      description: params.description,
+    });
+
+    const userContent: ChatContentPart[] = [{ type: "text", text: userText }];
+
+    if (params.imageBase64) {
+      const mime = params.imageMimeType?.startsWith("image/")
+        ? params.imageMimeType
+        : "image/jpeg";
+      userContent.push({
+        type: "image_url",
+        image_url: {
+          url: `data:${mime};base64,${params.imageBase64}`,
+        },
+      });
     }
+
+    const content = await groqChatCompletion({
+      messages: [
+        { role: "system", content: SYSTEM_FOOD_ANALYSIS },
+        { role: "user", content: userContent },
+      ],
+      responseFormatJson: true,
+      temperature: 0.35,
+      maxTokens: 2048,
+    });
+
+    try {
+      return parseFoodAnalysisContent(content);
+    } catch (firstErr) {
+      try {
+        return await repairFoodJson(content);
+      } catch (repairErr) {
+        const primary =
+          firstErr instanceof Error ? firstErr : new Error(String(firstErr));
+        logger.error("Análisis: reparar JSON", repairErr);
+        return buildFoodAnalysisFallback(params, primary);
+      }
+    }
+  } catch (e) {
+    logger.error("Análisis Groq", e);
+    return buildFoodAnalysisFallback(params, e);
   }
 }
 
@@ -209,35 +219,44 @@ export async function runNutritionTipsGroq(params: {
     params.recentSummary
   );
 
-  const content = await groqChatCompletion({
-    messages: [
-      { role: "system", content: SYSTEM_NUTRITION_TIPS },
-      { role: "user", content: userText },
-    ],
-    responseFormatJson: true,
-    temperature: 0.55,
-    maxTokens: 800,
-  });
-
   try {
-    const obj = parseJsonObject<unknown>(content);
-    const { tips } = nutritionTipsResponseSchema.parse(obj);
-    return tips;
-  } catch {
-    const repaired = await groqChatCompletion({
+    const content = await groqChatCompletion({
       messages: [
-        { role: "system", content: SYSTEM_JSON_REPAIR },
-        {
-          role: "user",
-          content: `Devuelve solo {"tips":["..."]} en español, 3 a 5 strings. Entrada defectuosa:\n${content.slice(0, 4000)}`,
-        },
+        { role: "system", content: SYSTEM_NUTRITION_TIPS },
+        { role: "user", content: userText },
       ],
       responseFormatJson: true,
-      temperature: 0.2,
-      maxTokens: 600,
+      temperature: 0.55,
+      maxTokens: 800,
     });
-    const obj = parseJsonObject<unknown>(repaired);
-    const { tips } = nutritionTipsResponseSchema.parse(obj);
-    return tips;
+
+    try {
+      const obj = parseJsonObject<unknown>(content);
+      const { tips } = nutritionTipsResponseSchema.parse(obj);
+      return tips;
+    } catch {
+      const repaired = await groqChatCompletion({
+        messages: [
+          { role: "system", content: SYSTEM_JSON_REPAIR },
+          {
+            role: "user",
+            content: `Devuelve solo {"tips":["..."]} en español, 3 a 5 strings. Entrada defectuosa:\n${content.slice(0, 4000)}`,
+          },
+        ],
+        responseFormatJson: true,
+        temperature: 0.2,
+        maxTokens: 600,
+      });
+      const obj = parseJsonObject<unknown>(repaired);
+      const { tips } = nutritionTipsResponseSchema.parse(obj);
+      return tips;
+    }
+  } catch (e) {
+    logger.error("Consejos Groq (respaldo fijo)", e);
+    return [
+      "Hidrátate a lo largo del día, sobre todo cerca de las comidas principales.",
+      "Incluye proteína y vegetales en al menos una comida principal hoy.",
+      "Si notas bajón de energía, revisa si espaciaste mucho el tiempo sin comer.",
+    ];
   }
 }

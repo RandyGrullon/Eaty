@@ -1,4 +1,5 @@
 import type { FoodAnalysisMealFields } from "@/lib/food-analysis-schema";
+import { GroqApiError } from "@/lib/groq-api-error";
 
 export type AnalyzeFoodParams = {
   imageBase64?: string;
@@ -9,13 +10,23 @@ export type AnalyzeFoodParams = {
 
 /**
  * Analiza comida vía API interna (clave Groq solo en servidor).
+ * Incluye la cookie de sesión (`eaty_session`) y opcionalmente Bearer a la vez.
  */
 export async function analyzeFood(
-  params: AnalyzeFoodParams
+  params: AnalyzeFoodParams,
+  idToken: string
 ): Promise<FoodAnalysisMealFields> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (idToken.trim()) {
+    headers.Authorization = `Bearer ${idToken.trim()}`;
+  }
+
   const res = await fetch("/api/analyze-food", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    headers,
     body: JSON.stringify({
       imageBase64: params.imageBase64,
       imageMimeType: params.imageMimeType,
@@ -24,17 +35,17 @@ export async function analyzeFood(
     }),
   });
 
-  const data: unknown = await res.json();
+  const data: unknown = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    const err =
+    const errMsg =
       typeof data === "object" &&
       data !== null &&
       "error" in data &&
       typeof (data as { error: unknown }).error === "string"
         ? (data as { error: string }).error
         : `Error ${res.status}`;
-    throw new Error(err);
+    throw new GroqApiError(errMsg, res.status);
   }
 
   return data as FoodAnalysisMealFields;
@@ -47,31 +58,37 @@ export async function generateNutritionTips(
     macros: { protein: number; carbs: number; fat: number };
   }>,
   totalCalories: number,
-  dailyGoal?: number,
-  options?: { recentSummary?: string }
+  dailyGoal: number | undefined,
+  options: { recentSummary?: string; idToken: string }
 ): Promise<string[]> {
+  const h: Record<string, string> = { "Content-Type": "application/json" };
+  if (options.idToken.trim()) {
+    h.Authorization = `Bearer ${options.idToken.trim()}`;
+  }
+
   const res = await fetch("/api/nutrition-tips", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    headers: h,
     body: JSON.stringify({
       meals,
       totalCalories,
       dailyGoal,
-      recentSummary: options?.recentSummary,
+      recentSummary: options.recentSummary,
     }),
   });
 
-  const data: unknown = await res.json();
+  const data: unknown = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    const err =
+    const errMsg =
       typeof data === "object" &&
       data !== null &&
       "error" in data &&
       typeof (data as { error: unknown }).error === "string"
         ? (data as { error: string }).error
         : `Error ${res.status}`;
-    throw new Error(err);
+    throw new GroqApiError(errMsg, res.status);
   }
 
   if (
@@ -83,5 +100,5 @@ export async function generateNutritionTips(
     return (data as { tips: string[] }).tips;
   }
 
-  throw new Error("Respuesta de consejos inválida.");
+  throw new GroqApiError("Respuesta de consejos inválida.", 500);
 }

@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { analyzeFood } from "@/lib/groq";
+import { userMessageForGroqError } from "@/lib/groq-api-error";
+import { logger } from "@/lib/logger";
 import { prepareImageForGroq } from "@/lib/image-for-llm";
 import { saveMeal } from "@/lib/meals";
 import { useAuth } from "./use-auth";
@@ -23,19 +25,27 @@ export function useFoodAnalysis() {
     description?: string
   ): Promise<void> => {
     if (!imageFile) return;
+    if (!user) {
+      setError("Debes iniciar sesión para analizar.");
+      return;
+    }
 
     setIsAnalyzing(true);
     setError(null);
 
     try {
+      const idToken = await user.getIdToken(true);
       const { base64WithoutPrefix, mimeType } =
         await prepareImageForGroq(imageFile);
 
-      const result = await analyzeFood({
-        imageBase64: base64WithoutPrefix,
-        imageMimeType: mimeType,
-        description,
-      });
+      const result = await analyzeFood(
+        {
+          imageBase64: base64WithoutPrefix,
+          imageMimeType: mimeType,
+          description,
+        },
+        idToken
+      );
 
       setAnalysisResult({
         imageUrl: null,
@@ -45,8 +55,8 @@ export function useFoodAnalysis() {
         recommendations: result.recommendations,
       });
     } catch (err: unknown) {
-      console.error("Error analyzing image:", err);
-      setError("Error al analizar la imagen. Intenta nuevamente.");
+      logger.error("analyzeImage", err);
+      setError(userMessageForGroqError(err));
     } finally {
       setIsAnalyzing(false);
     }
@@ -54,12 +64,20 @@ export function useFoodAnalysis() {
 
   const analyzeText = async (foodName: string): Promise<void> => {
     if (!foodName.trim()) return;
+    if (!user) {
+      setError("Debes iniciar sesión para analizar.");
+      return;
+    }
 
     setIsAnalyzing(true);
     setError(null);
 
     try {
-      const result = await analyzeFood({ foodName: foodName.trim() });
+      const idToken = await user.getIdToken(true);
+      const result = await analyzeFood(
+        { foodName: foodName.trim() },
+        idToken
+      );
 
       setAnalysisResult({
         imageUrl: null,
@@ -69,8 +87,8 @@ export function useFoodAnalysis() {
         recommendations: result.recommendations,
       });
     } catch (err: unknown) {
-      console.error("Error analyzing text:", err);
-      setError("Error al analizar la comida. Intenta nuevamente.");
+      logger.error("analyzeText", err);
+      setError(userMessageForGroqError(err));
     } finally {
       setIsAnalyzing(false);
     }
@@ -86,7 +104,7 @@ export function useFoodAnalysis() {
       await saveMeal(user.uid, analysisResult);
       setAnalysisResult(null);
     } catch (err: unknown) {
-      console.error("Error saving meal:", err);
+      logger.error("saveAnalysis", err);
       setError("Error al guardar la comida. Intenta nuevamente.");
     } finally {
       setIsSaving(false);

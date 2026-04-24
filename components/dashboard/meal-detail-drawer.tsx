@@ -20,6 +20,7 @@ import type { Meal } from "@/types/meal";
 import { doc, deleteDoc } from "firebase/firestore";
 import { Loader2, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { logger } from "@/lib/logger";
 import { cn } from "@/lib/utils";
 
 type MealDetailDrawerProps = {
@@ -103,7 +104,7 @@ export function MealDetailDrawer({
       onMealUpdated();
       onOpenChange(false);
     } catch (err) {
-      console.error(err);
+      logger.error("meal-detail-drawer save", err);
       toast({
         title: "Error",
         description: "No se pudo guardar la comida.",
@@ -125,7 +126,7 @@ export function MealDetailDrawer({
       onMealUpdated();
       onOpenChange(false);
     } catch (err) {
-      console.error(err);
+      logger.error("meal-detail-drawer delete", err);
       toast({
         title: "Error",
         description: "No se pudo eliminar.",

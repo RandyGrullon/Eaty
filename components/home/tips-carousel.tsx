@@ -12,6 +12,8 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Lightbulb, Loader2, Heart, Share2, Play, Pause } from "lucide-react";
 import { generateNutritionTips } from "@/lib/groq";
+import { GroqApiError } from "@/lib/groq-api-error";
+import { logger } from "@/lib/logger";
 import { getUserMeals, getTodayStats } from "@/lib/meals";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -110,6 +112,7 @@ export function TipsCarousel({ className }: TipsCarouselProps) {
           ? `Última comida registrada: ${sorted[0].foodName}`
           : undefined;
 
+        const idToken = await user.getIdToken(true);
         const generatedTips = await generateNutritionTips(
           todayMeals.map((meal) => ({
             foodName: meal.foodName,
@@ -122,7 +125,7 @@ export function TipsCarousel({ className }: TipsCarouselProps) {
           })),
           stats.totalCalories,
           undefined,
-          { recentSummary }
+          { recentSummary, idToken }
         );
         setTips(generatedTips);
       } else {
@@ -135,7 +138,14 @@ export function TipsCarousel({ className }: TipsCarouselProps) {
         ]);
       }
     } catch (error) {
-      console.error("Error loading tips:", error);
+      logger.error("Error loading tips", error);
+      if (error instanceof GroqApiError && error.status === 429) {
+        toast({
+          title: "Límite diario",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
       setTips([
         "Mantén un equilibrio nutricional en tus comidas",
         "Incluye proteínas magras en cada comida",

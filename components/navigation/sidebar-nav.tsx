@@ -1,11 +1,12 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
+import type { MainTab } from "@/lib/main-tab"
 import { Home, Camera, History, User } from "lucide-react"
 
 interface SidebarNavProps {
-  activeTab: "home" | "scan" | "history" | "profile"
-  onTabChange: (tab: "home" | "scan" | "history" | "profile") => void
+  activeTab: MainTab
+  onTabChange: (tab: MainTab) => void
 }
 
 export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {

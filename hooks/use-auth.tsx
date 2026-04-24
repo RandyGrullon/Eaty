@@ -37,6 +37,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return unsubscribe
   }, [])
 
+  useEffect(() => {
+    if (loading) return
+    if (!user) {
+      void fetch("/api/auth/session", {
+        method: "DELETE",
+        credentials: "include",
+      })
+      return
+    }
+    void (async () => {
+      try {
+        const idToken = await user.getIdToken(true)
+        await fetch("/api/auth/session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken }),
+          credentials: "include",
+        })
+      } catch {
+        // p. ej. admin no configurado o sin red
+      }
+    })()
+  }, [user, loading])
+
   const signIn = async (email: string, password: string) => {
     try {
       await signInWithEmailAndPassword(auth, email, password)
@@ -63,6 +87,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
+      await fetch("/api/auth/session", {
+        method: "DELETE",
+        credentials: "include",
+      })
       await signOut(auth)
     } catch (error: any) {
       throw new Error("Error al cerrar sesión")
