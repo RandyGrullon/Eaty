@@ -2,6 +2,8 @@
 
 App Next.js (App Router) + Firebase + Groq para registro y análisis de comidas.
 
+El módulo de **entrenos (gym)** está en la PWA **Body Matter**, repo aparte: [github.com/RandyGrullon/bodymeter](https://github.com/RandyGrullon/bodymeter) (mismo Firebase).
+
 ## Desarrollo
 
 1. `pnpm install`
