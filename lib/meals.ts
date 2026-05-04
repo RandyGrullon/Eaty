@@ -1,0 +1,464 @@
+import {
+  collection,
+  addDoc,
+  query,
+  orderBy,
+  getDocs,
+  Timestamp,
+  doc,
+  setDoc,
+  getDoc,
+  updateDoc,
+} from "firebase/firestore";
+import { appFirebase } from "./firebase";
+import { uploadUserMealImage } from "@/lib/meal-image-storage";
+import { logger } from "@/lib/logger";
+
+const getDb = () => appFirebase.db;
+import { normalizeBirthDateFromFirestore } from "./age-from-birthdate";
+import type { Meal, UserProfile } from "@/types/meal";
+
+export type MealUpdatePayload = {
+  foodName: string;
+  calories: number;
+  macros: Meal["macros"];
+  recommendations: string[];
+  imageUrl: string | null;
+  aiContext?: Meal["aiContext"];
+};
+
+export async function updateMeal(
+  userId: string,
+  mealId: string,
+  data: MealUpdatePayload
+): Promise<void> {
+  try {
+    const mealRef = doc(getDb(), "users", userId, "meals", mealId);
+    await updateDoc(mealRef, {
+      foodName: data.foodName,
+      calories: data.calories,
+      macros: data.macros,
+      recommendations: data.recommendations,
+      imageUrl: data.imageUrl,
+      ...(data.aiContext !== undefined ? { aiContext: data.aiContext } : {}),
+    });
+  } catch (error) {
+    console.error("Error updating meal:", error);
+    throw new Error("Error al actualizar la comida");
+  }
+}
+
+export type SaveMealOptions = {
+  /** Foto usada en el análisis; se sube a Storage y se guarda `imageUrl` en el documento. */
+  imageFile?: File;
+};
+
+export type SaveMealResult = {
+  mealId: string;
+  /** `true` si se pidió subir imagen y la subida y el update tuvieron éxito. */
+  imageStored: boolean;
+};
+
+export async function saveMeal(
+  userId: string,
+  mealData: Omit<Meal, "id" | "createdAt">,
+  options?: SaveMealOptions
+): Promise<SaveMealResult> {
+  try {
+    const mealsRef = collection(getDb(), "users", userId, "meals");
+    const docRef = await addDoc(mealsRef, {
+      ...mealData,
+      imageUrl: mealData.imageUrl ?? null,
+      createdAt: Timestamp.now(),
+    });
+    let imageStored = false;
+    if (options?.imageFile) {
+      try {
+        const url = await uploadUserMealImage(
+          userId,
+          docRef.id,
+          options.imageFile
+        );
+        await updateDoc(docRef, { imageUrl: url });
+        imageStored = true;
+      } catch (e) {
+        logger.error("saveMeal: subida de imagen (comida guardada sin foto)", e);
+      }
+    }
+    return { mealId: docRef.id, imageStored };
+  } catch (error) {
+    console.error("Error saving meal:", error);
+    throw new Error("Error al guardar la comida");
+  }
+}
+
+export async function getUserMeals(userId: string): Promise<Meal[]> {
+  try {
+    const mealsRef = collection(getDb(), "users", userId, "meals");
+    const q = query(mealsRef, orderBy("createdAt", "desc"));
+    const querySnapshot = await getDocs(q);
+
+    return querySnapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ...data,
+        createdAt: data.createdAt.toDate(),
+      } as Meal;
+    });
+  } catch (error) {
+    console.error("Error fetching meals:", error);
+    throw new Error("Error al cargar el historial");
+  }
+}
+
+export async function getTodayStats(
+  userId: string
+): Promise<{ mealsCount: number; totalCalories: number }> {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const mealsRef = collection(getDb(), "users", userId, "meals");
+    const q = query(mealsRef, orderBy("createdAt", "desc"));
+    const querySnapshot = await getDocs(q);
+
+    let mealsCount = 0;
+    let totalCalories = 0;
+
+    querySnapshot.docs.forEach((doc) => {
+      const data = doc.data();
+      const mealDate = data.createdAt.toDate();
+
+      if (mealDate >= today && mealDate < tomorrow) {
+        mealsCount++;
+        totalCalories += data.calories || 0;
+      }
+    });
+
+    return { mealsCount, totalCalories };
+  } catch (error) {
+    console.error("Error fetching today stats:", error);
+    return { mealsCount: 0, totalCalories: 0 };
+  }
+}
+
+export async function getMealsGroupedByDate(
+  userId: string,
+  startDate?: Date,
+  endDate?: Date
+): Promise<{ [key: string]: Meal[] }> {
+  try {
+    const mealsRef = collection(getDb(), "users", userId, "meals");
+    const q = query(mealsRef, orderBy("createdAt", "desc"));
+    const querySnapshot = await getDocs(q);
+
+    const groups: { [key: string]: Meal[] } = {};
+
+    querySnapshot.docs.forEach((doc) => {
+      const data = doc.data();
+      const mealDate = data.createdAt.toDate();
+
+      // Filter by date range if provided
+      if (startDate && mealDate < startDate) return;
+      if (endDate && mealDate >= endDate) return;
+
+      const dateKey = mealDate.toDateString();
+      if (!groups[dateKey]) {
+        groups[dateKey] = [];
+      }
+      groups[dateKey].push({
+        id: doc.id,
+        ...data,
+        createdAt: mealDate,
+      } as Meal);
+    });
+
+    return groups;
+  } catch (error) {
+    console.error("Error fetching meals grouped by date:", error);
+    throw new Error("Error al cargar las comidas agrupadas");
+  }
+}
+
+export async function getMonthlyStats(
+  userId: string,
+  year: number,
+  month: number
+): Promise<{
+  totalMeals: number;
+  totalCalories: number;
+  averageCalories: number;
+  daysWithMeals: number;
+}> {
+  try {
+    const startDate = new Date(year, month, 1);
+    const endDate = new Date(year, month + 1, 1);
+
+    const mealsRef = collection(getDb(), "users", userId, "meals");
+    const q = query(mealsRef, orderBy("createdAt", "desc"));
+    const querySnapshot = await getDocs(q);
+
+    let totalMeals = 0;
+    let totalCalories = 0;
+    const daysWithMeals = new Set<string>();
+
+    querySnapshot.docs.forEach((doc) => {
+      const data = doc.data();
+      const mealDate = data.createdAt.toDate();
+
+      if (mealDate >= startDate && mealDate < endDate) {
+        totalMeals++;
+        totalCalories += data.calories || 0;
+        daysWithMeals.add(mealDate.toDateString());
+      }
+    });
+
+    const averageCalories =
+      totalMeals > 0 ? Math.round(totalCalories / totalMeals) : 0;
+
+    return {
+      totalMeals,
+      totalCalories,
+      averageCalories,
+      daysWithMeals: daysWithMeals.size,
+    };
+  } catch (error) {
+    console.error("Error fetching monthly stats:", error);
+    return {
+      totalMeals: 0,
+      totalCalories: 0,
+      averageCalories: 0,
+      daysWithMeals: 0,
+    };
+  }
+}
+
+export async function saveUserProfile(
+  userId: string,
+  profileData: Omit<UserProfile, "uid" | "createdAt" | "updatedAt">
+): Promise<void> {
+  try {
+    const userProfileRef = doc(getDb(), "users", userId, "profile", "main");
+    const now = Timestamp.now();
+
+    await setDoc(userProfileRef, {
+      ...profileData,
+      uid: userId,
+      createdAt: now,
+      updatedAt: now,
+    });
+  } catch (error) {
+    console.error("Error saving user profile:", error);
+    throw new Error("Error al guardar el perfil del usuario");
+  }
+}
+
+export async function getUserProfile(
+  userId: string
+): Promise<UserProfile | null> {
+  try {
+    const userProfileRef = doc(getDb(), "users", userId, "profile", "main");
+    const docSnap = await getDoc(userProfileRef);
+
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      const { birthDate: rawBirth, createdAt, updatedAt, ...rest } = data;
+      return {
+        ...rest,
+        birthDate: normalizeBirthDateFromFirestore(rawBirth),
+        createdAt: createdAt.toDate(),
+        updatedAt: updatedAt.toDate(),
+      } as UserProfile;
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Error fetching user profile:", error);
+    throw new Error("Error al cargar el perfil del usuario");
+  }
+}
+
+export async function updateUserProfile(
+  userId: string,
+  profileData: Partial<Omit<UserProfile, "uid" | "createdAt" | "updatedAt">>
+): Promise<void> {
+  try {
+    const userProfileRef = doc(getDb(), "users", userId, "profile", "main");
+    const now = Timestamp.now();
+
+    await setDoc(
+      userProfileRef,
+      {
+        ...profileData,
+        updatedAt: now,
+      },
+      { merge: true }
+    );
+  } catch (error) {
+    console.error("Error updating user profile:", error);
+    throw new Error("Error al actualizar el perfil del usuario");
+  }
+}
+
+export async function getRecentActivities(
+  userId: string,
+  limit: number = 5
+): Promise<Meal[]> {
+  try {
+    const mealsRef = collection(getDb(), "users", userId, "meals");
+    const q = query(mealsRef, orderBy("createdAt", "desc"));
+    const querySnapshot = await getDocs(q);
+
+    return querySnapshot.docs.slice(0, limit).map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ...data,
+        createdAt: data.createdAt.toDate(),
+      } as Meal;
+    });
+  } catch (error) {
+    console.error("Error fetching recent activities:", error);
+    return [];
+  }
+}
+
+export async function getWeeklyProgress(userId: string): Promise<{
+  currentWeek: {
+    totalMeals: number;
+    totalCalories: number;
+    averageCalories: number;
+    daysActive: number;
+  };
+  previousWeek: {
+    totalMeals: number;
+    totalCalories: number;
+    averageCalories: number;
+    daysActive: number;
+  };
+  progress: {
+    mealsChange: number;
+    caloriesChange: number;
+    daysChange: number;
+  };
+}> {
+  try {
+    const now = new Date();
+    const currentWeekStart = new Date(now);
+    currentWeekStart.setDate(now.getDate() - now.getDay()); // Start of current week (Sunday)
+    currentWeekStart.setHours(0, 0, 0, 0);
+
+    const currentWeekEnd = new Date(currentWeekStart);
+    currentWeekEnd.setDate(currentWeekStart.getDate() + 7);
+
+    const previousWeekStart = new Date(currentWeekStart);
+    previousWeekStart.setDate(currentWeekStart.getDate() - 7);
+
+    const previousWeekEnd = new Date(currentWeekStart);
+
+    const mealsRef = collection(getDb(), "users", userId, "meals");
+    const q = query(mealsRef, orderBy("createdAt", "desc"));
+    const querySnapshot = await getDocs(q);
+
+    let currentWeekMeals = 0;
+    let currentWeekCalories = 0;
+    let previousWeekMeals = 0;
+    let previousWeekCalories = 0;
+    const currentWeekDays = new Set<string>();
+    const previousWeekDays = new Set<string>();
+
+    querySnapshot.docs.forEach((doc) => {
+      const data = doc.data();
+      const mealDate = data.createdAt.toDate();
+
+      if (mealDate >= currentWeekStart && mealDate < currentWeekEnd) {
+        currentWeekMeals++;
+        currentWeekCalories += data.calories || 0;
+        currentWeekDays.add(mealDate.toDateString());
+      } else if (mealDate >= previousWeekStart && mealDate < previousWeekEnd) {
+        previousWeekMeals++;
+        previousWeekCalories += data.calories || 0;
+        previousWeekDays.add(mealDate.toDateString());
+      }
+    });
+
+    const currentWeek = {
+      totalMeals: currentWeekMeals,
+      totalCalories: currentWeekCalories,
+      averageCalories:
+        currentWeekMeals > 0
+          ? Math.round(currentWeekCalories / currentWeekMeals)
+          : 0,
+      daysActive: currentWeekDays.size,
+    };
+
+    const previousWeek = {
+      totalMeals: previousWeekMeals,
+      totalCalories: previousWeekCalories,
+      averageCalories:
+        previousWeekMeals > 0
+          ? Math.round(previousWeekCalories / previousWeekMeals)
+          : 0,
+      daysActive: previousWeekDays.size,
+    };
+
+    const progress = {
+      mealsChange:
+        previousWeek.totalMeals > 0
+          ? Math.round(
+              ((currentWeek.totalMeals - previousWeek.totalMeals) /
+                previousWeek.totalMeals) *
+                100
+            )
+          : currentWeek.totalMeals > 0
+          ? 100
+          : 0,
+      caloriesChange:
+        previousWeek.totalCalories > 0
+          ? Math.round(
+              ((currentWeek.totalCalories - previousWeek.totalCalories) /
+                previousWeek.totalCalories) *
+                100
+            )
+          : currentWeek.totalCalories > 0
+          ? 100
+          : 0,
+      daysChange:
+        previousWeek.daysActive > 0
+          ? Math.round(
+              ((currentWeek.daysActive - previousWeek.daysActive) /
+                previousWeek.daysActive) *
+                100
+            )
+          : currentWeek.daysActive > 0
+          ? 100
+          : 0,
+    };
+
+    return {
+      currentWeek,
+      previousWeek,
+      progress,
+    };
+  } catch (error) {
+    console.error("Error fetching weekly progress:", error);
+    return {
+      currentWeek: {
+        totalMeals: 0,
+        totalCalories: 0,
+        averageCalories: 0,
+        daysActive: 0,
+      },
+      previousWeek: {
+        totalMeals: 0,
+        totalCalories: 0,
+        averageCalories: 0,
+        daysActive: 0,
+      },
+      progress: { mealsChange: 0, caloriesChange: 0, daysChange: 0 },
+    };
+  }
+}
