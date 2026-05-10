@@ -9,9 +9,13 @@ import {
 import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
+/** Para que Vercel/Next.js no maten el análisis vision lento (hasta 60s) */
+export const maxDuration = 60;
 
 /** ~12 MB en base64; evita payloads que tumban el worker o el JSON.parse */
 const MAX_IMAGE_BASE64_CHARS = 16_000_000;
+/** Groq vision: ~4MB base64 máximo recomendado por el proveedor */
+const MAX_IMAGE_BASE64_CHARS_GROQ = 4_000_000;
 
 const bodySchema = z
   .object({
@@ -40,7 +44,16 @@ export async function POST(req: Request) {
     const json: unknown = await req.json();
     const body = bodySchema.parse(json);
 
-    await enforceDailyQuota(uid, "analyze");
+    // Evita gastar cuota si la imagen excede el límite del proveedor (aunque pase el límite general).
+    if (body.imageBase64 && body.imageBase64.length > MAX_IMAGE_BASE64_CHARS_GROQ) {
+      return NextResponse.json(
+        {
+          error:
+            "La imagen es demasiado grande para el análisis. Prueba con menor resolución o recorta la foto.",
+        },
+        { status: 413 }
+      );
+    }
 
     const result = await runFoodAnalysisGroq({
       imageBase64: body.imageBase64?.trim(),
@@ -48,6 +61,9 @@ export async function POST(req: Request) {
       foodName: body.foodName?.trim(),
       description: body.description?.trim(),
     });
+
+    // Contar cuota solo cuando el análisis se completó con éxito.
+    await enforceDailyQuota(uid, "analyze");
 
     return NextResponse.json(result);
   } catch (e) {

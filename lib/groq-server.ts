@@ -23,6 +23,7 @@ import { STATIC_TIPS_ERROR } from "@/lib/nutrition-tip-defaults";
 const GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 const DEFAULT_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
+const DEFAULT_TIMEOUT_MS = 60_000;
 
 function getGroqApiKey(): string {
   const key = process.env.GROQ_API_KEY;
@@ -34,6 +35,14 @@ function getGroqApiKey(): string {
 
 function getModel(): string {
   return process.env.GROQ_MODEL?.trim() || DEFAULT_MODEL;
+}
+
+function getTimeoutMs(): number {
+  const raw = process.env.GROQ_TIMEOUT_MS?.trim();
+  if (!raw) return DEFAULT_TIMEOUT_MS;
+  const n = parseInt(raw, 10);
+  if (!Number.isFinite(n) || n < 3000) return DEFAULT_TIMEOUT_MS;
+  return Math.min(60_000, n);
 }
 
 type ChatContentPart =
@@ -56,6 +65,23 @@ type GroqChatResponse = {
   error?: { message?: string };
 };
 
+function safeOneLine(s: string): string {
+  return s.replace(/\s+/g, " ").trim();
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+function isRetryableGroqError(message: string): boolean {
+  // Errores típicos transitorios: 429/5xx/timeouts
+  return (
+    /\bGroq\s+(429|500|502|503|504)\b/.test(message) ||
+    /timeout/i.test(message) ||
+    /temporarily|try again|rate limit/i.test(message)
+  );
+}
+
 async function groqChatCompletion(params: {
   messages: ChatMessage[];
   responseFormatJson?: boolean;
@@ -75,28 +101,78 @@ async function groqChatCompletion(params: {
     body.response_format = { type: "json_object" };
   }
 
-  const res = await fetch(GROQ_CHAT_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${getGroqApiKey()}`,
-    },
-    body: JSON.stringify(body),
-  });
+  const timeoutMs = getTimeoutMs();
 
-  const data = (await res.json()) as GroqChatResponse;
+  const maxAttempts = 3;
+  let lastErr: Error | null = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(GROQ_CHAT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${getGroqApiKey()}`,
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
 
-  if (!res.ok) {
-    const msg = data.error?.message ?? res.statusText;
-    throw new Error(`Groq: ${msg}`);
+      const rawText = await res.text();
+      const data: GroqChatResponse = (() => {
+        try {
+          return JSON.parse(rawText) as GroqChatResponse;
+        } catch {
+          return {};
+        }
+      })();
+
+      if (!res.ok) {
+        const msg = data.error?.message ?? rawText ?? res.statusText;
+        const err = new Error(`Groq ${res.status} (${getModel()}): ${safeOneLine(msg || "Error")}`);
+        logger.error("Groq API error", { status: res.status, model: getModel(), message: msg });
+        lastErr = err;
+        if (attempt < maxAttempts && isRetryableGroqError(err.message)) {
+          const backoff = 400 * Math.pow(2, attempt - 1);
+          await sleep(backoff);
+          continue;
+        }
+        throw err;
+      }
+
+      const content = data.choices?.[0]?.message?.content;
+      if (typeof content !== "string" || !content.trim()) {
+        throw new Error("Respuesta vacía del modelo.");
+      }
+
+      return content.trim();
+    } catch (e) {
+      const msg =
+        e instanceof Error ? e.message : typeof e === "string" ? e : String(e);
+      const err =
+        e instanceof Error
+          ? e
+          : new Error(`Groq error: ${safeOneLine(msg || "Error")}`);
+      lastErr = err;
+      const aborted =
+        e instanceof Error &&
+        // Node/undici suele dar AbortError; mantenemos genérico
+        (e.name === "AbortError" || /aborted/i.test(e.message));
+      const retryable = aborted || isRetryableGroqError(err.message);
+      if (attempt < maxAttempts && retryable) {
+        const backoff = 600 * Math.pow(2, attempt - 1);
+        logger.warn("Groq retry", { attempt, reason: safeOneLine(err.message) });
+        await sleep(backoff);
+        continue;
+      }
+      throw err;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
-  const content = data.choices?.[0]?.message?.content;
-  if (typeof content !== "string" || !content.trim()) {
-    throw new Error("Respuesta vacía del modelo.");
-  }
-
-  return content.trim();
+  throw lastErr ?? new Error("Groq: error desconocido");
 }
 
 function parseJsonObject<T>(text: string): T {
@@ -228,8 +304,12 @@ async function runTextRetryPass(params: {
 
 export class FoodAnalysisExhaustedError extends Error {
   constructor(cause?: unknown) {
+    const causeMsg =
+      cause instanceof Error && cause.message.trim()
+        ? ` Causa: ${safeOneLine(cause.message)}`
+        : "";
     super(
-      "No se pudo obtener un análisis nutricional. Reintenta o comprueba GROQ_API_KEY y el tamaño de la imagen."
+      `No se pudo obtener un análisis nutricional. Reintenta o comprueba GROQ_API_KEY y el tamaño de la imagen.${causeMsg}`
     );
     this.name = "FoodAnalysisExhaustedError";
     if (cause && cause instanceof Error) {
@@ -296,7 +376,7 @@ export async function runFoodAnalysisGroq(params: {
         description: params.description,
       });
     } catch (e2) {
-      throw new FoodAnalysisExhaustedError(e);
+      throw new FoodAnalysisExhaustedError(e2);
     }
   }
 

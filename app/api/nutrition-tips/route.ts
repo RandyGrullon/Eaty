@@ -30,7 +30,6 @@ const bodySchema = z.object({
 export async function POST(req: Request) {
   try {
     const uid = await requireUidFromRequest(req);
-    await enforceDailyQuota(uid, "tips");
 
     const json: unknown = await req.json();
     const body = bodySchema.parse(json);
@@ -41,6 +40,9 @@ export async function POST(req: Request) {
       dailyGoal: body.dailyGoal,
       recentSummary: body.recentSummary,
     });
+
+    // Contar cuota solo cuando el resultado está listo.
+    await enforceDailyQuota(uid, "tips");
 
     return NextResponse.json({ tips });
   } catch (e) {
