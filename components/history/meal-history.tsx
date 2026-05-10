@@ -14,6 +14,8 @@ import {
   Camera,
   UtensilsCrossed,
   Download,
+  Loader2,
+  ChevronRight,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { getUserMeals } from "@/lib/meals";
@@ -193,30 +195,34 @@ export function MealHistory({ onBack }: MealHistoryProps) {
   };
 
   const header = (
-    <div className="relative z-10 mx-auto flex max-w-3xl items-center gap-3 px-4 pt-8 pb-6 sm:px-6">
+    <div className="relative z-10 mx-auto flex max-w-4xl items-center gap-4 px-4 pt-10 pb-8 sm:px-8">
       <Button
-        variant="outline"
+        variant="ghost"
         size="icon"
         onClick={onBack}
-        className="h-10 w-10 shrink-0 rounded-xl border-border/80 bg-card/90 shadow-sm backdrop-blur-sm"
+        className="h-12 w-12 shrink-0 rounded-[1.25rem] border border-border/40 bg-card/40 shadow-sm backdrop-blur-xl hover:bg-card"
         aria-label="Volver"
       >
-        <ArrowLeft className="h-5 w-5" />
+        <ArrowLeft className="h-6 w-6" />
       </Button>
       <div className="min-w-0 flex-1">
-        <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+        <h1 className="text-3xl font-black tracking-tight text-foreground sm:text-4xl">
           Historial
         </h1>
-        <p className="text-sm text-muted-foreground">
-          {filteredMeals.length} de {meals.length} en{" "}
-          {getFilterLabel(filterPeriod).toLowerCase()}
-        </p>
+        <div className="mt-1 flex items-center gap-2">
+          <Badge variant="secondary" className="bg-primary/10 text-primary border-none font-bold px-2 py-0">
+            {filteredMeals.length} registros
+          </Badge>
+          <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest opacity-60">
+            {getFilterLabel(filterPeriod)}
+          </span>
+        </div>
       </div>
       <Button
         type="button"
         variant="outline"
         size="sm"
-        className="shrink-0 gap-1.5 rounded-xl"
+        className="hidden sm:flex shrink-0 gap-2 rounded-2xl border-border/40 bg-card/40 font-bold shadow-sm backdrop-blur-sm"
         onClick={exportFilteredJson}
         disabled={filteredMeals.length === 0}
       >
@@ -228,16 +234,13 @@ export function MealHistory({ onBack }: MealHistoryProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background pb-28 md:pb-10">
-        <section className="relative overflow-hidden border-b border-border/60">
-          <div
-            className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/[0.07] via-background to-chart-2/[0.06]"
-            aria-hidden
-          />
+      <div className="min-h-screen bg-background pb-32">
+        <section className="relative overflow-hidden">
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-primary/[0.08] to-transparent" />
           {header}
         </section>
         <div className="flex justify-center py-20">
-          <div className="h-9 w-9 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <Loader2 className="h-12 w-12 animate-spin text-primary/40" />
         </div>
       </div>
     );
@@ -245,18 +248,18 @@ export function MealHistory({ onBack }: MealHistoryProps) {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background pb-28 md:pb-10">
-        <section className="relative overflow-hidden border-b border-border/60">
-          <div
-            className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/[0.07] via-background to-chart-2/[0.06]"
-            aria-hidden
-          />
+      <div className="min-h-screen bg-background pb-32">
+        <section className="relative overflow-hidden">
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-primary/[0.08] to-transparent" />
           {header}
         </section>
         <div className="mx-auto max-w-md px-4 py-16 text-center">
-          <p className="text-destructive text-sm font-medium">{error}</p>
-          <Button onClick={loadMeals} variant="outline" className="mt-6 rounded-xl">
-            Reintentar
+          <div className="mb-6 inline-flex h-20 w-20 items-center justify-center rounded-3xl bg-destructive/10 text-destructive">
+            <UtensilsCrossed className="h-10 w-10" />
+          </div>
+          <p className="text-lg font-bold text-foreground">{error}</p>
+          <Button onClick={loadMeals} variant="default" className="mt-8 rounded-2xl font-black h-12 px-8 shadow-xl shadow-primary/20">
+            Reintentar carga
           </Button>
         </div>
       </div>
@@ -271,31 +274,25 @@ export function MealHistory({ onBack }: MealHistoryProps) {
       : 0;
 
   return (
-    <div className="min-h-screen bg-background pb-28 md:pb-10">
-      <section className="relative overflow-hidden border-b border-border/60">
-        <div
-          className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/[0.07] via-background to-chart-2/[0.06]"
-          aria-hidden
-        />
-        <div
-          className="pointer-events-none absolute bottom-0 left-1/4 h-48 w-48 rounded-full bg-primary/15 blur-3xl"
-          aria-hidden
-        />
+    <div className="min-h-screen bg-background pb-32">
+      <section className="relative overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-primary/[0.08] to-transparent" aria-hidden />
+        <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-primary/10 blur-3xl opacity-50" aria-hidden />
         {header}
       </section>
 
-      <div className="mx-auto max-w-3xl space-y-8 px-4 py-8 sm:px-6">
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="mx-auto max-w-4xl space-y-12 px-4 py-4 sm:px-8">
+        <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-none snap-x">
           {(["day", "week", "month"] as const).map((period) => (
             <button
               key={period}
               type="button"
               onClick={() => setFilterPeriod(period)}
               className={cn(
-                "inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-all",
+                "inline-flex shrink-0 snap-start items-center gap-2.5 rounded-2xl border px-6 py-3 text-sm font-black tracking-tight transition-all duration-300",
                 filterPeriod === period
-                  ? "border-primary bg-primary text-primary-foreground shadow-md"
-                  : "border-border/80 bg-card/90 text-muted-foreground hover:border-primary/25 hover:text-foreground"
+                  ? "border-primary bg-primary text-primary-foreground shadow-xl shadow-primary/20 scale-[1.02]"
+                  : "border-border/40 bg-card/40 text-muted-foreground hover:bg-card hover:text-foreground hover:border-border"
               )}
             >
               {getFilterIcon(period)}
@@ -305,136 +302,119 @@ export function MealHistory({ onBack }: MealHistoryProps) {
         </div>
 
         {filteredMeals.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-border bg-muted/20 px-6 py-16 text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
-              <Calendar className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <h3 className="mt-5 text-lg font-semibold text-foreground">
-              {filterPeriod === "day"
-                ? "Sin comidas hoy"
-                : filterPeriod === "week"
-                  ? "Sin comidas esta semana"
-                  : "Sin comidas este mes"}
+          <div className="rounded-[3rem] border-2 border-dashed border-border/40 bg-muted/20 px-6 py-24 text-center">
+            <Calendar className="mx-auto h-16 w-16 text-muted-foreground/20 mb-6" />
+            <h3 className="text-xl font-black text-foreground">
+              Nada por aquí...
             </h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Registra platos desde Escanear para verlos aquí.
+            <p className="mt-2 text-sm font-medium text-muted-foreground max-w-xs mx-auto">
+              {filterPeriod === "day"
+                ? "Aún no has registrado nada hoy. ¿Qué tal un snack saludable?"
+                : "Parece que no hay registros en este periodo."}
             </p>
-            <Button onClick={onBack} className="mt-8 rounded-xl">
-              Ir a escanear
+            <Button onClick={onBack} className="mt-10 rounded-2xl font-black h-14 px-10 shadow-xl shadow-primary/20">
+              Registrar mi primera comida
             </Button>
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-3 gap-3 sm:gap-4">
-              <div className="rounded-2xl border border-border/80 bg-card/90 p-4 text-center shadow-sm">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  Registros
-                </p>
-                <p className="mt-1 text-2xl font-bold tabular-nums text-primary">
-                  {filteredMeals.length}
-                </p>
-              </div>
-              <div className="rounded-2xl border border-border/80 bg-card/90 p-4 text-center shadow-sm">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  Promedio
-                </p>
-                <p className="mt-1 text-2xl font-bold tabular-nums text-chart-2">
-                  {avgCal}
-                </p>
-                <p className="text-[10px] text-muted-foreground">kcal</p>
-              </div>
-              <div className="rounded-2xl border border-border/80 bg-card/90 p-4 text-center shadow-sm">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  Total
-                </p>
-                <p className="mt-1 text-2xl font-bold tabular-nums text-chart-3">
-                  {totalCal}
-                </p>
-                <p className="text-[10px] text-muted-foreground">kcal</p>
-              </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              {[
+                { label: "Registros", value: filteredMeals.length, color: "text-primary", bg: "bg-primary/5" },
+                { label: "Promedio", value: `${avgCal} kcal`, color: "text-chart-2", bg: "bg-chart-2/5" },
+                { label: "Total", value: `${totalCal} kcal`, color: "text-chart-3", bg: "bg-chart-3/5" }
+              ].map((stat) => (
+                <div key={stat.label} className={cn("rounded-[2rem] border border-border/40 bg-card/40 p-6 shadow-2xl shadow-black/[0.02] backdrop-blur-sm", stat.bg)}>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 mb-2">
+                    {stat.label}
+                  </p>
+                  <p className={cn("text-3xl font-black tracking-tighter tabular-nums", stat.color)}>
+                    {stat.value}
+                  </p>
+                </div>
+              ))}
             </div>
 
-            <div className="space-y-10">
+            <div className="relative space-y-12">
+              {/* Línea de tiempo decorativa en Desktop */}
+              <div className="absolute left-[31px] top-4 bottom-4 w-px bg-gradient-to-b from-primary/30 via-border/50 to-transparent hidden sm:block" />
+
               {groupedMeals.map(([dateString, dayMeals]) => {
                 const date = new Date(dateString);
                 const dayCalories = dayMeals.reduce((s, m) => s + m.calories, 0);
 
                 return (
-                  <div key={dateString}>
-                    <div className="mb-4 flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <UtensilsCrossed className="h-4 w-4 shrink-0 text-primary" />
-                        <h3 className="truncate text-sm font-semibold capitalize text-foreground sm:text-base">
-                          {date.toLocaleDateString("es-ES", {
-                            weekday: "long",
-                            day: "numeric",
-                            month: "long",
-                          })}
-                        </h3>
+                  <div key={dateString} className="relative">
+                    <div className="mb-6 flex items-center justify-between sticky top-[4.5rem] z-20 py-2 bg-background/80 backdrop-blur-md -mx-4 px-4 sm:mx-0 sm:px-0 sm:bg-transparent sm:backdrop-blur-none">
+                      <div className="flex items-center gap-4">
+                        <div className="hidden sm:flex h-[64px] w-[64px] items-center justify-center rounded-[1.5rem] bg-card border border-border/40 shadow-xl shadow-black/[0.02] shrink-0 z-10">
+                          <div className="text-center">
+                            <p className="text-[10px] font-black uppercase text-primary leading-none mb-1">{date.toLocaleDateString("es-ES", { month: "short" })}</p>
+                            <p className="text-xl font-black leading-none">{date.getDate()}</p>
+                          </div>
+                        </div>
+                        <div>
+                          <h3 className="text-xl font-black tracking-tight text-foreground capitalize">
+                            {date.toLocaleDateString("es-ES", { weekday: "long" })}
+                          </h3>
+                          <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest opacity-60">
+                            {date.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}
+                          </p>
+                        </div>
                       </div>
-                      <Badge
-                        variant="secondary"
-                        className="shrink-0 rounded-full px-3 font-mono text-xs"
-                      >
-                        {dayCalories} kcal
-                      </Badge>
+                      <div className="px-4 py-2 rounded-2xl bg-primary/10 border border-primary/20">
+                        <p className="text-[10px] font-black text-primary uppercase tracking-widest leading-none mb-1">Total Día</p>
+                        <p className="text-lg font-black tabular-nums text-primary leading-none">{dayCalories} <span className="text-[10px]">kcal</span></p>
+                      </div>
                     </div>
 
-                    <ul className="space-y-2">
+                    <div className="grid gap-3 sm:pl-20">
                       {dayMeals.map((meal) => (
-                        <li key={meal.id}>
-                          <Card className="overflow-hidden border-border/70 transition-shadow hover:shadow-md">
-                            <CardContent className="p-0">
-                              <button
-                                type="button"
-                                onClick={() => setSelectedMeal(meal)}
-                                className="flex w-full items-center gap-4 p-4 text-left transition-colors hover:bg-muted/30"
-                              >
-                                <div className="h-14 w-14 shrink-0 overflow-hidden rounded-2xl border border-border/60 bg-muted">
-                                  {meal.imageUrl ? (
-                                    <img
-                                      src={meal.imageUrl}
-                                      alt=""
-                                      className="h-full w-full object-cover"
-                                    />
-                                  ) : (
-                                    <div className="flex h-full w-full items-center justify-center">
-                                      <Camera className="h-6 w-6 text-muted-foreground" />
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <p className="font-medium leading-snug text-foreground line-clamp-2">
-                                    {meal.foodName}
-                                  </p>
-                                  <p className="mt-0.5 text-xs text-muted-foreground">
-                                    {formatDate(meal.createdAt)}
-                                  </p>
-                                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                                    <span
-                                      className={cn(
-                                        "inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold",
-                                        getCaloriesBadgeColor(meal.calories)
-                                      )}
-                                    >
-                                      {meal.calories} kcal
-                                    </span>
-                                    <span className="text-[11px] text-muted-foreground">
-                                      P {meal.macros.protein}g · C{" "}
-                                      {meal.macros.carbs}g · G {meal.macros.fat}g
-                                    </span>
-                                  </div>
-                                </div>
-                                <Eye
-                                  className="h-5 w-5 shrink-0 text-muted-foreground"
-                                  aria-hidden
-                                />
-                              </button>
-                            </CardContent>
-                          </Card>
-                        </li>
+                        <button
+                          key={meal.id}
+                          type="button"
+                          onClick={() => setSelectedMeal(meal)}
+                          className="group flex w-full items-center gap-4 rounded-[2rem] border border-border/40 bg-card/40 p-3 pr-6 text-left transition-all hover:bg-card hover:shadow-2xl hover:shadow-black/[0.03] hover:-translate-y-1 sm:p-4 sm:pr-8"
+                        >
+                          <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-border/40 bg-muted shadow-inner sm:h-20 sm:w-20">
+                            {meal.imageUrl ? (
+                              <img
+                                src={meal.imageUrl}
+                                alt=""
+                                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center bg-muted/50">
+                                <Camera className="h-8 w-8 text-muted-foreground/20" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-lg font-black tracking-tight text-foreground truncate group-hover:text-primary transition-colors">
+                              {meal.foodName}
+                            </p>
+                            <div className="mt-1 flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-60">
+                              <Clock className="h-3 w-3" />
+                              {date.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
+                            </div>
+                            
+                            <div className="mt-4 flex flex-wrap items-center gap-3">
+                              <div className={cn("rounded-full px-3 py-1 text-[11px] font-black tabular-nums shadow-sm", getCaloriesBadgeColor(meal.calories))}>
+                                {meal.calories} kcal
+                              </div>
+                              <div className="text-[10px] font-bold text-muted-foreground tracking-tight bg-accent/50 px-2 py-0.5 rounded-lg">
+                                P <span className="text-foreground">{meal.macros.protein}g</span> · 
+                                C <span className="text-foreground">{meal.macros.carbs}g</span> · 
+                                G <span className="text-foreground">{meal.macros.fat}g</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/50 text-muted-foreground transition-all group-hover:bg-primary/10 group-hover:text-primary">
+                            <ChevronRight className="h-5 w-5" />
+                          </div>
+                        </button>
                       ))}
-                    </ul>
+                    </div>
                   </div>
                 );
               })}

@@ -260,32 +260,36 @@ function AppContent() {
           </div>
         ) : (
           <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-            {activeTab === "home" ? (
-              <section className={tabPanelClass}>
-                <DashboardScreen
-                  key={refreshKey}
-                  onViewHistory={handleViewHistory}
-                />
-              </section>
-            ) : null}
-            {activeTab === "scan" ? (
-              <section className={tabPanelClass}>
-                <ScanScreenLazy
-                  onScanFood={handleScanFood}
-                  onImageSelected={handleImageSelected}
-                />
-              </section>
-            ) : null}
-            {activeTab === "history" ? (
-              <section className={tabPanelClass}>
-                <MealHistoryLazy onBack={() => setActiveTab("home")} />
-              </section>
-            ) : null}
-            {activeTab === "profile" ? (
-              <section className={tabPanelClass}>
-                <ProfilePageLazy />
-              </section>
-            ) : null}
+            <main className="flex-1 overflow-y-auto overflow-x-hidden p-6 sm:p-10">
+              <div className="mx-auto w-full max-w-5xl">
+                {activeTab === "home" ? (
+                  <section className={tabPanelClass}>
+                    <DashboardScreen
+                      key={refreshKey}
+                      onViewHistory={handleViewHistory}
+                    />
+                  </section>
+                ) : null}
+                {activeTab === "scan" ? (
+                  <section className={tabPanelClass}>
+                    <ScanScreenLazy
+                      onScanFood={handleScanFood}
+                      onImageSelected={handleImageSelected}
+                    />
+                  </section>
+                ) : null}
+                {activeTab === "history" ? (
+                  <section className={tabPanelClass}>
+                    <MealHistoryLazy onBack={() => setActiveTab("home")} />
+                  </section>
+                ) : null}
+                {activeTab === "profile" ? (
+                  <section className={tabPanelClass}>
+                    <ProfilePageLazy />
+                  </section>
+                ) : null}
+              </div>
+            </main>
           </div>
         )}
       </div>

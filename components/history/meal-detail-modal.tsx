@@ -13,12 +13,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { X, Trash2, Calendar } from "lucide-react";
+import { X, Trash2, Calendar, Loader2, Camera, Lightbulb, ChevronRight } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { doc, deleteDoc } from "firebase/firestore";
 import { appFirebase } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
+import { cn } from "@/lib/utils";
 import type { Meal } from "@/types/meal";
 
 interface MealDetailModalProps {
@@ -90,102 +91,139 @@ export function MealDetailModal({ meal, onClose, onDelete }: MealDetailModalProp
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-background rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-bold text-foreground">Detalle de comida</h2>
-          <div className="flex items-center gap-2">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+      <div className="bg-background rounded-[3rem] border border-border/40 shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        {/* Header con estilo flotante interno */}
+        <div className="flex items-center justify-between p-6 border-b border-border/40 bg-card/20">
+          <div>
+            <h2 className="text-xl font-black tracking-tight text-foreground">Detalle de Comida</h2>
+            <p className="text-[10px] font-bold text-primary uppercase tracking-widest mt-0.5">Historial Nutricional</p>
+          </div>
+          <div className="flex items-center gap-3">
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={() => setDeleteOpen(true)}
               disabled={isDeleting}
-              className="text-destructive hover:bg-destructive/10 p-2"
+              className="h-10 w-10 rounded-xl text-destructive hover:bg-destructive/10 transition-colors"
             >
               {isDeleting ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-destructive" />
+                <Loader2 className="h-5 w-5 animate-spin" />
               ) : (
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-5 w-5" />
               )}
             </Button>
-            <Button variant="ghost" size="sm" onClick={onClose} className="p-2">
-              <X className="h-4 w-4" />
+            <Button variant="ghost" size="icon" onClick={onClose} className="h-10 w-10 rounded-xl hover:bg-accent transition-colors">
+              <X className="h-5 w-5" />
             </Button>
           </div>
         </div>
 
-        <div className="p-4 space-y-4">
-          <Card>
-            <CardContent className="p-4 text-center">
-              {meal.imageUrl ? (
-                <div className="w-full max-h-72 mb-4 rounded-xl overflow-hidden bg-muted border border-border">
-                  <img
-                    src={meal.imageUrl}
-                    alt={meal.foodName}
-                    className="w-full h-full max-h-72 object-contain mx-auto"
-                  />
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground mb-4 text-center max-w-sm mx-auto">
-                  Sin imagen en el registro.
-                </p>
-              )}
-              <h3 className="text-xl font-bold text-foreground mb-2">{meal.foodName}</h3>
-              <div className="text-3xl font-bold text-primary mb-1">{meal.calories}</div>
-              <div className="text-sm text-muted-foreground mb-3">kcal (estimación)</div>
-              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                <Calendar className="h-4 w-4" />
-                {formatDate(meal.createdAt)}
+        <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-8">
+          {/* Hero Section similar a AnalysisResults */}
+          <section className="relative overflow-hidden rounded-[2.5rem] border border-border/40 bg-card/40 shadow-xl shadow-black/[0.02]">
+            {meal.imageUrl ? (
+              <div className="aspect-video w-full overflow-hidden sm:aspect-[21/9]">
+                <img src={meal.imageUrl} alt={meal.foodName} className="h-full w-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-card/80 via-transparent to-transparent" />
               </div>
-            </CardContent>
-          </Card>
+            ) : (
+              <div className="flex h-32 w-full items-center justify-center bg-muted/30">
+                <Camera className="h-10 w-10 text-muted-foreground/20" />
+              </div>
+            )}
+            <div className="relative p-6 sm:p-8 text-center sm:text-left sm:flex sm:items-end sm:justify-between sm:gap-6">
+              <div className="min-w-0 flex-1">
+                <h3 className="text-3xl font-black tracking-tight text-foreground sm:text-4xl">
+                  {meal.foodName}
+                </h3>
+                <div className="mt-3 flex items-center justify-center sm:justify-start gap-2 text-xs font-bold text-muted-foreground uppercase tracking-widest opacity-60">
+                  <Calendar className="h-3.5 w-3.5" />
+                  {formatDate(meal.createdAt)}
+                </div>
+              </div>
+              <div className="mt-6 sm:mt-0 text-center sm:text-right shrink-0">
+                <div className="text-6xl font-black tracking-tighter text-primary tabular-nums">
+                  {meal.calories}
+                </div>
+                <p className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">
+                  kcal registradas
+                </p>
+              </div>
+            </div>
+          </section>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Macronutrientes</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {macroData.map((macro) => {
-                const percentage = totalMacros > 0 ? (macro.value / totalMacros) * 100 : 0;
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:gap-12">
+            <div className="lg:col-span-12 grid grid-cols-1 gap-4 sm:grid-cols-3">
+              {[
+                { name: "Proteínas", key: "protein", color: "bg-chart-1" },
+                { name: "Carbos", key: "carbs", color: "bg-chart-2" },
+                { name: "Grasas", key: "fat", color: "bg-chart-4" },
+              ].map((m) => {
+                const val = meal.macros[m.key as keyof typeof meal.macros];
+                const pct = totalMacros > 0 ? (val / totalMacros) * 100 : 0;
                 return (
-                  <div key={macro.name} className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium">{macro.name}</span>
-                      <span className="text-sm font-bold">
-                        {macro.value}
-                        {macro.unit}
-                      </span>
-                    </div>
-                    <div className="w-full bg-muted rounded-full h-2">
-                      <div
-                        className={`h-2 rounded-full ${macro.color}`}
-                        style={{ width: `${Math.min(percentage, 100)}%` }}
-                      />
-                    </div>
-                    <div className="text-xs text-muted-foreground text-right">
-                      {percentage.toFixed(1)}%
+                  <div key={m.name} className="relative overflow-hidden rounded-[2rem] border border-border/40 bg-card/40 p-6 shadow-xl shadow-black/[0.02] backdrop-blur-sm group">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80 mb-3">
+                      {m.name}
+                    </p>
+                    <p className="text-4xl font-black tracking-tighter tabular-nums">{val}g</p>
+                    <div className="mt-4 space-y-2">
+                      <div className="flex justify-between text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                        <span>{pct.toFixed(0)}% del total</span>
+                      </div>
+                      <div className="h-1.5 w-full rounded-full bg-muted shadow-inner">
+                        <div className={cn("h-full rounded-full shadow-lg", m.color)} style={{ width: `${pct}%` }} />
+                      </div>
                     </div>
                   </div>
                 );
               })}
-            </CardContent>
-          </Card>
+            </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Recomendaciones</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {meal.recommendations.map((recommendation, index) => (
-                <div key={index} className="flex items-start gap-3">
-                  <Badge variant="secondary" className="mt-0.5 text-xs">
-                    {index + 1}
-                  </Badge>
-                  <p className="text-sm text-foreground leading-relaxed">{recommendation}</p>
+            <div className="lg:col-span-7 space-y-8">
+              <section className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Lightbulb className="h-5 w-5 text-chart-2" />
+                  <h3 className="text-lg font-black tracking-tight text-foreground">Sugerencias del día</h3>
                 </div>
-              ))}
-            </CardContent>
-          </Card>
+                <div className="grid gap-3">
+                  {meal.recommendations.map((rec, i) => (
+                    <div key={i} className="flex gap-4 items-start rounded-2xl border border-border/40 bg-card/40 p-4">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-[10px] font-black text-primary">
+                        {i + 1}
+                      </span>
+                      <p className="text-sm font-medium text-muted-foreground leading-relaxed">
+                        {rec}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </div>
+
+            <div className="lg:col-span-5">
+              <section className="space-y-4">
+                <h3 className="text-lg font-black tracking-tight text-foreground">Otros Detalles</h3>
+                <div className="rounded-[2rem] border border-border/40 bg-card/40 p-6 shadow-sm backdrop-blur-sm space-y-6">
+                  {[
+                    { name: "Fibra", val: meal.macros.fiber, color: "bg-chart-3" },
+                    { name: "Azúcar", val: meal.macros.sugar, color: "bg-chart-5" },
+                  ].map((m) => (
+                    <div key={m.name} className="group">
+                      <div className="flex justify-between items-end mb-2">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">{m.name}</span>
+                        <span className="text-lg font-black tabular-nums">{m.val}g</span>
+                      </div>
+                      <div className="h-1.5 w-full rounded-full bg-muted shadow-inner overflow-hidden">
+                        <div className={cn("h-full rounded-full opacity-60", m.color)} style={{ width: "50%" }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </div>
+          </div>
         </div>
       </div>
 

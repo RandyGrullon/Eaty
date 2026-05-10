@@ -85,15 +85,6 @@ export function AnalysisResults({
   const totalGramsPfc =
     result.macros.protein + result.macros.carbs + result.macros.fat;
 
-  const allMacrosForBars = [
-    ...MACRO_MAIN.map((m) => ({
-      name: m.name,
-      value: result.macros[m.key],
-      color: m.color,
-      kcal: macroKcal[m.key],
-    })),
-  ];
-
   const showAiBlock = result.aiContext != null;
   const ctx = result.aiContext;
 
@@ -125,359 +116,238 @@ export function AnalysisResults({
           text: shareText,
           url: window.location.href,
         });
-        toast({
-          title: "Análisis compartido",
-          description: "El análisis nutricional se compartió exitosamente",
-        });
       } else {
         await navigator.clipboard.writeText(shareText);
-        toast({
-          title: "Análisis copiado",
-          description: "El análisis se copió al portapapeles",
-        });
+        toast({ title: "Copiado", description: "El análisis se copió al portapapeles" });
       }
     } catch (error) {
-      toast({
-        title: "Error al compartir",
-        description: "No se pudo compartir el análisis nutricional",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "No se pudo compartir", variant: "destructive" });
     }
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="bg-primary text-primary-foreground p-4">
-        <div className="max-w-4xl mx-auto flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onBack}
-            className="text-primary-foreground hover:bg-primary-foreground/20 p-2"
-          >
+    <div className="min-h-screen bg-background pb-32">
+      {/* Header flotante */}
+      <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/60 backdrop-blur-xl">
+        <div className="mx-auto flex h-16 max-w-4xl items-center justify-between px-4">
+          <Button variant="ghost" size="icon" onClick={onBack} className="rounded-xl">
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-bold tracking-tight">
-              Análisis nutricional
+          <div className="text-center">
+            <h1 className="text-sm font-black uppercase tracking-[0.2em] text-foreground/80">
+              Resultados
             </h1>
-            {showAiBlock && (
-              <p className="text-xs opacity-90 truncate">
-                Incluye descripción e interpretación del modelo
-              </p>
-            )}
+            <p className="text-[10px] font-bold text-primary uppercase tracking-widest">
+              Análisis IA
+            </p>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={shareAnalysis}
-            className="text-primary-foreground hover:bg-primary-foreground/20 p-2 shrink-0"
-          >
-            <Share2 className="h-4 w-4" />
+          <Button variant="ghost" size="icon" onClick={shareAnalysis} className="rounded-xl">
+            <Share2 className="h-5 w-5" />
           </Button>
+        </div>
+      </header>
+
+      <div className="mx-auto mt-6 max-w-4xl space-y-8 px-4">
+        {/* Hero Section */}
+        <section className="relative overflow-hidden rounded-[2.5rem] border border-border/40 bg-card/40 shadow-2xl shadow-black/[0.03]">
+          {imageSrc ? (
+            <div className="aspect-video w-full overflow-hidden sm:aspect-[21/9]">
+              <img src={imageSrc} alt={imageAlt} className="h-full w-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-card/80 via-transparent to-transparent" />
+            </div>
+          ) : (
+            <div className="flex h-32 w-full items-center justify-center bg-muted/30">
+              <Camera className="h-10 w-10 text-muted-foreground/20" />
+            </div>
+          )}
+          <div className="relative p-6 sm:p-8 text-center sm:text-left sm:flex sm:items-end sm:justify-between sm:gap-6">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-3xl font-black tracking-tight text-foreground sm:text-4xl">
+                {result.foodName}
+              </h2>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {ctx && (
+                  <Badge variant="secondary" className={cn("px-3 py-1 font-bold", confidenceLabel(ctx.confidence).className)}>
+                    Confianza: {confidenceLabel(ctx.confidence).text}
+                  </Badge>
+                )}
+                <Badge variant="outline" className="px-3 py-1 font-bold bg-background/50">
+                  {ctx?.portionLabel || "Porción Estándar"}
+                </Badge>
+              </div>
+            </div>
+            <div className="mt-6 sm:mt-0 text-center sm:text-right shrink-0">
+              <div className="text-6xl font-black tracking-tighter text-primary tabular-nums">
+                {result.calories}
+              </div>
+              <p className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">
+                kcal estimadas
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Macros Summary Grid */}
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {MACRO_MAIN.map((m) => {
+            const val = result.macros[m.key];
+            const kcal = macroKcal[m.key];
+            const pct = pfcShare(m.key);
+            return (
+              <div key={m.key} className="relative overflow-hidden rounded-[2rem] border border-border/40 bg-card/40 p-6 shadow-xl shadow-black/[0.02] backdrop-blur-sm group">
+                <div className={cn("absolute -right-4 -top-4 h-20 w-20 rounded-full blur-3xl opacity-10 transition-opacity group-hover:opacity-20", m.color)} />
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80">
+                  {m.name}
+                </p>
+                <div className="mt-3 flex items-baseline gap-2">
+                  <p className="text-4xl font-black tracking-tighter tabular-nums">{val}g</p>
+                </div>
+                <div className="mt-4 space-y-2">
+                  <div className="flex justify-between text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                    <span>{pct.toFixed(0)}% del total</span>
+                    <span>{kcal.toFixed(0)} kcal</span>
+                  </div>
+                  <div className="h-1.5 w-full rounded-full bg-muted shadow-inner">
+                    <div className={cn("h-full rounded-full shadow-lg", m.color)} style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </section>
+
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:gap-12">
+          {/* Interpretación IA */}
+          <div className="lg:col-span-7 space-y-8">
+            {ctx ? (
+              <section className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  <h3 className="text-lg font-black tracking-tight text-foreground">Análisis Detallado</h3>
+                </div>
+                <div className="rounded-[2rem] border border-border/40 bg-card/40 p-6 shadow-sm backdrop-blur-sm space-y-4">
+                  <p className="text-sm font-medium leading-relaxed text-muted-foreground">
+                    {ctx.dishDescription}
+                  </p>
+                  
+                  {ctx.ambiguityNotes && (
+                    <div className="flex gap-3 rounded-2xl bg-amber-500/5 border border-amber-500/20 p-4">
+                      <Info className="h-5 w-5 text-amber-500 shrink-0" />
+                      <p className="text-xs font-medium text-amber-700/80 dark:text-amber-400/80 leading-snug">
+                        {ctx.ambiguityNotes}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="pt-4 border-t border-border/40">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 mb-3">Componentes identificados</p>
+                    <div className="flex flex-wrap gap-2">
+                      {ctx.visibleComponents.map((c) => (
+                        <span key={c} className="px-3 py-1 rounded-full bg-accent/50 border border-border/40 text-[10px] font-bold text-foreground/80">
+                          {c}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </section>
+            ) : (
+              <div className="rounded-[2rem] border-2 border-dashed border-border/40 p-8 text-center">
+                <p className="text-sm font-medium text-muted-foreground/60">Análisis básico sin contexto IA avanzado.</p>
+              </div>
+            )}
+
+            {/* Recomendaciones */}
+            <section className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Lightbulb className="h-5 w-5 text-chart-2" />
+                <h3 className="text-lg font-black tracking-tight text-foreground">Consejos de Salud</h3>
+              </div>
+              <div className="grid gap-3">
+                {result.recommendations.map((rec, i) => (
+                  <div key={i} className="flex gap-4 items-start rounded-2xl border border-border/40 bg-card/40 p-4 transition-colors hover:bg-card">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-[10px] font-black text-primary">
+                      {i + 1}
+                    </span>
+                    <p className="text-sm font-medium text-muted-foreground leading-relaxed">
+                      {rec}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
+
+          {/* Otros Detalles Macros */}
+          <div className="lg:col-span-5">
+            <section className="space-y-4">
+              <h3 className="text-lg font-black tracking-tight text-foreground">Otros Detalles</h3>
+              <div className="rounded-[2rem] border border-border/40 bg-card/40 p-6 shadow-sm backdrop-blur-sm space-y-6">
+                {MACRO_FIBER_SUGAR.map((m) => (
+                  <div key={m.key} className="group">
+                    <div className="flex justify-between items-end mb-2">
+                      <span className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">{m.name}</span>
+                      <span className="text-lg font-black tabular-nums">{result.macros[m.key]}g</span>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full bg-muted shadow-inner overflow-hidden">
+                      <div className={cn("h-full rounded-full opacity-60", m.color)} style={{ width: `${Math.min((result.macros[m.key]/20)*100, 100)}%` }} />
+                    </div>
+                  </div>
+                ))}
+
+                <div className="pt-6 border-t border-border/40">
+                  <div className="flex items-start gap-3 rounded-2xl bg-muted/30 p-4 text-[10px] font-medium text-muted-foreground/80 leading-relaxed">
+                    <Info className="h-4 w-4 shrink-0 text-primary/40" />
+                    <p>
+                      La suma técnica es de <span className="font-bold text-foreground">{fromMacros.toFixed(0)} kcal</span>. 
+                      La diferencia con las {result.calories} kcal mostradas es normal debido al redondeo nutricional estándar.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
         </div>
       </div>
 
-      <div className="p-4 max-w-4xl mx-auto space-y-6 pb-20">
-        {/* Hero: nombre, kcal, foto */}
-        <Card className="overflow-hidden border-2 border-primary/10 shadow-sm">
-          {imageSrc ? (
-            <div className="w-full h-48 sm:h-56 bg-muted">
-              <img
-                src={imageSrc}
-                alt={imageAlt}
-                className="w-full h-full object-cover"
-              />
-            </div>
-          ) : null}
-          <CardContent className="p-5 sm:p-6 text-center space-y-1">
-            <h2 className="text-2xl font-bold text-card-foreground leading-tight">
-              {result.foodName}
-            </h2>
-            <div className="pt-3">
-              <div
-                className="text-5xl sm:text-6xl font-extrabold text-primary tabular-nums"
-                data-testid="calories-hero"
-              >
-                {result.calories}
-              </div>
-              <div className="text-sm text-muted-foreground font-medium">
-                kcal (estimación por porción)
-              </div>
-            </div>
-            {!imageSrc && (
-              <p className="text-xs text-muted-foreground pt-2">
-                Análisis a partir de texto; sube una foto en el inicio para más
-                contexto visual.
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Lo que interpretó la IA */}
-        {ctx != null ? (
-          <Card>
-            <CardHeader className="pb-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <CardTitle className="text-lg">Lo que interpretó la IA</CardTitle>
-                {(() => {
-                  const c = confidenceLabel(ctx.confidence);
-                  return (
-                    <Badge
-                      variant="secondary"
-                      className={`text-xs font-semibold ${c.className}`}
-                    >
-                      Confianza: {c.text}
-                    </Badge>
-                  );
-                })()}
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4 text-left">
-              <p className="text-sm text-card-foreground leading-relaxed">
-                {ctx.dishDescription}
-              </p>
-              {ctx.cuisineOrStyle != null && ctx.cuisineOrStyle ? (
-                <p className="text-xs text-muted-foreground">
-                  <span className="font-medium text-foreground/80">Estilo: </span>
-                  {ctx.cuisineOrStyle}
-                </p>
-              ) : null}
-              {ctx.cookingClues != null && ctx.cookingClues ? (
-                <p className="text-xs text-muted-foreground">
-                  <span className="font-medium text-foreground/80">Cocina: </span>
-                  {ctx.cookingClues}
-                </p>
-              ) : null}
-              {ctx.ambiguityNotes != null && ctx.ambiguityNotes ? (
-                <div className="flex gap-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-950 dark:text-amber-100/90">
-                  <Info
-                    className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400"
-                    aria-hidden
-                  />
-                  <span>
-                    <span className="font-medium">Dudas del modelo: </span>
-                    {ctx.ambiguityNotes}
-                  </span>
-                </div>
-              ) : null}
-              {ctx.visibleComponents.length > 0 ? (
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground mb-2">
-                    Componentes visibles o identificados
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {ctx.visibleComponents.map((c) => (
-                      <Badge key={c} variant="outline" className="text-xs">
-                        {c}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-              <p className="text-xs text-muted-foreground border-t border-border pt-3">
-                <span className="font-medium text-foreground/80">Porción: </span>
-                {ctx.portionLabel}
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="bg-muted/40">
-            <CardContent className="p-4 flex gap-3 text-sm text-muted-foreground">
-              <Info className="h-5 w-5 shrink-0" aria-hidden />
-              <p>
-                No hay descripción detallada del modelo para este resultado
-                (registro antiguo o análisis de respaldo). Los números siguen
-                siendo una estimación orientativa.
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Distribución de energía (P, C, G) */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Distribución de la energía</CardTitle>
-            <p className="text-xs text-muted-foreground font-normal">
-              Porcentaje aprox. de calorías que aporta cada macronutriente (P×4, C×4, G×9
-              kcal/g).
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex h-3 w-full overflow-hidden rounded-full bg-muted">
-              {MACRO_MAIN.map((m) => {
-                const pct = pfcShare(m.key);
-                return pct > 0 ? (
-                  <div
-                    key={m.key}
-                    className={`h-full ${m.color}`}
-                    style={{ width: `${pct}%` }}
-                    title={`${m.name} ~${pct.toFixed(0)}%`}
-                  />
-                ) : null;
-              })}
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-              {MACRO_MAIN.map((m) => {
-                const pct = pfcShare(m.key);
-                return (
-                  <div
-                    key={m.key}
-                    className="flex items-center justify-between gap-2 rounded-md border bg-card px-2 py-1.5"
-                  >
-                    <span className="flex items-center gap-1.5">
-                      <span className={`h-2.5 w-2.5 rounded ${m.color}`} />
-                      {m.name}
-                    </span>
-                    <span className="tabular-nums text-muted-foreground">
-                      {pct.toFixed(0)}%
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Suma aprox. P×4 + C×4 + G×9 + fibra×2:{" "}
-              <span className="font-medium text-foreground tabular-nums">
-                {fromMacros.toFixed(0)} kcal
-              </span>
-              {". "}
-              Frente a {result.calories} kcal mostradas, la diferencia suele
-              deberse al redondeo. La barra de colores de arriba reparte solo P,
-              C y G (azúcares van dentro de los carbos en la práctica).
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Detalle (gramos)</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {allMacrosForBars.map((macro) => {
-              const percentage =
-                totalGramsPfc > 0
-                  ? (macro.value / totalGramsPfc) * 100
-                  : 0;
-              return (
-                <div key={macro.name} className="space-y-1.5">
-                  <div className="flex justify-between items-baseline text-sm">
-                    <span className="font-medium">{macro.name}</span>
-                    <span>
-                      <span className="font-bold tabular-nums">{macro.value}</span>
-                      <span className="text-muted-foreground text-xs ml-1">g</span>
-                      {macro.kcal > 0 ? (
-                        <span className="text-muted-foreground text-xs ml-2 tabular-nums">
-                          ≈{macro.kcal.toFixed(0)} kcal
-                        </span>
-                      ) : null}
-                    </span>
-                  </div>
-                  <div className="w-full bg-muted rounded-full h-2">
-                    <div
-                      className={`h-2 rounded-full ${macro.color}`}
-                      style={{ width: `${Math.min(percentage, 100)}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-            {MACRO_FIBER_SUGAR.map((m, i) => {
-              const value = result.macros[m.key];
-              return (
-                <div
-                  key={m.key}
-                  className={
-                    "flex justify-between text-sm" +
-                    (i > 0
-                      ? " border-t border-dashed border-border pt-3 mt-1"
-                      : "")
-                  }
-                >
-                  <span className="text-muted-foreground font-medium">
-                    {m.name}
-                  </span>
-                  <span className="font-semibold tabular-nums">{value} g</span>
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Recomendaciones</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {result.recommendations.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Sin sugerencias.</p>
-            ) : (
-              result.recommendations.map((recommendation, index) => (
-                <div key={index} className="flex items-start gap-3">
-                  <Badge variant="secondary" className="mt-0.5 text-xs">
-                    {index + 1}
-                  </Badge>
-                  <p className="text-sm text-card-foreground leading-relaxed">
-                    {recommendation}
-                  </p>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-
-        <div className="sticky bottom-4">
+      {/* Botón de Guardar flotante */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 p-4 pb-8 bg-gradient-to-t from-background via-background/95 to-transparent flex justify-center sm:pb-4">
+        <div className="w-full max-w-4xl">
           <Button
             type="button"
             onClick={() => setSaveDialogOpen(true)}
             disabled={isSaving}
-            className="w-full h-12 text-lg font-semibold"
+            className="w-full h-14 rounded-2xl text-lg font-black shadow-2xl shadow-primary/30 transition-all active:scale-95"
           >
             {isSaving ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground mr-2" />
-                Guardando...
-              </>
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
             ) : (
-              <>
-                <Save className="mr-2 h-5 w-5" />
-                Guardar en mi historial
-              </>
+              <Save className="mr-2 h-5 w-5" />
             )}
+            {isSaving ? "Guardando..." : "Registrar Comida"}
           </Button>
         </div>
       </div>
 
       <AlertDialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-[2rem]">
           <AlertDialogHeader>
-            <AlertDialogTitle>Guardar en el historial</AlertDialogTitle>
-            <AlertDialogDescription>
-              Se guardarán el nombre, calorías, macros y, si lo hay, lo que
-              interpretó el análisis. ¿Continuar?
+            <AlertDialogTitle className="text-xl font-black">¿Registrar comida?</AlertDialogTitle>
+            <AlertDialogDescription className="font-medium">
+              Este análisis se guardará en tu historial personal para el seguimiento de tus metas diarias.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogFooter className="mt-4">
+            <AlertDialogCancel className="rounded-xl font-bold">Cancelar</AlertDialogCancel>
             <Button
               type="button"
+              className="rounded-xl font-black"
               onClick={() => {
                 setSaveDialogOpen(false);
-                void (async () => {
-                  try {
-                    await Promise.resolve(onSave());
-                  } catch (e) {
-                    toast({
-                      title: "No se pudo guardar",
-                      description:
-                        e instanceof Error ? e.message : "Intenta de nuevo.",
-                      variant: "destructive",
-                    });
-                  }
-                })();
+                void onSave();
               }}
             >
-              Guardar
+              Confirmar
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -59,18 +59,24 @@ function CalorieProgressRing({
 }) {
   const pctRaw = goal > 0 ? consumed / goal : 0;
   const pctDisplay = Math.min(pctRaw, 1);
-  const r = 56;
+  const r = 58;
   const c = 2 * Math.PI * r;
   const dash = c * (1 - pctDisplay);
 
   return (
     <div className="flex flex-col items-center">
-      <div className="relative mx-auto h-[200px] w-[200px] shrink-0">
+      <div className="relative mx-auto h-[220px] w-[220px] shrink-0 group">
+        {/* Glow effect */}
+        <div className={cn(
+          "absolute inset-8 rounded-full blur-2xl opacity-20 transition-all duration-700",
+          overGoal ? "bg-warning" : "bg-primary"
+        )} />
+        
         <svg
-          width="200"
-          height="200"
+          width="220"
+          height="220"
           viewBox="0 0 140 140"
-          className="absolute inset-0 -rotate-90"
+          className="absolute inset-0 -rotate-90 drop-shadow-sm"
           aria-hidden
         >
           <circle
@@ -78,41 +84,47 @@ function CalorieProgressRing({
             cy="70"
             r={r}
             fill="none"
-            className="stroke-muted/80"
-            strokeWidth="10"
+            className="stroke-muted/40"
+            strokeWidth="8"
           />
           <circle
             cx="70"
             cy="70"
             r={r}
             fill="none"
-            strokeWidth="10"
+            strokeWidth="8"
             strokeLinecap="round"
             strokeDasharray={c}
             strokeDashoffset={dash}
             className={cn(
-              "transition-[stroke-dashoffset] duration-700 ease-out",
+              "transition-[stroke-dashoffset] duration-1000 ease-in-out",
               overGoal ? "stroke-warning" : "stroke-primary"
             )}
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <span className="text-3xl font-bold tabular-nums tracking-tight text-foreground sm:text-4xl">
-            {Math.round(pctRaw * 100)}%
-          </span>
-          <span className="mt-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            del objetivo
-          </span>
+          <div className="text-center">
+            <span className="text-4xl font-black tabular-nums tracking-tighter text-foreground sm:text-5xl">
+              {Math.round(pctRaw * 100)}%
+            </span>
+            <div className="mt-1 flex items-center justify-center gap-1.5">
+              <div className={cn("h-1.5 w-1.5 rounded-full animate-pulse", overGoal ? "bg-warning" : "bg-primary")} />
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">
+                Logrado
+              </span>
+            </div>
+          </div>
         </div>
       </div>
-      <div className="mt-4 flex gap-8 text-center text-sm">
-        <div>
-          <p className="text-xs text-muted-foreground">Consumidas</p>
-          <p className="font-semibold tabular-nums">{consumed}</p>
+      <div className="mt-6 flex items-center gap-10">
+        <div className="text-center">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-0.5">Consumidas</p>
+          <p className="text-lg font-black tabular-nums text-foreground">{consumed}</p>
         </div>
-        <div>
-          <p className="text-xs text-muted-foreground">Meta</p>
-          <p className="font-semibold tabular-nums">{goal}</p>
+        <div className="h-8 w-px bg-border/40" />
+        <div className="text-center">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-0.5">Objetivo</p>
+          <p className="text-lg font-black tabular-nums text-foreground">{goal}</p>
         </div>
       </div>
     </div>
@@ -135,25 +147,25 @@ function StatTile({
   return (
     <div
       className={cn(
-        "rounded-2xl border border-border/80 bg-card/90 p-4 sm:p-5 shadow-sm",
-        "flex flex-col justify-between min-h-[120px] transition-shadow hover:shadow-md",
+        "group rounded-[2rem] border border-border/40 bg-card/60 p-5 sm:p-6 shadow-2xl shadow-black/[0.03] backdrop-blur-md",
+        "flex flex-col justify-between min-h-[140px] transition-all duration-300 hover:shadow-primary/5 hover:-translate-y-1",
         className
       )}
     >
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      <div className="flex items-start justify-between">
+        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-inner transition-transform group-hover:scale-110">
+          <Icon className="h-5 w-5" aria-hidden />
+        </div>
+        <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/80 pt-1">
           {label}
         </span>
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
-          <Icon className="h-4 w-4" aria-hidden />
-        </div>
       </div>
-      <div className="mt-3">
-        <p className="text-2xl sm:text-3xl font-bold tabular-nums tracking-tight">
+      <div className="mt-4">
+        <p className="text-3xl sm:text-4xl font-black tabular-nums tracking-tighter text-foreground">
           {value}
         </p>
         {sub ? (
-          <p className="text-xs text-muted-foreground mt-1 leading-snug">{sub}</p>
+          <p className="text-xs font-medium text-muted-foreground mt-1.5 leading-snug">{sub}</p>
         ) : null}
       </div>
     </div>
@@ -391,30 +403,39 @@ export function DashboardScreen({
               )}
 
               {calorieData && !calorieLoading && !calorieError ? (
-                <div className="col-span-2 grid grid-cols-3 gap-2 rounded-2xl border border-border/80 bg-muted/20 p-4 sm:p-5">
-                  <div className="text-center">
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <div className="col-span-2 grid grid-cols-3 gap-3 rounded-[2rem] border border-border/40 bg-card/40 p-5 shadow-inner backdrop-blur-sm">
+                  <div className="text-center group">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 mb-1">
                       Proteína
                     </p>
-                    <p className="mt-1 text-lg font-bold tabular-nums text-chart-1">
-                      {calorieData.macros.protein}g
-                    </p>
+                    <div className="flex flex-col items-center">
+                      <p className="text-2xl font-black tabular-nums text-chart-1 group-hover:scale-110 transition-transform">
+                        {calorieData.macros.protein}g
+                      </p>
+                      <div className="mt-1 h-1 w-8 rounded-full bg-chart-1/30" />
+                    </div>
                   </div>
-                  <div className="text-center border-x border-border/60">
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  <div className="text-center group border-x border-border/40">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 mb-1">
                       Carbos
                     </p>
-                    <p className="mt-1 text-lg font-bold tabular-nums text-chart-2">
-                      {calorieData.macros.carbs}g
-                    </p>
+                    <div className="flex flex-col items-center">
+                      <p className="text-2xl font-black tabular-nums text-chart-2 group-hover:scale-110 transition-transform">
+                        {calorieData.macros.carbs}g
+                      </p>
+                      <div className="mt-1 h-1 w-8 rounded-full bg-chart-2/30" />
+                    </div>
                   </div>
-                  <div className="text-center">
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  <div className="text-center group">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 mb-1">
                       Grasa
                     </p>
-                    <p className="mt-1 text-lg font-bold tabular-nums text-chart-4">
-                      {calorieData.macros.fat}g
-                    </p>
+                    <div className="flex flex-col items-center">
+                      <p className="text-2xl font-black tabular-nums text-chart-4 group-hover:scale-110 transition-transform">
+                        {calorieData.macros.fat}g
+                      </p>
+                      <div className="mt-1 h-1 w-8 rounded-full bg-chart-4/30" />
+                    </div>
                   </div>
                 </div>
               ) : null}
@@ -422,17 +443,24 @@ export function DashboardScreen({
           </div>
 
           {calorieData && !calorieLoading && !calorieError ? (
-            <p className="mt-6 max-w-3xl text-xs leading-relaxed text-muted-foreground sm:text-sm">
-              <span className="font-semibold text-foreground">BMR</span>{" "}
-              {calorieData.bmr} kcal ·{" "}
-              <span className="font-semibold text-foreground">TDEE</span>{" "}
-              {calorieData.tdee} kcal — {calorieData.explanation}
-            </p>
+            <div className="mt-8 flex flex-wrap gap-4 items-center">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-card/40 border border-border/40 text-[11px] font-bold">
+                <span className="text-muted-foreground uppercase tracking-wider">BMR:</span>
+                <span className="text-foreground">{calorieData.bmr} kcal</span>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-card/40 border border-border/40 text-[11px] font-bold">
+                <span className="text-muted-foreground uppercase tracking-wider">TDEE:</span>
+                <span className="text-foreground">{calorieData.tdee} kcal</span>
+              </div>
+              <p className="text-xs font-medium text-muted-foreground italic">
+                {calorieData.explanation}
+              </p>
+            </div>
           ) : null}
         </div>
       </section>
 
-      <div className="mx-auto max-w-6xl space-y-12 px-4 py-10 sm:px-6 lg:py-14">
+      <div className="mx-auto max-w-6xl space-y-16 px-4 py-12 sm:px-6 lg:py-20">
         <TipsCarousel
           dailyGoal={
             calorieData && !calorieLoading && !calorieError
@@ -441,152 +469,153 @@ export function DashboardScreen({
           }
         />
 
-        <div className="grid gap-10 lg:grid-cols-12 lg:gap-8">
+        <div className="grid gap-12 lg:grid-cols-12 lg:gap-16">
           <div className="lg:col-span-7">
-            <div className="mb-5 flex items-end justify-between gap-4">
+            <div className="mb-8 flex items-end justify-between gap-4">
               <div>
-                <h2 className="text-lg font-semibold tracking-tight sm:text-xl">
+                <h2 className="text-2xl font-black tracking-tight text-foreground">
                   Últimas comidas
                 </h2>
-                <p className="text-sm text-muted-foreground">
-                  Lo más reciente que registraste
+                <p className="text-sm font-medium text-muted-foreground">
+                  Tu registro fotográfico más reciente
                 </p>
               </div>
               <Button
                 variant="ghost"
                 size="sm"
-                className="gap-1 text-primary shrink-0"
+                className="group gap-1 text-primary hover:bg-primary/5 font-bold"
                 onClick={onViewHistory}
               >
                 Ver todo
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Button>
             </div>
 
-            <div className="relative space-y-0">
-              <div
-                className="absolute left-[19px] top-3 bottom-3 w-px bg-border sm:left-[23px]"
-                aria-hidden
-              />
+            <div className="relative">
               {loadingActivities ? (
                 <div className="flex justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <Loader2 className="h-10 w-10 animate-spin text-primary/40" />
                 </div>
               ) : recentActivities.length > 0 ? (
-                <ul className="space-y-1">
-                  {recentActivities.map((meal, i) => (
-                    <li key={meal.id} className="relative">
-                      <button
-                        type="button"
-                        onClick={() => setDetailMeal(meal)}
-                        className="relative flex w-full gap-4 rounded-xl py-3 text-left transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:gap-5 sm:py-4"
-                      >
-                        <div className="relative z-10 flex shrink-0">
-                          <div
-                            className={cn(
-                              "flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl border bg-card shadow-sm sm:h-12 sm:w-12",
-                              i === 0 && "ring-2 ring-primary/30"
-                            )}
-                          >
-                            {meal.imageUrl ? (
-                              <img
-                                src={meal.imageUrl}
-                                alt=""
-                                className="h-full w-full object-cover"
-                              />
-                            ) : (
-                              <Camera className="h-4 w-4 text-muted-foreground" />
-                            )}
-                          </div>
+                <div className="grid grid-cols-1 gap-3">
+                  {recentActivities.map((meal) => (
+                    <button
+                      key={meal.id}
+                      type="button"
+                      onClick={() => setDetailMeal(meal)}
+                      className="group flex w-full items-center gap-4 rounded-3xl border border-border/40 bg-card/40 p-3 pr-5 text-left transition-all hover:bg-card hover:shadow-xl hover:shadow-black/[0.02] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 sm:gap-5"
+                    >
+                      <div className="relative shrink-0">
+                        <div className="h-14 w-14 overflow-hidden rounded-2xl border border-border/40 bg-muted shadow-inner sm:h-16 sm:w-16">
+                          {meal.imageUrl ? (
+                            <img
+                              src={meal.imageUrl}
+                              alt=""
+                              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center">
+                              <Camera className="h-6 w-6 text-muted-foreground/40" />
+                            </div>
+                          )}
                         </div>
-                        <div className="min-w-0 flex-1 pt-0.5">
-                          <p className="font-medium leading-snug text-foreground">
-                            {meal.foodName}
-                          </p>
-                          <p className="mt-0.5 text-xs text-muted-foreground">
-                            {meal.createdAt.toLocaleString("es-ES", {
-                              day: "numeric",
-                              month: "short",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </p>
-                        </div>
-                        <div className="shrink-0 text-right pt-0.5">
-                          <p className="text-sm font-bold tabular-nums text-primary">
-                            {meal.calories}
-                          </p>
-                          <p className="text-[10px] text-muted-foreground">
-                            kcal
-                          </p>
-                        </div>
-                      </button>
-                    </li>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-foreground truncate group-hover:text-primary transition-colors">
+                          {meal.foodName}
+                        </p>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 mt-0.5">
+                          {meal.createdAt.toLocaleString("es-ES", {
+                            day: "numeric",
+                            month: "short",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <p className="text-xl font-black tabular-nums text-primary tracking-tighter">
+                          {meal.calories}
+                        </p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+                          kcal
+                        </p>
+                      </div>
+                    </button>
                   ))}
-                </ul>
+                </div>
               ) : (
-                <div className="rounded-2xl border border-dashed border-border bg-muted/20 py-12 text-center text-sm text-muted-foreground">
-                  Aún no hay comidas registradas. Escanea tu primer plato.
+                <div className="rounded-[2.5rem] border-2 border-dashed border-border/40 bg-muted/20 py-16 text-center">
+                  <UtensilsCrossed className="mx-auto h-12 w-12 text-muted-foreground/20 mb-4" />
+                  <p className="text-sm font-bold text-muted-foreground">
+                    Aún no hay comidas registradas.
+                  </p>
+                  <Button variant="link" className="mt-2 text-primary font-bold">Escanea tu primer plato ahora</Button>
                 </div>
               )}
             </div>
           </div>
 
           <div className="lg:col-span-5">
-            <div className="mb-5">
-              <h2 className="text-lg font-semibold tracking-tight sm:text-xl">
+            <div className="mb-8">
+              <h2 className="text-2xl font-black tracking-tight text-foreground">
                 Ritmo semanal
               </h2>
-              <p className="text-sm text-muted-foreground">
-                Esta semana frente a la anterior
+              <p className="text-sm font-medium text-muted-foreground">
+                Comparativa con tu actividad previa
               </p>
             </div>
 
             {loadingProgress ? (
-              <div className="flex h-48 items-center justify-center rounded-2xl border border-border/60 bg-card/50">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <div className="flex h-64 items-center justify-center rounded-3xl border border-border/40 bg-card/20 backdrop-blur-sm">
+                <Loader2 className="h-10 w-10 animate-spin text-primary/40" />
               </div>
             ) : weeklyProgress ? (
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Card className="overflow-hidden border-primary/15 bg-gradient-to-br from-primary/8 to-transparent shadow-sm">
-                    <CardContent className="p-5">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-                        Esta semana
-                      </p>
-                      <p className="mt-3 text-3xl font-bold tabular-nums">
+                  <div className="relative overflow-hidden rounded-[2rem] border border-primary/20 bg-gradient-to-br from-primary/10 via-card/50 to-card/50 p-6 shadow-2xl shadow-primary/5">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">
+                      Esta semana
+                    </p>
+                    <div className="mt-4 flex items-baseline gap-2">
+                      <p className="text-4xl font-black tabular-nums tracking-tighter">
                         {weeklyProgress.currentWeek.totalMeals}
                       </p>
-                      <p className="text-xs text-muted-foreground">comidas</p>
-                      <p className="mt-4 text-2xl font-semibold tabular-nums text-chart-2">
+                      <p className="text-xs font-bold text-muted-foreground">comidas</p>
+                    </div>
+                    <div className="mt-6">
+                      <p className="text-2xl font-black tabular-nums tracking-tighter text-chart-2">
                         {weeklyProgress.currentWeek.totalCalories}
                       </p>
-                      <p className="text-xs text-muted-foreground">kcal totales</p>
-                    </CardContent>
-                  </Card>
-                  <Card className="border-border/80 bg-muted/15 shadow-sm">
-                    <CardContent className="p-5">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        Semana anterior
-                      </p>
-                      <p className="mt-3 text-3xl font-bold tabular-nums text-muted-foreground">
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">kcal totales</p>
+                    </div>
+                  </div>
+                  
+                  <div className="rounded-[2rem] border border-border/40 bg-card/40 p-6 shadow-sm backdrop-blur-sm">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+                      Semana anterior
+                    </p>
+                    <div className="mt-4 flex items-baseline gap-2">
+                      <p className="text-4xl font-black tabular-nums tracking-tighter text-muted-foreground/60">
                         {weeklyProgress.previousWeek.totalMeals}
                       </p>
-                      <p className="text-xs text-muted-foreground">comidas</p>
-                      <p className="mt-4 text-2xl font-semibold tabular-nums text-muted-foreground">
+                      <p className="text-xs font-bold text-muted-foreground/40">comidas</p>
+                    </div>
+                    <div className="mt-6">
+                      <p className="text-2xl font-black tabular-nums tracking-tighter text-muted-foreground/60">
                         {weeklyProgress.previousWeek.totalCalories}
                       </p>
-                      <p className="text-xs text-muted-foreground">kcal totales</p>
-                    </CardContent>
-                  </Card>
+                      <p className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest">kcal totales</p>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="rounded-2xl border border-border/80 bg-card/80 p-4">
-                  <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    <Sparkles className="h-3.5 w-3.5 text-primary" />
-                    Cambio vs semana pasada
+                <div className="rounded-[2rem] border border-border/40 bg-card/40 p-6 shadow-xl shadow-black/[0.02] backdrop-blur-sm">
+                  <div className="mb-6 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-primary">
+                    <Sparkles className="h-4 w-4" />
+                    Progreso vs semana pasada
                   </div>
-                  <div className="grid grid-cols-3 gap-3 text-center">
+                  <div className="grid grid-cols-3 gap-4 text-center">
                     {[
                       {
                         label: "Comidas",
@@ -601,33 +630,35 @@ export function DashboardScreen({
                         v: weeklyProgress.progress.daysChange,
                       },
                     ].map((row) => (
-                      <div key={row.label}>
-                        <p className="text-[10px] text-muted-foreground">
+                      <div key={row.label} className="group">
+                        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mb-2 group-hover:text-primary transition-colors">
                           {row.label}
                         </p>
-                        <p
+                        <div
                           className={cn(
-                            "mt-1 flex items-center justify-center gap-0.5 text-sm font-bold tabular-nums",
+                            "flex items-center justify-center gap-0.5 text-lg font-black tabular-nums transition-transform group-hover:scale-110",
                             row.v > 0 && "text-chart-3",
                             row.v < 0 && "text-destructive",
-                            row.v === 0 && "text-muted-foreground"
+                            row.v === 0 && "text-muted-foreground/40"
                           )}
                         >
                           {row.v > 0 ? (
-                            <TrendingUp className="h-3.5 w-3.5" />
+                            <TrendingUp className="h-4 w-4" />
                           ) : row.v < 0 ? (
-                            <TrendingDown className="h-3.5 w-3.5" />
+                            <TrendingDown className="h-4 w-4" />
                           ) : null}
                           {Math.abs(row.v)}%
-                        </p>
+                        </div>
                       </div>
                     ))}
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="rounded-2xl border border-dashed border-border py-12 text-center text-sm text-muted-foreground">
-                Sin datos de semanas aún.
+              <div className="rounded-3xl border-2 border-dashed border-border/40 bg-muted/10 py-16 text-center">
+                <p className="text-sm font-bold text-muted-foreground/40">
+                  Sin datos comparativos suficientes.
+                </p>
               </div>
             )}
           </div>

@@ -501,242 +501,170 @@ export function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-28 md:pb-10">
-      <section className="relative overflow-hidden border-b border-border/60">
+    <div className="min-h-screen bg-background pb-32">
+      <section className="relative overflow-hidden">
         <div
-          className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/[0.09] via-background to-chart-2/[0.07]"
+          className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/[0.08] via-background to-chart-2/[0.06]"
           aria-hidden
         />
         <div
-          className="pointer-events-none absolute right-0 top-0 h-72 w-72 translate-x-1/4 rounded-full bg-primary/20 blur-3xl"
+          className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-primary/10 blur-3xl"
           aria-hidden
         />
 
-        <div className="relative z-10 mx-auto max-w-3xl px-4 pb-10 pt-10 sm:px-6">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex min-w-0 items-start gap-4">
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-primary text-lg font-bold text-primary-foreground shadow-lg shadow-primary/25">
+        <div className="relative z-10 mx-auto max-w-4xl px-4 pb-12 pt-12 sm:px-8">
+          <div className="flex flex-col gap-8 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-6">
+              <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-[2rem] bg-primary text-2xl font-black text-primary-foreground shadow-2xl shadow-primary/20 transition-transform hover:scale-105">
                 {initials}
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-                  Perfil
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-1">
+                  Mi Cuenta
                 </p>
-                <h1 className="mt-1 truncate text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+                <h1 className="truncate text-3xl font-black tracking-tight text-foreground sm:text-4xl">
                   {displayName}
                 </h1>
-                <p className="mt-1 truncate text-sm text-muted-foreground">
+                <p className="mt-1 truncate text-sm font-medium text-muted-foreground/80">
                   {user?.email}
                 </p>
               </div>
             </div>
-            <div className="flex shrink-0 flex-wrap items-center gap-2 self-start sm:self-auto">
+            <div className="flex shrink-0 flex-wrap items-center gap-3">
               <ThemeToggle />
-              <Button variant="outline" size="sm" asChild className="rounded-xl">
-                <a
-                  href={getBodyMatterPublicOrigin()}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2"
-                >
-                  <Dumbbell className="h-4 w-4" aria-hidden />
-                  Body Matter
-                  <ExternalLink className="h-3 w-3 opacity-70" aria-hidden />
-                </a>
-              </Button>
               <Button
                 variant="outline"
                 onClick={openEditModal}
-                className="gap-2 rounded-xl border-border/80 bg-card/90 shadow-sm"
+                className="h-12 gap-2 rounded-2xl border-border/40 bg-card/40 px-6 font-bold shadow-sm backdrop-blur-md transition-all hover:bg-card"
               >
                 <Edit className="h-4 w-4" />
-                Editar datos
+                Editar Perfil
               </Button>
             </div>
           </div>
 
           {userProfile ? (
-            <div className="mt-8 grid gap-2 sm:grid-cols-3">
-              <div className="rounded-2xl border border-border/70 bg-card/80 px-4 py-3 text-sm">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  Edad
-                </p>
-                <p className="mt-0.5 font-medium text-foreground">
-                  {getProfileDisplayAge(userProfile) ?? "—"} años
-                </p>
-              </div>
-              <div className="rounded-2xl border border-border/70 bg-card/80 px-4 py-3 text-sm">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  Peso
-                </p>
-                <p className="mt-0.5 font-medium text-foreground">
-                  {formatWeightDisplay(userProfile.weight || 0)}
-                </p>
-              </div>
-              <div className="rounded-2xl border border-border/70 bg-card/80 px-4 py-3 text-sm">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  Altura
-                </p>
-                <p className="mt-0.5 font-medium text-foreground">
-                  {formatHeightDisplay(userProfile.height || 0)}
-                </p>
-              </div>
+            <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-3">
+              {[
+                { label: "Edad", value: `${getProfileDisplayAge(userProfile) ?? "—"} años`, icon: CalendarDays },
+                { label: "Peso", value: formatWeightDisplay(userProfile.weight || 0), icon: Target },
+                { label: "Altura", value: formatHeightDisplay(userProfile.height || 0), icon: TrendingUp }
+              ].map((item) => (
+                <div key={item.label} className="flex items-center gap-4 rounded-[1.5rem] border border-border/40 bg-card/40 p-4 backdrop-blur-sm">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <item.icon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">
+                      {item.label}
+                    </p>
+                    <p className="text-sm font-black text-foreground">{item.value}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : null}
         </div>
       </section>
 
-      <div className="mx-auto max-w-3xl space-y-10 px-4 py-10 sm:px-6">
-        <div>
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Rango de estadísticas
-          </p>
-          <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {periodOptions.map(({ value, label }) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => handlePeriodChange(value)}
-                className={cn(
-                  "shrink-0 rounded-full border px-4 py-2 text-sm font-medium transition-all",
-                  selectedPeriod === value
-                    ? "border-primary bg-primary text-primary-foreground shadow-md"
-                    : "border-border/80 bg-card/90 text-muted-foreground hover:border-primary/25 hover:text-foreground"
-                )}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Statistics Cards */}
-        {stats && (
-          <>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <div className="rounded-2xl border border-border/80 bg-card/90 p-4 text-center shadow-sm sm:p-5">
-                <Target className="mx-auto mb-2 h-4 w-4 text-chart-1" />
-                <p className="text-2xl font-bold tabular-nums text-chart-1">
-                  {stats.totalMeals}
-                </p>
-                <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                  Comidas
-                </p>
-              </div>
-              <div className="rounded-2xl border border-border/80 bg-card/90 p-4 text-center shadow-sm sm:p-5">
-                <TrendingUp className="mx-auto mb-2 h-4 w-4 text-chart-3" />
-                <p className="text-2xl font-bold tabular-nums text-chart-3">
-                  {stats.averageCalories}
-                </p>
-                <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                  Kcal media
-                </p>
-              </div>
-              <div className="rounded-2xl border border-border/80 bg-card/90 p-4 text-center shadow-sm sm:p-5">
-                <Flame className="mx-auto mb-2 h-4 w-4 text-primary" />
-                <p className="text-2xl font-bold tabular-nums text-primary">
-                  {stats.totalCalories.toLocaleString()}
-                </p>
-                <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                  Kcal totales
-                </p>
-              </div>
-              <div className="rounded-2xl border border-border/80 bg-card/90 p-4 text-center shadow-sm sm:p-5">
-                <CalendarIcon className="mx-auto mb-2 h-4 w-4 text-chart-2" />
-                <p className="text-2xl font-bold tabular-nums text-chart-2">
-                  {stats.weeklyMeals}
-                </p>
-                <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                  En período
-                </p>
-              </div>
+      <div className="mx-auto max-w-4xl space-y-12 px-4 py-8 sm:px-8">
+        <section className="space-y-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-2xl font-black tracking-tight text-foreground">Estadísticas</h2>
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+              {periodOptions.map(({ value, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => handlePeriodChange(value)}
+                  className={cn(
+                    "shrink-0 rounded-xl px-4 py-2 text-xs font-black uppercase tracking-widest transition-all",
+                    selectedPeriod === value
+                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                      : "bg-card/40 text-muted-foreground border border-border/40 hover:bg-card hover:text-foreground"
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
+          </div>
 
-            <Card className="border-primary/10 shadow-md shadow-primary/5">
-              <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-base font-semibold sm:text-lg">
-                  <CalendarDays className="h-5 w-5 text-primary" />
-                  {getPeriodLabel(selectedPeriod)}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-2 gap-6 pt-0 sm:gap-8">
-                <div className="rounded-xl bg-muted/30 p-4 text-center">
-                  <p className="text-xs text-muted-foreground">Comidas</p>
-                  <p className="mt-1 text-3xl font-bold tabular-nums text-foreground">
-                    {stats.weeklyMeals}
-                  </p>
-                </div>
-                <div className="rounded-xl bg-muted/30 p-4 text-center">
-                  <p className="text-xs text-muted-foreground">Calorías</p>
-                  <p className="mt-1 text-3xl font-bold tabular-nums text-foreground">
-                    {stats.weeklyCalories.toLocaleString()}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="overflow-hidden border-border/80 shadow-sm">
-              <CardHeader className="border-b border-border/60 bg-muted/20 pb-3">
-                <CardTitle className="text-base font-semibold">
-                  Acumulado en el período
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-0 divide-y divide-border/60 p-0 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+          {stats && (
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+              <div className="lg:col-span-12 grid grid-cols-2 gap-4 sm:grid-cols-4">
                 {[
-                  {
-                    label: "Calorías",
-                    value: `${stats.totalCalories.toLocaleString()} kcal`,
-                  },
-                  {
-                    label: "Proteína",
-                    value: `${Math.round(stats.totalProtein)} g`,
-                  },
-                  {
-                    label: "Carbohidratos",
-                    value: `${Math.round(stats.totalCarbs)} g`,
-                  },
-                  { label: "Grasas", value: `${Math.round(stats.totalFat)} g` },
-                  {
-                    label: "Fibra",
-                    value: `${Math.round(stats.totalFiber)} g`,
-                  },
-                  {
-                    label: "Azúcar",
-                    value: `${Math.round(stats.totalSugar)} g`,
-                  },
-                ].map((row) => (
-                  <div
-                    key={row.label}
-                    className="flex items-center justify-between gap-4 px-4 py-3.5 sm:px-5"
-                  >
-                    <span className="text-sm text-muted-foreground">
-                      {row.label}
-                    </span>
-                    <Badge variant="secondary" className="font-mono text-xs">
-                      {row.value}
-                    </Badge>
+                  { label: "Comidas", value: stats.totalMeals, icon: Target, color: "text-chart-1", bg: "bg-chart-1/10" },
+                  { label: "Kcal Media", value: stats.averageCalories, icon: TrendingUp, color: "text-chart-3", bg: "bg-chart-3/10" },
+                  { label: "Kcal Totales", value: stats.totalCalories.toLocaleString(), icon: Flame, color: "text-primary", bg: "bg-primary/10" },
+                  { label: "En Período", value: stats.weeklyMeals, icon: CalendarIcon, color: "text-chart-2", bg: "bg-chart-2/10" }
+                ].map((stat) => (
+                  <div key={stat.label} className="rounded-[2rem] border border-border/40 bg-card/40 p-6 shadow-xl shadow-black/[0.02] backdrop-blur-sm transition-transform hover:-translate-y-1">
+                    <div className={cn("mb-3 flex h-10 w-10 items-center justify-center rounded-2xl", stat.bg, stat.color)}>
+                      <stat.icon className="h-5 w-5" />
+                    </div>
+                    <p className="text-3xl font-black tabular-nums tracking-tighter">{stat.value}</p>
+                    <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">{stat.label}</p>
                   </div>
                 ))}
-              </CardContent>
-            </Card>
+              </div>
 
-            <MealCalendar />
-          </>
-        )}
+              <div className="lg:col-span-5">
+                <Card className="rounded-[2.5rem] border border-border/40 bg-card/40 shadow-xl shadow-black/[0.02] backdrop-blur-sm overflow-hidden h-full">
+                  <CardHeader className="p-8 pb-4">
+                    <CardTitle className="text-xl font-black tracking-tight flex items-center gap-2">
+                      <Sparkles className="h-5 w-5 text-primary" />
+                      Acumulado
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-8 pt-0 space-y-4">
+                    {[
+                      { label: "Proteína", value: stats.totalProtein, unit: "g", color: "bg-chart-1" },
+                      { label: "Carbos", value: stats.totalCarbs, unit: "g", color: "bg-chart-2" },
+                      { label: "Grasas", value: stats.totalFat, unit: "g", color: "bg-chart-4" },
+                      { label: "Fibra", value: stats.totalFiber, unit: "g", color: "bg-chart-3" },
+                      { label: "Azúcar", value: stats.totalSugar, unit: "g", color: "bg-chart-5" }
+                    ].map((row) => (
+                      <div key={row.label} className="group">
+                        <div className="flex justify-between items-end mb-1.5">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">{row.label}</span>
+                          <span className="text-sm font-black tabular-nums">{Math.round(row.value)}{row.unit}</span>
+                        </div>
+                        <div className="h-1.5 w-full rounded-full bg-muted shadow-inner overflow-hidden">
+                          <div className={cn("h-full rounded-full opacity-60", row.color)} style={{ width: "60%" }} />
+                        </div>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              </div>
 
-        {!stats || stats.totalMeals === 0 ? (
-          <div className="rounded-3xl border border-dashed border-border bg-muted/20 px-6 py-14 text-center">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-muted">
-              <Award className="h-7 w-7 text-muted-foreground" />
+              <div className="lg:col-span-7">
+                <MealCalendar />
+              </div>
             </div>
-            <h3 className="mt-5 text-lg font-semibold text-foreground">
-              Sin datos en este rango
-            </h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Registra comidas desde Escanear para ver métricas y calendario.
-            </p>
+          )}
+        </section>
+
+        <section className="pt-8 border-t border-border/40">
+          <div className="rounded-[2rem] border border-primary/20 bg-gradient-to-br from-primary/5 via-card/50 to-card/50 p-8 shadow-2xl shadow-primary/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+            <div>
+              <h3 className="text-2xl font-black tracking-tight text-foreground flex items-center gap-2">
+                <Dumbbell className="h-6 w-6 text-primary" />
+                Body Matter
+              </h3>
+              <p className="mt-2 text-sm font-medium text-muted-foreground/80 max-w-sm">
+                Potencia tu entrenamiento con nuestra plataforma hermana. Sincroniza tus macros y entrena de forma inteligente.
+              </p>
+            </div>
+            <Button size="lg" asChild className="rounded-2xl font-black h-14 px-8 shadow-xl shadow-primary/20">
+              <a href={getBodyMatterPublicOrigin()} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                Explorar Body Matter
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </Button>
           </div>
-        ) : null}
+        </section>
       </div>
 
       {/* Edit Profile Modal */}

@@ -32,14 +32,17 @@ export const foodAnalysisRawSchema = z.object({
   visibleComponents: z.array(z.string()).min(1).max(24),
   dishDescription: z.string().min(1).max(500),
   cuisineOrStyle: z.string().max(120).optional(),
-  cookingClues: z.string().max(200).optional(),
+  cookingClues: z
+    .union([z.string(), z.array(z.string())])
+    .transform((val) => (Array.isArray(val) ? val.join(", ") : val))
+    .optional(),
   ambiguityNotes: z.string().max(400).optional(),
   portionHypothesis: portionHypothesisSchema,
   confidence: confidenceLevelSchema,
   foodName: z.string().min(1).max(200),
   calories: z.number().min(1).max(3500),
   macros: foodMacrosSchema,
-  recommendations: z.array(z.string()).min(2).max(5),
+  recommendations: z.array(z.string()).min(1).max(5),
 });
 
 export type FoodAnalysisRaw = z.infer<typeof foodAnalysisRawSchema>;

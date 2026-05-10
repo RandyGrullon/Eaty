@@ -196,175 +196,160 @@ export function MealDetailDrawer({
     <Drawer open={open} onOpenChange={onOpenChange} modal>
       <DrawerContent
         className={cn(
-          "mt-10 max-h-[min(58vh,560px)] border-t bg-background px-0 pb-6 pt-2",
-          "data-[vaul-drawer-direction=bottom]:mt-10 data-[vaul-drawer-direction=bottom]:max-h-[min(58vh,560px)]"
+          "mx-auto max-w-2xl rounded-t-[3rem] border-t border-border/40 bg-background pb-10 pt-2 shadow-2xl",
+          "data-[vaul-drawer-direction=bottom]:max-h-[85vh]"
         )}
       >
+        <div className="mx-auto mt-2 h-1.5 w-12 rounded-full bg-muted/40" />
+        
         {meal ? (
           <>
-            <DrawerHeader className="border-b border-border/60 px-4 pb-3 text-left">
-              <DrawerTitle className="text-lg">Detalle de comida</DrawerTitle>
-              <p className="text-xs text-muted-foreground">
-                {meal.createdAt.toLocaleString("es-ES", {
-                  day: "numeric",
-                  month: "short",
-                  year: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </p>
+            <DrawerHeader className="px-6 pb-6 pt-6 text-left">
+              <div className="flex items-center justify-between">
+                <div>
+                  <DrawerTitle className="text-2xl font-black tracking-tight text-foreground">
+                    Editar Comida
+                  </DrawerTitle>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mt-1">
+                    Gestión de Historial
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">
+                    Registrado
+                  </p>
+                  <p className="text-xs font-black text-foreground mt-1">
+                    {meal.createdAt.toLocaleString("es-ES", {
+                      day: "numeric",
+                      month: "short",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                </div>
+              </div>
             </DrawerHeader>
 
-            <div className="flex max-h-[calc(min(58vh,560px)-8rem)] flex-col gap-4 overflow-y-auto px-4 py-3">
+            <div className="flex flex-col gap-8 overflow-y-auto px-6 pb-8">
               {meal.imageUrl ? (
-                <div className="w-full overflow-hidden rounded-xl border border-border bg-muted">
+                <div className="relative aspect-video w-full overflow-hidden rounded-[2.5rem] border border-border/40 bg-card shadow-inner">
                   <img
                     src={meal.imageUrl}
                     alt={meal.foodName}
-                    className="max-h-[min(40vh,280px)] w-full object-contain"
+                    className="h-full w-full object-cover"
                   />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
                 </div>
               ) : (
-                <p className="text-center text-xs text-muted-foreground">
-                  Sin imagen en el registro.
-                </p>
+                <div className="flex h-32 w-full items-center justify-center rounded-[2.5rem] bg-muted/30 border border-dashed border-border/60">
+                  <p className="text-xs font-medium text-muted-foreground/60 italic">Sin imagen adjunta</p>
+                </div>
               )}
 
-              <div className="space-y-2">
-                <Label htmlFor="meal-name">Nombre</Label>
-                <Input
-                  id="meal-name"
-                  value={foodName}
-                  onChange={(e) => setFoodName(e.target.value)}
-                  className="rounded-lg"
-                />
-              </div>
+              <div className="grid gap-6 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="meal-name" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+                    Nombre del Plato
+                  </Label>
+                  <Input
+                    id="meal-name"
+                    value={foodName}
+                    onChange={(e) => setFoodName(e.target.value)}
+                    className="h-12 rounded-2xl border-border/40 bg-card/40 px-4 font-bold shadow-sm transition-all focus:bg-card focus:shadow-md"
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="meal-cal">Calorías (kcal)</Label>
-                <Input
-                  id="meal-cal"
-                  type="number"
-                  min={0}
-                  value={calories}
-                  onChange={(e) => setCalories(e.target.value)}
-                  className="rounded-lg"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="meal-p" className="text-xs">
-                    Proteína (g)
+                <div className="space-y-2">
+                  <Label htmlFor="meal-cal" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+                    Calorías (kcal)
                   </Label>
                   <Input
-                    id="meal-p"
+                    id="meal-cal"
                     type="number"
                     min={0}
-                    value={protein}
-                    onChange={(e) => setProtein(e.target.value)}
-                    className="h-9 rounded-lg text-sm"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="meal-c" className="text-xs">
-                    Carbos (g)
-                  </Label>
-                  <Input
-                    id="meal-c"
-                    type="number"
-                    min={0}
-                    value={carbs}
-                    onChange={(e) => setCarbs(e.target.value)}
-                    className="h-9 rounded-lg text-sm"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="meal-f" className="text-xs">
-                    Grasa (g)
-                  </Label>
-                  <Input
-                    id="meal-f"
-                    type="number"
-                    min={0}
-                    value={fat}
-                    onChange={(e) => setFat(e.target.value)}
-                    className="h-9 rounded-lg text-sm"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="meal-fi" className="text-xs">
-                    Fibra (g)
-                  </Label>
-                  <Input
-                    id="meal-fi"
-                    type="number"
-                    min={0}
-                    value={fiber}
-                    onChange={(e) => setFiber(e.target.value)}
-                    className="h-9 rounded-lg text-sm"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="meal-s" className="text-xs">
-                    Azúcar (g)
-                  </Label>
-                  <Input
-                    id="meal-s"
-                    type="number"
-                    min={0}
-                    value={sugar}
-                    onChange={(e) => setSugar(e.target.value)}
-                    className="h-9 rounded-lg text-sm"
+                    value={calories}
+                    onChange={(e) => setCalories(e.target.value)}
+                    className="h-12 rounded-2xl border-border/40 bg-card/40 px-4 font-black tabular-nums shadow-sm transition-all focus:bg-card focus:shadow-md text-primary"
                   />
                 </div>
               </div>
 
+              <div className="space-y-4">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+                  Macronutrientes (gramos)
+                </Label>
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { id: "meal-p", label: "Proteína", val: protein, set: setProtein, color: "focus:ring-chart-1" },
+                    { id: "meal-c", label: "Carbos", val: carbs, set: setCarbs, color: "focus:ring-chart-2" },
+                    { id: "meal-f", label: "Grasa", val: fat, set: setFat, color: "focus:ring-chart-4" },
+                    { id: "meal-fi", label: "Fibra", val: fiber, set: setFiber, color: "focus:ring-chart-3" },
+                    { id: "meal-s", label: "Azúcar", val: sugar, set: setSugar, color: "focus:ring-chart-5" },
+                  ].map((macro) => (
+                    <div key={macro.id} className="relative group">
+                      <Input
+                        id={macro.id}
+                        type="number"
+                        min={0}
+                        value={macro.val}
+                        placeholder="0"
+                        onChange={(e) => macro.set(e.target.value)}
+                        className={cn(
+                          "h-14 rounded-[1.25rem] border-border/40 bg-card/40 pt-6 px-4 font-black tabular-nums shadow-sm transition-all focus:bg-card focus:shadow-md",
+                          macro.color
+                        )}
+                      />
+                      <Label htmlFor={macro.id} className="absolute left-4 top-2 text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 pointer-events-none group-focus-within:text-primary transition-colors">
+                        {macro.label}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <div className="space-y-2">
-                <Label htmlFor="meal-rec">Recomendaciones (una por línea)</Label>
+                <Label htmlFor="meal-rec" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+                  Sugerencias (IA)
+                </Label>
                 <Textarea
                   id="meal-rec"
-                  rows={4}
+                  rows={3}
                   value={recommendationsText}
                   onChange={(e) => setRecommendationsText(e.target.value)}
-                  className="resize-none rounded-lg text-sm"
+                  className="resize-none rounded-[1.5rem] border-border/40 bg-card/40 p-4 text-sm font-medium shadow-sm transition-all focus:bg-card focus:shadow-md"
                 />
               </div>
             </div>
 
-            <DrawerFooter className="flex-row flex-wrap gap-2 border-t border-border/60 pt-3">
+            <DrawerFooter className="flex-row items-center gap-3 border-t border-border/40 px-6 pt-6">
               <Button
                 type="button"
-                variant="destructive"
-                size="sm"
-                className="gap-1.5"
+                variant="ghost"
+                className="h-14 w-14 rounded-2xl text-destructive hover:bg-destructive/10 transition-colors shrink-0"
                 disabled={deleting || saving}
                 onClick={() => setDeleteOpen(true)}
               >
                 {deleting ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-6 w-6 animate-spin" />
                 ) : (
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-6 w-6" />
                 )}
-                Eliminar
               </Button>
               <DrawerClose asChild>
-                <Button type="button" variant="outline" size="sm">
+                <Button type="button" variant="outline" className="h-14 rounded-2xl px-6 font-bold border-border/40 bg-card/20 transition-all hover:bg-card">
                   Cerrar
                 </Button>
               </DrawerClose>
               <Button
                 type="button"
-                size="sm"
-                className="ml-auto"
+                className="h-14 flex-1 rounded-2xl px-6 font-black shadow-xl shadow-primary/20 transition-all active:scale-95"
                 disabled={saving || deleting}
                 onClick={requestSaveConfirm}
               >
                 {saving ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  "Guardar cambios"
-                )}
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                ) : null}
+                {saving ? "Guardando..." : "Guardar Cambios"}
               </Button>
             </DrawerFooter>
           </>

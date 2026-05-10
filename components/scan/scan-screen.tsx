@@ -26,7 +26,7 @@ interface ScanScreenProps {
 }
 
 const scanCardClass =
-  "group relative flex flex-col items-start gap-3 overflow-hidden rounded-2xl border-2 border-border/70 bg-card/90 p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md hover:shadow-primary/10 active:scale-[0.99]";
+  "group relative flex flex-col items-start gap-4 overflow-hidden rounded-[2.5rem] border border-border/40 bg-card/40 p-6 text-left shadow-2xl shadow-black/[0.03] backdrop-blur-md transition-all duration-300 hover:shadow-primary/10 hover:-translate-y-1 hover:bg-card active:scale-[0.98]";
 
 function ScanModeCard({
   icon: Icon,
@@ -45,25 +45,27 @@ function ScanModeCard({
 }) {
   return (
     <button type="button" onClick={onClick} className={scanCardClass}>
-      <div className="flex w-full items-start justify-between gap-2">
+      <div className="flex w-full items-start justify-between">
         <div
           className={cn(
-            "flex h-11 w-11 items-center justify-center rounded-xl shadow-sm",
+            "flex h-14 w-14 items-center justify-center rounded-2xl shadow-inner transition-transform group-hover:scale-110 duration-300",
             iconWrapClassName
           )}
         >
-          <Icon className="h-5 w-5" aria-hidden />
+          <Icon className="h-6 w-6" aria-hidden />
         </div>
-        <span className="rounded-full border border-border/60 bg-background/80 px-2 py-0.5 text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground">
+        <span className="rounded-full border border-border/40 bg-background/50 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground/80">
           {badge}
         </span>
       </div>
       <div>
-        <p className="font-semibold text-foreground">{title}</p>
-        <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+        <p className="text-xl font-black tracking-tight text-foreground">{title}</p>
+        <p className="mt-1.5 text-xs font-medium leading-relaxed text-muted-foreground/80">
           {description}
         </p>
       </div>
+      {/* Decorative gradient corner */}
+      <div className="absolute -bottom-6 -right-6 h-12 w-12 bg-primary/10 blur-xl opacity-0 transition-opacity group-hover:opacity-100" />
     </button>
   );
 }
