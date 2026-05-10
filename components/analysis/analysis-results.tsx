@@ -13,7 +13,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Save, Share2, Info } from "lucide-react";
+import { ArrowLeft, Save, Share2, Info, Camera, Sparkles, Lightbulb, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { macroCaloriesRough } from "@/lib/food-analysis-schema";
 import type { FoodAnalysisAiContext } from "@/lib/food-analysis-schema";

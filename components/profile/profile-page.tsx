@@ -31,6 +31,7 @@ import {
   Loader2,
   Dumbbell,
   ExternalLink,
+  Sparkles,
 } from "lucide-react";
 import { format } from "date-fns";
 import { es as esLocale } from "date-fns/locale";
