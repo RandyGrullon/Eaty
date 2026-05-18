@@ -3,11 +3,11 @@ import {
   buildFoodTextRetryUserPrompt,
   buildFoodVisionRetryUserPrompt,
   buildNutritionTipsUserPrompt,
-  SYSTEM_FOOD_ANALYSIS,
-  SYSTEM_FOOD_TEXT_RETRY,
-  SYSTEM_FOOD_VISION_RETRY,
+  getSystemFoodAnalysis,
+  getSystemFoodTextRetry,
+  getSystemFoodVisionRetry,
+  getSystemNutritionTips,
   SYSTEM_JSON_REPAIR,
-  SYSTEM_NUTRITION_TIPS,
 } from "@/lib/food-analysis-prompts";
 import {
   buildMealFromAnalyzedRaw,
@@ -264,15 +264,16 @@ function buildImageUserContent(params: {
 async function runVisionRetryPass(params: {
   imageBase64: string;
   imageMimeType?: string;
+  lang?: string;
 }): Promise<FoodAnalysisMealFields> {
   const userContent = buildImageUserContent({
-    systemForUser: buildFoodVisionRetryUserPrompt(),
+    systemForUser: buildFoodVisionRetryUserPrompt(params.lang),
     imageBase64: params.imageBase64,
     imageMimeType: params.imageMimeType,
   });
   const content = await groqChatCompletion({
     messages: [
-      { role: "system", content: SYSTEM_FOOD_VISION_RETRY },
+      { role: "system", content: getSystemFoodVisionRetry(params.lang) },
       { role: "user", content: userContent },
     ],
     responseFormatJson: true,
@@ -285,14 +286,16 @@ async function runVisionRetryPass(params: {
 async function runTextRetryPass(params: {
   foodName?: string;
   description?: string;
+  lang?: string;
 }): Promise<FoodAnalysisMealFields> {
   const userText = buildFoodTextRetryUserPrompt({
     foodName: params.foodName,
     description: params.description,
+    lang: params.lang,
   });
   const content = await groqChatCompletion({
     messages: [
-      { role: "system", content: SYSTEM_FOOD_TEXT_RETRY },
+      { role: "system", content: getSystemFoodTextRetry(params.lang) },
       { role: "user", content: userText },
     ],
     responseFormatJson: true,
@@ -333,6 +336,7 @@ export async function runFoodAnalysisGroq(params: {
   foodName?: string;
   description?: string;
   allergens?: string[];
+  lang?: string;
 }): Promise<FoodAnalysisMealFields> {
   const hasImage = Boolean(params.imageBase64?.trim());
   const userText = buildFoodAnalysisUserPrompt({
@@ -340,6 +344,7 @@ export async function runFoodAnalysisGroq(params: {
     foodName: params.foodName,
     description: params.description,
     allergens: params.allergens,
+    lang: params.lang,
   });
 
   const userContent: ChatContentPart[] = hasImage
@@ -361,7 +366,7 @@ export async function runFoodAnalysisGroq(params: {
   try {
     content = await groqChatCompletion({
       messages: [
-        { role: "system", content: SYSTEM_FOOD_ANALYSIS },
+        { role: "system", content: getSystemFoodAnalysis(params.lang) },
         { role: "user", content: userContent },
       ],
       responseFormatJson: true,
@@ -375,6 +380,7 @@ export async function runFoodAnalysisGroq(params: {
         return await runVisionRetryPass({
           imageBase64: params.imageBase64!,
           imageMimeType: params.imageMimeType,
+          lang: params.lang,
         });
       } catch (e2) {
         logger.error("Análisis Groq: reintento visión", e2);
@@ -385,6 +391,7 @@ export async function runFoodAnalysisGroq(params: {
       return await runTextRetryPass({
         foodName: params.foodName,
         description: params.description,
+        lang: params.lang,
       });
     } catch (e2) {
       throw new FoodAnalysisExhaustedError(e2);
@@ -403,6 +410,7 @@ export async function runFoodAnalysisGroq(params: {
           return await runVisionRetryPass({
             imageBase64: params.imageBase64!,
             imageMimeType: params.imageMimeType,
+            lang: params.lang,
           });
         } catch (retryVisErr) {
           logger.error("Análisis: reintento visión", retryVisErr);
@@ -416,6 +424,7 @@ export async function runFoodAnalysisGroq(params: {
             return await runTextRetryPass({
               foodName: params.foodName,
               description: params.description,
+              lang: params.lang,
             });
           } catch (retryTextErr) {
             logger.error("Análisis: reintento texto", retryTextErr);
@@ -438,6 +447,7 @@ export async function runNutritionTipsGroq(params: {
   totalCalories: number;
   dailyGoal?: number;
   recentSummary?: string;
+  lang?: string;
 }): Promise<PersonalizedNutritionTip[]> {
   const userText = buildNutritionTipsUserPrompt(
     params.meals,
@@ -449,7 +459,7 @@ export async function runNutritionTipsGroq(params: {
   try {
     const content = await groqChatCompletion({
       messages: [
-        { role: "system", content: SYSTEM_NUTRITION_TIPS },
+        { role: "system", content: getSystemNutritionTips(params.lang) },
         { role: "user", content: userText },
       ],
       responseFormatJson: true,

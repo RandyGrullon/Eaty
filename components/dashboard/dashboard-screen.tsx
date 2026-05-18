@@ -38,6 +38,7 @@ import { ThemeToggle } from "@/components/app/theme-toggle";
 import { motion, AnimatePresence } from "framer-motion";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { AICoachDrawer } from "./ai-coach-drawer";
+import { CommunityChallenges } from "./community-challenges";
 
 type WeeklyProgressData = Awaited<ReturnType<typeof getWeeklyProgress>>;
 
@@ -795,6 +796,10 @@ export function DashboardScreen({
                   <Button variant="link" className="mt-2 text-primary font-bold">Escanea tu primer plato ahora</Button>
                 </div>
               )}
+            </div>
+
+            <div className="mt-12">
+              <CommunityChallenges />
             </div>
           </div>
 

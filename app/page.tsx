@@ -4,7 +4,7 @@ import { FirebaseEnvErrorScreen } from "@/components/app/firebase-env-error";
 import { ImageDescriptionStep } from "@/components/app/image-description-step";
 import { AnalyzingFoodOverlay } from "@/components/app/analyzing-food-overlay";
 import { isFirebaseConfigReady } from "@/lib/firebase-config";
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserProfile } from "@/hooks/use-user-profile";
 import { useToast } from "@/hooks/use-toast";
@@ -20,6 +20,7 @@ import {
   ScanScreenLazy,
   WeeklyPlannerLazy,
 } from "@/components/app/lazy-tab-panels";
+import { LazyTabContent } from "@/components/app/lazy-tab-content";
 import { AuthScreen } from "@/components/auth/auth-screen";
 import { DashboardScreen } from "@/components/dashboard/dashboard-screen";
 import { AnalysisResults } from "@/components/analysis/analysis-results";
@@ -35,15 +36,29 @@ import { AuthProvider } from "@/hooks/use-auth";
 import { UserProfileProvider } from "@/hooks/use-user-profile";
 import { Loader2 } from "lucide-react";
 
+import { useSearchParams } from "next/navigation";
+
 function AppContent() {
   const { user, loading, signInAnonymously } = useAuth();
   const { userProfile, profileLoading, refreshUserProfile } = useUserProfile();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     if (!loading && !user) {
       void signInAnonymously().catch((e) => logger.error("Guest login failed", e));
     }
   }, [user, loading, signInAnonymously]);
+
+  useEffect(() => {
+    const action = searchParams.get("action");
+    if (action === "scan") {
+      setActiveTab("scan");
+    } else if (action === "history") {
+      setActiveTab("history");
+    } else if (action === "planning") {
+      setActiveTab("planning");
+    }
+  }, [searchParams]);
 
   const { isInstalled } = usePWA();
   const isMobile = useIsMobile();
@@ -278,41 +293,51 @@ function AppContent() {
               inert={activeTab !== "home" ? true : undefined}
               className="flex h-full max-h-full min-h-0 w-full max-w-full shrink-0 grow-0 basis-full snap-start [scroll-snap-stop:always] flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain min-w-0"
             >
-              <DashboardScreen
-                key={refreshKey}
-                onViewHistory={handleViewHistory}
-              />
+              <LazyTabContent isActive={activeTab === "home"} className="w-full h-full">
+                <DashboardScreen
+                  key={refreshKey}
+                  onViewHistory={handleViewHistory}
+                />
+              </LazyTabContent>
             </section>
             <section
               aria-hidden={activeTab !== "planning"}
               inert={activeTab !== "planning" ? true : undefined}
               className="flex h-full max-h-full min-h-0 w-full max-w-full shrink-0 grow-0 basis-full snap-start [scroll-snap-stop:always] flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain min-w-0"
             >
-              <WeeklyPlannerLazy onAddMeal={() => setActiveTab("scan")} />
+              <LazyTabContent isActive={activeTab === "planning"} className="w-full h-full">
+                <WeeklyPlannerLazy onAddMeal={() => setActiveTab("scan")} />
+              </LazyTabContent>
             </section>
             <section
               aria-hidden={activeTab !== "scan"}
               inert={activeTab !== "scan" ? true : undefined}
               className="flex h-full max-h-full min-h-0 w-full max-w-full shrink-0 grow-0 basis-full snap-start [scroll-snap-stop:always] flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain min-w-0"
             >
-              <ScanScreenLazy
-                onScanFood={handleScanFood}
-                onImageSelected={handleImageSelected}
-              />
+              <LazyTabContent isActive={activeTab === "scan"} className="w-full h-full">
+                <ScanScreenLazy
+                  onScanFood={handleScanFood}
+                  onImageSelected={handleImageSelected}
+                />
+              </LazyTabContent>
             </section>
             <section
               aria-hidden={activeTab !== "history"}
               inert={activeTab !== "history" ? true : undefined}
               className="flex h-full max-h-full min-h-0 w-full max-w-full shrink-0 grow-0 basis-full snap-start [scroll-snap-stop:always] flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain min-w-0"
             >
-              <MealHistoryLazy onBack={() => setActiveTab("home")} />
+              <LazyTabContent isActive={activeTab === "history"} className="w-full h-full">
+                <MealHistoryLazy onBack={() => setActiveTab("home")} />
+              </LazyTabContent>
             </section>
             <section
               aria-hidden={activeTab !== "profile"}
               inert={activeTab !== "profile" ? true : undefined}
               className="flex h-full max-h-full min-h-0 w-full max-w-full shrink-0 grow-0 basis-full snap-start [scroll-snap-stop:always] flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain min-w-0"
             >
-              <ProfilePageLazy />
+              <LazyTabContent isActive={activeTab === "profile"} className="w-full h-full">
+                <ProfilePageLazy />
+              </LazyTabContent>
             </section>
           </div>
         ) : (
@@ -372,7 +397,13 @@ export default function Home() {
   return (
     <AuthProvider>
       <UserProfileProvider>
-        <AppContent />
+        <Suspense fallback={
+          <div className="flex min-h-screen items-center justify-center bg-background">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        }>
+          <AppContent />
+        </Suspense>
       </UserProfileProvider>
     </AuthProvider>
   );

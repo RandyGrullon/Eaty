@@ -8,6 +8,7 @@ export type AnalyzeFoodParams = {
   foodName?: string;
   description?: string;
   allergens?: string[];
+  lang?: string;
 };
 
 // Simple in-memory cache for the session
@@ -69,6 +70,7 @@ export async function analyzeFood(
       foodName: params.foodName,
       description: params.description,
       allergens: params.allergens,
+      lang: params.lang,
     }),
   });
 
@@ -102,7 +104,7 @@ export async function generateNutritionTips(
   }>,
   totalCalories: number,
   dailyGoal: number | undefined,
-  options: { recentSummary?: string; idToken: string }
+  options: { recentSummary?: string; idToken: string; lang?: string }
 ): Promise<PersonalizedNutritionTip[]> {
   const h: Record<string, string> = { "Content-Type": "application/json" };
   if (options.idToken.trim()) {
@@ -118,6 +120,7 @@ export async function generateNutritionTips(
       totalCalories,
       dailyGoal,
       recentSummary: options.recentSummary,
+      lang: options.lang,
     }),
   });
 

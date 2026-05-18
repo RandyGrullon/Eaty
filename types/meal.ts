@@ -34,8 +34,8 @@ export interface UserProfile {
   birthDate?: string;
   age?: number;
   gender?: "male" | "female" | "other";
-  weight?: number; // in kg
-  height?: number; // in cm
+  weight?: number | string; // in kg or encrypted string
+  height?: number | string; // in cm or encrypted string
   /** Unidad preferida en la UI; el peso en Firestore sigue en kg. */
   weightUnit?: "kg" | "lbs";
   /** Unidad preferida en la UI; la altura en Firestore sigue en cm. */
@@ -49,6 +49,8 @@ export interface UserProfile {
   level?: number;
   /** Alérgenos o ingredientes a evitar configurados por el usuario. */
   allergens?: string[];
+  /** Idioma preferido para las respuestas de la IA (ej: 'es', 'en'). */
+  language?: string;
   createdAt: Date;
   updatedAt: Date;
 }

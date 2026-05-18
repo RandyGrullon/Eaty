@@ -34,7 +34,7 @@ export function useCalorieTracker() {
 
   const { data, error, isLoading, mutate } = useSWR<CalorieData, Error>(
     user ? ["calorie-tracker", user.uid] : null,
-    async ([, uid]: [string, string]) => {
+    async ([ , uid]: readonly [string, string]) => {
       // Get user profile
       const profile = await getUserProfile(uid);
       if (!profile) {
@@ -56,17 +56,36 @@ export function useCalorieTracker() {
         );
       }
 
+      const weightNum = typeof profile.weight === 'string' ? 0 : (profile.weight || 0);
+      const heightNum = typeof profile.height === 'string' ? 0 : (profile.height || 0);
+
+      const todayStats = await getTodayStats(uid);
+
+      if (weightNum <= 0 || heightNum <= 0) {
+         // Si los datos están cifrados o no son válidos, no podemos calcular el TDEE aquí
+         return {
+           dailyGoal: 2000,
+           consumed: todayStats.totalCalories,
+           remaining: Math.max(0, 2000 - todayStats.totalCalories),
+           bmr: 0,
+           tdee: 0,
+           mealsCount: todayStats.mealsCount,
+           macros: { protein: 0, carbs: 0, fat: 0 },
+           consumedMacros: todayStats.macros,
+           waterGlasses: todayStats.waterGlasses,
+           streak: profile.currentStreak || 0,
+           explanation: "No se puede calcular sin datos de peso/altura.",
+         };
+      }
+
       const tdeeData = calculateTDEEPrecise({
         age: displayAge,
         gender: profile.gender || "other",
-        weight: profile.weight,
-        height: profile.height,
+        weight: weightNum,
+        height: heightNum,
         activityLevel: profile.activityLevel,
         fitnessGoal: profile.fitnessGoal,
       });
-
-      // Get today's consumed calories and other stats
-      const todayStats = await getTodayStats(uid);
 
       const consumed = todayStats.totalCalories;
       const remaining = Math.max(0, tdeeData.dailyCalories - consumed);

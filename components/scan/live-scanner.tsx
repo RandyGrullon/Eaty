@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { X, Camera, Zap, ScanLine, Loader2, Aperture, Focus, Flame, Beef, Wheat, Droplets as FatIcon } from "lucide-react";
+import { X, Camera, Zap, ScanLine, Loader2, Aperture, Focus, Flame, Beef, Wheat, Droplets as FatIcon, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { logger } from "@/lib/logger";
+import { cn } from "@/lib/utils";
 
 interface LiveScannerProps {
   onCapture: (file: File) => void;
@@ -139,25 +140,41 @@ export function LiveScanner({ onCapture, onClose, isAnalyzingRealTime, analysisR
           </div>
 
           {/* AR Scanner Reticle Overlay */}
-          {!isInitializing && !error && (
+          {!isInitializing && !error && !analysisResult && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="relative w-64 h-64 sm:w-80 sm:h-80">
+              <div className="relative w-72 h-72 sm:w-80 sm:h-80">
                 {/* Frame corners */}
-                <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-primary rounded-tl-xl" />
-                <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-primary rounded-tr-xl" />
-                <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-primary rounded-bl-xl" />
-                <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-primary rounded-br-xl" />
+                <motion.div 
+                  animate={{ scale: [1, 1.05, 1] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="absolute inset-0"
+                >
+                  <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-primary rounded-tl-3xl shadow-[0_0_15px_rgba(var(--primary),0.5)]" />
+                  <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-primary rounded-tr-3xl shadow-[0_0_15px_rgba(var(--primary),0.5)]" />
+                  <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-primary rounded-bl-3xl shadow-[0_0_15px_rgba(var(--primary),0.5)]" />
+                  <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-primary rounded-br-3xl shadow-[0_0_15px_rgba(var(--primary),0.5)]" />
+                </motion.div>
                 
                 {/* Center crosshair */}
-                <div className="absolute inset-0 flex items-center justify-center opacity-30">
-                  <Focus className="w-16 h-16 text-white" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <motion.div
+                    animate={{ opacity: [0.2, 0.5, 0.2], scale: [0.9, 1.1, 0.9] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                  >
+                    <Focus className="w-20 h-20 text-white/40" />
+                  </motion.div>
                 </div>
+
+                {/* Pulsing detected points */}
+                <div className="absolute top-1/4 left-1/4 h-2 w-2 bg-primary rounded-full animate-ping" />
+                <div className="absolute top-1/3 right-1/4 h-2 w-2 bg-chart-2 rounded-full animate-ping [animation-delay:0.5s]" />
+                <div className="absolute bottom-1/4 left-1/3 h-2 w-2 bg-chart-1 rounded-full animate-ping [animation-delay:1s]" />
 
                 {/* Animated Scan Line */}
                 <motion.div 
-                  className="absolute left-0 right-0 h-0.5 bg-primary shadow-[0_0_15px_rgba(255,255,255,0.8)]"
+                  className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-primary to-transparent shadow-[0_0_20px_rgba(var(--primary),1)]"
                   animate={{ top: ["0%", "100%", "0%"] }}
-                  transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                  transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
                 />
               </div>
             </div>
@@ -167,47 +184,54 @@ export function LiveScanner({ onCapture, onClose, isAnalyzingRealTime, analysisR
           <AnimatePresence>
             {analysisResult && !isAnalyzingRealTime && (
               <motion.div 
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
+                initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
                 className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none p-6"
               >
-                <div className="relative group">
-                  <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full animate-pulse" />
-                  <div className="relative bg-black/60 backdrop-blur-xl border border-primary/40 rounded-[2rem] p-6 shadow-2xl min-w-[280px]">
-                    <div className="flex flex-col items-center text-center mb-6">
-                      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-1">Detección Live</p>
-                      <h3 className="text-xl font-black text-white">{analysisResult.foodName}</h3>
+                <div className="relative w-full max-w-[320px]">
+                  <div className="absolute inset-0 bg-primary/30 blur-[100px] rounded-full animate-pulse" />
+                  <div className="relative bg-black/40 backdrop-blur-3xl border border-white/20 rounded-[3rem] p-8 shadow-2xl overflow-hidden">
+                    {/* Glass glare effect */}
+                    <div className="absolute -top-[100%] -left-[100%] w-[300%] h-[300%] bg-gradient-to-br from-white/10 via-transparent to-transparent rotate-12 pointer-events-none" />
+                    
+                    <div className="flex flex-col items-center text-center mb-8">
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className="bg-primary/20 p-2 rounded-xl mb-3 border border-primary/30"
+                      >
+                        <Sparkles className="h-5 w-5 text-primary" />
+                      </motion.div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary/80 mb-2">Análisis Finalizado</p>
+                      <h3 className="text-2xl font-black text-white leading-tight">{analysisResult.foodName}</h3>
                     </div>
                     
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-white/5 rounded-2xl p-3 border border-white/10">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Flame className="h-3 w-3 text-orange-500" />
-                          <span className="text-[9px] font-black uppercase text-muted-foreground">Calorías</span>
-                        </div>
-                        <p className="text-lg font-black text-white">{analysisResult.calories} <span className="text-[10px]">kcal</span></p>
-                      </div>
-                      <div className="bg-white/5 rounded-2xl p-3 border border-white/10">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Beef className="h-3 w-3 text-red-400" />
-                          <span className="text-[9px] font-black uppercase text-muted-foreground">Proteína</span>
-                        </div>
-                        <p className="text-lg font-black text-white">{analysisResult.macros.protein}g</p>
-                      </div>
-                      <div className="bg-white/5 rounded-2xl p-3 border border-white/10">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Wheat className="h-3 w-3 text-amber-400" />
-                          <span className="text-[9px] font-black uppercase text-muted-foreground">Carbos</span>
-                        </div>
-                        <p className="text-lg font-black text-white">{analysisResult.macros.carbs}g</p>
-                      </div>
-                      <div className="bg-white/5 rounded-2xl p-3 border border-white/10">
-                        <div className="flex items-center gap-2 mb-1">
-                          <FatIcon className="h-3 w-3 text-yellow-400" />
-                          <span className="text-[9px] font-black uppercase text-muted-foreground">Grasa</span>
-                        </div>
-                        <p className="text-lg font-black text-white">{analysisResult.macros.fat}g</p>
-                      </div>
+                      {[
+                        { icon: Flame, label: "Calorías", value: `${analysisResult.calories} kcal`, color: "text-orange-500", bg: "bg-orange-500/10" },
+                        { icon: Beef, label: "Proteína", value: `${analysisResult.macros.protein}g`, color: "text-red-400", bg: "bg-red-400/10" },
+                        { icon: Wheat, label: "Carbos", value: `${analysisResult.macros.carbs}g`, color: "text-amber-400", bg: "bg-amber-400/10" },
+                        { icon: FatIcon, label: "Grasa", value: `${analysisResult.macros.fat}g`, color: "text-yellow-400", bg: "bg-yellow-400/10" }
+                      ].map((item, i) => (
+                        <motion.div 
+                          key={i}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: i * 0.1 }}
+                          className={cn("rounded-2xl p-4 border border-white/5", item.bg)}
+                        >
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <item.icon className={cn("h-3.5 w-3.5", item.color)} />
+                            <span className="text-[9px] font-black uppercase text-white/40 tracking-wider">{item.label}</span>
+                          </div>
+                          <p className="text-lg font-black text-white">{item.value}</p>
+                        </motion.div>
+                      ))}
+                    </div>
+
+                    <div className="mt-6 flex items-center justify-center gap-2 text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">
+                      <ScanLine className="h-3 w-3" />
+                      Visión por Computadora
                     </div>
                   </div>
                 </div>

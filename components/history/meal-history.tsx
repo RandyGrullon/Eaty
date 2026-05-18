@@ -344,6 +344,7 @@ export function MealHistory({ onBack }: MealHistoryProps) {
                   key={period}
                   type="button"
                   onClick={() => setFilterPeriod(period)}
+                  aria-pressed={filterPeriod === period}
                   className={cn(
                     "inline-flex shrink-0 items-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-black tracking-tight transition-all duration-300",
                     filterPeriod === period
@@ -373,6 +374,7 @@ export function MealHistory({ onBack }: MealHistoryProps) {
               <button
                 key={range.id}
                 onClick={() => setCalorieRange(range.id as any)}
+                aria-pressed={calorieRange === range.id}
                 className={cn(
                   "rounded-full px-4 py-1.5 text-[10px] font-bold border transition-all",
                   calorieRange === range.id

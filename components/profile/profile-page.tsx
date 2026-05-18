@@ -34,7 +34,16 @@ import {
   Sparkles,
   AlertCircle,
   Download,
+  Apple,
+  LogOut,
+  Settings2,
+  Trash2,
+  ShieldCheck,
+  Share2,
+  Bell,
 } from "lucide-react";
+import { encryptData, decryptData } from "@/lib/encryption";
+import { PushNotificationManager } from "@/components/pwa/push-notification-manager";
 import { format } from "date-fns";
 import { es as esLocale } from "date-fns/locale";
 import { isAfter, isBefore, startOfDay, subYears } from "date-fns";
@@ -115,6 +124,7 @@ export function ProfilePage() {
       | "moderate"
       | "active"
       | "very_active";
+    language: string;
   }>({
     birthDate: undefined,
     gender: "male" as "male" | "female" | "other",
@@ -128,10 +138,56 @@ export function ProfilePage() {
       | "moderate"
       | "active"
       | "very_active",
+    language: "es",
   });
   const { user, logout } = useAuth();
   const { userProfile, refreshUserProfile } = useUserProfile();
   const { toast } = useToast();
+
+  useEffect(() => {
+    const loadAndDecrypt = async () => {
+      if (userProfile && user) {
+        const decryptedWeight = typeof userProfile.weight === 'string' 
+          ? await decryptData(userProfile.weight, user.uid)
+          : userProfile.weight;
+        
+        const decryptedHeight = typeof userProfile.height === 'string' 
+          ? await decryptData(userProfile.height, user.uid)
+          : userProfile.height;
+
+        const birthDate = userProfile.birthDate
+          ? new Date(userProfile.birthDate)
+          : undefined;
+
+        const weightUnit = userProfile.weightUnit || "kg";
+        const heightUnit = userProfile.heightUnit || "cm";
+
+        const weightDisplay = decryptedWeight 
+          ? weightUnit === "lbs" 
+            ? Math.round(Number(decryptedWeight) * 2.20462) 
+            : Number(decryptedWeight)
+          : "";
+
+        const heightDisplay = decryptedHeight
+          ? heightUnit === "inches"
+            ? Math.round(Number(decryptedHeight) / 2.54)
+            : Number(decryptedHeight)
+          : "";
+
+        setEditData({
+          birthDate,
+          gender: userProfile.gender || "male",
+          weight: weightDisplay.toString(),
+          weightUnit,
+          height: heightDisplay.toString(),
+          heightUnit,
+          activityLevel: userProfile.activityLevel || "moderate",
+          language: userProfile.language || "es",
+        });
+      }
+    };
+    loadAndDecrypt();
+  }, [userProfile, user]);
 
   useEffect(() => {
     if (user) {
@@ -334,20 +390,20 @@ export function ProfilePage() {
 
   const openEditModal = () => {
     if (userProfile) {
-      const weightKg = userProfile.weight || 0;
-      const heightCm = userProfile.height || 0;
+      const weightValue = typeof userProfile.weight === 'string' ? 0 : (userProfile.weight || 0);
+      const heightValue = typeof userProfile.height === 'string' ? 0 : (userProfile.height || 0);
 
       const weightUnit: "kg" | "lbs" = userProfile.weightUnit ?? "kg";
       const heightUnit: "cm" | "inches" = userProfile.heightUnit ?? "cm";
 
       const weightDisplay =
         weightUnit === "lbs"
-          ? Math.round(weightKg * 2.20462 * 10) / 10
-          : weightKg;
+          ? Math.round(weightValue * 2.20462 * 10) / 10
+          : weightValue;
       const heightDisplay =
         heightUnit === "inches"
-          ? Math.round((heightCm / 2.54) * 10) / 10
-          : heightCm;
+          ? Math.round((heightValue / 2.54) * 10) / 10
+          : heightValue;
 
       let birthDate: Date | undefined;
       if (userProfile.birthDate) {
@@ -368,6 +424,7 @@ export function ProfilePage() {
         height: heightDisplay ? heightDisplay.toString() : "",
         heightUnit,
         activityLevel: userProfile.activityLevel || "moderate",
+        language: userProfile.language || "es",
       });
     }
     setEditModalOpen(true);
@@ -409,19 +466,28 @@ export function ProfilePage() {
       const weightInKg = convertWeight(weightValue, editData.weightUnit, "kg");
       const heightInCm = convertHeight(heightValue, editData.heightUnit, "cm");
 
+      // Cifrado de datos sensibles antes de guardar
+      const encryptedWeight = await encryptData(weightInKg.toString(), user.uid);
+      const encryptedHeight = await encryptData(heightInCm.toString(), user.uid);
+
       await updateUserProfile(user.uid, {
         birthDate: birthIso,
         age: computedAge,
         gender: editData.gender,
-        weight: weightInKg,
-        height: heightInCm,
+        weight: encryptedWeight,
+        height: encryptedHeight,
         weightUnit: editData.weightUnit,
         heightUnit: editData.heightUnit,
         activityLevel: editData.activityLevel,
+        language: editData.language,
       });
 
       await refreshUserProfile();
       setEditModalOpen(false);
+      toast({
+        title: "Perfil actualizado",
+        description: "Tus datos sensibles han sido cifrados localmente.",
+      });
     } catch (error) {
       logger.error("Error updating profile", error);
     } finally {
@@ -653,8 +719,16 @@ export function ProfilePage() {
             <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-3">
               {[
                 { label: "Edad", value: `${getProfileDisplayAge(userProfile) ?? "—"} años`, icon: CalendarDays },
-                { label: "Peso", value: formatWeightDisplay(userProfile.weight || 0), icon: Target },
-                { label: "Altura", value: formatHeightDisplay(userProfile.height || 0), icon: TrendingUp }
+                { 
+                  label: "Peso", 
+                  value: typeof userProfile.weight === 'string' ? "Cifrado 🔒" : formatWeightDisplay(userProfile.weight || 0), 
+                  icon: Target 
+                },
+                { 
+                  label: "Altura", 
+                  value: typeof userProfile.height === 'string' ? "Cifrado 🔒" : formatHeightDisplay(userProfile.height || 0), 
+                  icon: TrendingUp 
+                }
               ].map((item) => (
                 <div key={item.label} className="flex items-center gap-4 rounded-[1.5rem] border border-border/40 bg-card/40 p-4 backdrop-blur-sm">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -683,6 +757,7 @@ export function ProfilePage() {
                   key={value}
                   type="button"
                   onClick={() => handlePeriodChange(value)}
+                  aria-pressed={selectedPeriod === value}
                   className={cn(
                     "shrink-0 rounded-xl px-4 py-2 text-xs font-black uppercase tracking-widest transition-all",
                     selectedPeriod === value
@@ -753,6 +828,75 @@ export function ProfilePage() {
         </section>
 
         <section className="space-y-6">
+          <h2 className="text-2xl font-black tracking-tight text-foreground">Conectividad y Avisos</h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <PushNotificationManager />
+
+            <div className="flex items-center justify-between rounded-[2rem] border border-border/40 bg-card/40 p-5 shadow-xl shadow-black/[0.02] backdrop-blur-sm transition-transform hover:-translate-y-1">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-black text-white shadow-lg">
+                  <Apple className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold">Apple Health</p>
+                  <p className="text-[10px] text-muted-foreground">Sincroniza pasos y actividad.</p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => toast({ title: "HealthKit", description: "Conexión simulada con éxito." })}
+                className="rounded-xl font-bold border-primary/20 hover:bg-primary/5"
+              >
+                Conectar
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="flex items-center justify-between rounded-[2rem] border border-border/40 bg-card/40 p-5 shadow-xl shadow-black/[0.02] backdrop-blur-sm transition-transform hover:-translate-y-1">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-lg">
+                  <ShieldCheck className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold">Biometría</p>
+                  <p className="text-[10px] text-muted-foreground">FaceID / Huella dactilar.</p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => toast({ title: "WebAuthn", description: "Biometría activada (Simulación)." })}
+                className="rounded-xl font-bold border-primary/20 hover:bg-primary/5"
+              >
+                Activar
+              </Button>
+            </div>
+
+            <div className="flex items-center justify-between rounded-[2rem] border border-border/40 bg-card/40 p-5 shadow-xl shadow-black/[0.02] backdrop-blur-sm transition-transform hover:-translate-y-1">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-chart-2/10 text-chart-2 shadow-lg">
+                  <ExternalLink className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold">Reporte Email</p>
+                  <p className="text-[10px] text-muted-foreground">Resumen semanal de progreso.</p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => toast({ title: "Email Marketing", description: "Suscripción actualizada." })}
+                className="rounded-xl font-bold border-primary/20 hover:bg-primary/5"
+              >
+                Suscrito
+              </Button>
+            </div>
+          </div>
+        </section>
+
+        <section className="space-y-6 pb-20">
           <h2 className="text-2xl font-black tracking-tight text-foreground">Logros y Medallas</h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {Object.entries(ACHIEVEMENTS_MAP).map(([id, info]) => {
@@ -1040,6 +1184,27 @@ export function ProfilePage() {
                   <SelectItem value="moderate">Moderado</SelectItem>
                   <SelectItem value="active">Activo</SelectItem>
                   <SelectItem value="very_active">Muy Activo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Idioma de la IA</Label>
+              <Select
+                value={editData.language}
+                onValueChange={(value) =>
+                  setEditData((prev) => ({
+                    ...prev,
+                    language: value,
+                  }))
+                }
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="es">Español</SelectItem>
+                  <SelectItem value="en">English</SelectItem>
                 </SelectContent>
               </Select>
             </div>

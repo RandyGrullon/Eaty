@@ -9,6 +9,7 @@ import {
 import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
+
 /** Para que Vercel/Next.js no maten el análisis vision lento (hasta 60s) */
 export const maxDuration = 60;
 
@@ -24,6 +25,7 @@ const bodySchema = z
     foodName: z.string().max(200).optional(),
     description: z.string().max(2000).optional(),
     allergens: z.array(z.string()).optional(),
+    lang: z.string().max(10).optional(),
   })
   .refine(
     (b) =>
@@ -62,6 +64,7 @@ export async function POST(req: Request) {
       foodName: body.foodName?.trim(),
       description: body.description?.trim(),
       allergens: body.allergens,
+      lang: body.lang,
     });
 
     // Contar cuota solo cuando el análisis se completó con éxito.

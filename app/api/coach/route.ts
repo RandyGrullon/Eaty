@@ -8,7 +8,7 @@ import {
 } from "@/lib/api-auth-usage";
 import { logger } from "@/lib/logger";
 import {
-  SYSTEM_COACH_CHAT,
+  getSystemCoachChat,
   buildCoachUserPrompt,
 } from "@/lib/food-analysis-prompts";
 
@@ -29,6 +29,7 @@ const bodySchema = z.object({
     })
   ),
   dailyGoal: z.number().optional(),
+  lang: z.string().max(10).optional(),
 });
 
 export async function POST(req: Request) {
@@ -48,7 +49,7 @@ export async function POST(req: Request) {
 
     const response = await runGroqChat({
       messages: [
-        { role: "system", content: SYSTEM_COACH_CHAT },
+        { role: "system", content: getSystemCoachChat(body.lang) },
         { role: "user", content: userPrompt },
       ],
       temperature: 0.7,

@@ -1,3 +1,5 @@
+import { SentryMock } from "./sentry";
+
 /**
  * Punto único para logs (sustituible por Sentry/Datadog sin tocar cada call site).
  */
@@ -5,6 +7,9 @@ const isDev = process.env.NODE_ENV === "development";
 
 export const logger = {
   error(message: string, meta?: unknown): void {
+    if (!isDev) {
+      SentryMock.captureException(meta || message, { message });
+    }
     if (meta !== undefined) {
       console.error(`[eaty] ${message}`, meta);
       return;
@@ -12,7 +17,9 @@ export const logger = {
     console.error(`[eaty] ${message}`);
   },
   warn(message: string, meta?: unknown): void {
-    if (!isDev) return;
+    if (!isDev) {
+      SentryMock.captureMessage(message, "warning");
+    }
     if (meta !== undefined) {
       console.warn(`[eaty] ${message}`, meta);
       return;
@@ -20,7 +27,6 @@ export const logger = {
     console.warn(`[eaty] ${message}`);
   },
   info(message: string, meta?: unknown): void {
-    if (!isDev) return;
     if (meta !== undefined) {
       console.info(`[eaty] ${message}`, meta);
       return;
@@ -28,3 +34,4 @@ export const logger = {
     console.info(`[eaty] ${message}`);
   },
 };
+

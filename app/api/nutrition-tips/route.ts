@@ -25,6 +25,7 @@ const bodySchema = z.object({
   totalCalories: z.number(),
   dailyGoal: z.number().optional(),
   recentSummary: z.string().max(500).optional(),
+  lang: z.string().max(10).optional(),
 });
 
 export async function POST(req: Request) {
@@ -39,6 +40,7 @@ export async function POST(req: Request) {
       totalCalories: body.totalCalories,
       dailyGoal: body.dailyGoal,
       recentSummary: body.recentSummary,
+      lang: body.lang,
     });
 
     // Contar cuota solo cuando el resultado está listo.

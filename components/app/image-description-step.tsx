@@ -36,8 +36,9 @@ export function ImageDescriptionStep({
         <div className="mx-auto max-w-4xl">
           <h1 className="text-xl font-bold">Agregar descripción</h1>
           <p className="text-sm opacity-90">
-            Puedes dejar la descripción vacía: la IA nombra el plato y estima
-            según la foto. Un texto extra mejora la precisión.
+            Puedes dejar la descripción vacía: la IA estima según la foto.
+            <span className="hidden sm:inline"> Un texto extra mejora la precisión.</span>
+            <strong> Consejo:</strong> incluye un objeto de referencia (mano o cubierto) para mejor escala.
           </p>
         </div>
       </div>

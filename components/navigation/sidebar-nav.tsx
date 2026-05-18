@@ -38,6 +38,8 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
               <button
                 key={tab.id}
                 onClick={() => onTabChange(tab.id)}
+                aria-label={tab.label}
+                aria-current={isActive ? "page" : undefined}
                 className={`w-full group flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
                   isActive
                     ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-[1.02]"

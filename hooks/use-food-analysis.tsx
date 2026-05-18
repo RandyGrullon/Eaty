@@ -98,12 +98,15 @@ export function useFoodAnalysis(onSaveSuccess?: () => void) {
             imageMimeType: mimeType,
             description,
             allergens: userProfile?.allergens,
+            lang: userProfile?.language,
           },
           idToken
         );
 
+        const fullBase64 = `data:${mimeType};base64,${base64WithoutPrefix}`;
+
         setAnalysisResult({
-          imageUrl: null,
+          imageUrl: fullBase64,
           foodName: result.foodName,
           calories: result.calories,
           macros: result.macros,
@@ -163,6 +166,7 @@ export function useFoodAnalysis(onSaveSuccess?: () => void) {
           { 
             foodName: foodName.trim(),
             allergens: userProfile?.allergens,
+            lang: userProfile?.language,
           },
           idToken
         );

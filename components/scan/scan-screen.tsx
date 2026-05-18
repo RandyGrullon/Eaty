@@ -523,7 +523,7 @@ export function ScanScreen({ onScanFood, onImageSelected }: ScanScreenProps) {
               className="h-3.5 w-3.5 shrink-0 text-primary"
               aria-hidden
             />
-            Foto: plano cenital o ligeramente inclinado.
+            Foto: plano cenital o con una mano/cubierto para escala.
           </li>
           <li className="hidden h-3 w-px bg-border/80 sm:block" aria-hidden />
           <li className="flex items-center gap-2">

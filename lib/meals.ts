@@ -70,16 +70,22 @@ export async function saveMeal(
 ): Promise<SaveMealResult> {
   try {
     const mealsRef = collection(getDb(), "users", userId, "meals");
+    
+    // Si ya tenemos base64 en imageUrl, lo usamos directamente.
+    // De lo contrario, intentaremos subir el archivo si existe.
+    let finalImageUrl = mealData.imageUrl ?? null;
+    let imageStored = false;
+
     const docRef = await addDoc(mealsRef, {
       ...mealData,
-      imageUrl: mealData.imageUrl ?? null,
+      imageUrl: finalImageUrl,
       createdAt: options?.plannedDate 
         ? Timestamp.fromDate(options.plannedDate) 
         : Timestamp.now(),
       isPlanned: mealData.isPlanned ?? false,
     });
-    let imageStored = false;
-    if (options?.imageFile) {
+
+    if (options?.imageFile && !finalImageUrl) {
       try {
         const url = await uploadUserMealImage(
           userId,
@@ -91,7 +97,10 @@ export async function saveMeal(
       } catch (e) {
         logger.error("saveMeal: subida de imagen (comida guardada sin foto)", e);
       }
+    } else if (finalImageUrl) {
+      imageStored = true; // El base64 ya está guardado en el documento
     }
+
     return { mealId: docRef.id, imageStored };
   } catch (error) {
     console.error("Error saving meal:", error);

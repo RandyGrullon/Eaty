@@ -32,36 +32,48 @@ describe("nutritionTipsResponseSchema", () => {
           whatToChange: "Sustituye la bebida azucarada por agua con gas y limón",
           whereApply: "En el almuerzo con el menú que registraste hoy",
           whyItHelps: "Menos calorías líquidas y menos pico glucémico.",
-          recipeSearchQuery: "bebidas sin azúcar caseras limón",
           miniSteps: [
             "Prepara una jarra con agua, gas, rodajas de limón y menta.",
             "Guarda la bebida en nevera y sirve en vaso alto con hielo.",
           ],
+          recipe: {
+            title: "Agua de Limón y Menta",
+            ingredients: ["Agua con gas", "Limón", "Menta"],
+            steps: ["Mezclar todos los ingredientes", "Enfriar en la nevera por 10 min"],
+          },
         },
         {
           whatToChange: "Añade una ensalada verde antes del plato principal",
           whereApply: "En la cena, antes de servir carbohidrato",
-          recipeSearchQuery: "ensalada verde vinagreta simple",
           miniSteps: [
             "Lava y seca lechuga o rúcula.",
             "Aliña con aceite, limón y sal en el bol antes de mezclar.",
           ],
+          recipe: {
+            title: "Ensalada Simple",
+            ingredients: ["Lechuga", "Aceite", "Limón"],
+            steps: ["Lavar muy bien la lechuga", "Aliñar al gusto con limón"],
+          },
         },
         {
           whatToChange: "Reduce el pan a una sola rebanada tostada",
           whereApply: "En el desayuno registrado",
           whyItHelps: "Recorta carbohidrato refinado fácilmente.",
-          recipeSearchQuery: "desayuno proteína huevo aguacate",
           miniSteps: [
             "Tuesta solo una rebanada y acompaña con huevo o yogur.",
             "Si tienes hambre, suma tomate o pepino en rodajas.",
           ],
+          recipe: {
+            title: "Tostada Proteica",
+            ingredients: ["Pan integral", "Huevo"],
+            steps: ["Tostar el pan integral suavemente", "Añadir huevo cocido o a la plancha"],
+          },
         },
       ],
     };
     const parsed = nutritionTipsResponseSchema.parse(raw);
     expect(parsed.tips).toHaveLength(3);
-    expect(parsed.tips[0].recipeSearchQuery).toContain("bebidas");
+    expect(parsed.tips[0].recipe.title).toContain("Limón");
   });
 });
 

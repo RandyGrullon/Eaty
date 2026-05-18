@@ -18,6 +18,8 @@ import { logger } from "@/lib/logger";
 import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 
+import { useUserProfile } from "@/hooks/use-user-profile";
+
 interface Message {
   role: "user" | "assistant";
   content: string;
@@ -30,17 +32,26 @@ export function AICoachDrawer({
   open: boolean;
   onOpenChange: (o: boolean) => void;
 }) {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: "assistant",
-      content: "¡Hola! Soy tu Eaty Coach. ¿En qué puedo ayudarte hoy con tu alimentación?",
-    },
-  ]);
+  const { user } = useAuth();
+  const { userProfile } = useUserProfile();
+  const { calorieData } = useCalorieTracker();
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const { user } = useAuth();
-  const { calorieData } = useCalorieTracker();
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (messages.length === 0) {
+      setMessages([
+        {
+          role: "assistant",
+          content: userProfile?.language === "en" 
+            ? "Hello! I am your Eaty Coach. How can I help you today with your nutrition?"
+            : "¡Hola! Soy tu Eaty Coach. ¿En qué puedo ayudarte hoy con tu alimentación?",
+        },
+      ]);
+    }
+  }, [userProfile?.language, messages.length]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -72,6 +83,7 @@ export function AICoachDrawer({
             createdAt: m.createdAt.toISOString(),
           })),
           dailyGoal: calorieData?.dailyGoal,
+          lang: userProfile?.language,
         }),
       });
 
@@ -90,7 +102,7 @@ export function AICoachDrawer({
     } finally {
       setLoading(false);
     }
-  }, [user, calorieData, loading]);
+  }, [user, calorieData, loading, userProfile?.language]);
 
   const handleSend = async () => {
     if (!input.trim()) return;
@@ -138,19 +150,32 @@ export function AICoachDrawer({
                 )}
               >
                 <div className={cn(
-                  "flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full border text-[10px] font-bold",
-                  m.role === "assistant" ? "bg-primary text-primary-foreground border-primary" : "bg-muted text-muted-foreground"
+                  "flex h-9 w-9 shrink-0 select-none items-center justify-center rounded-2xl border text-[10px] font-bold shadow-sm transition-transform hover:scale-105",
+                  m.role === "assistant" 
+                    ? "bg-gradient-to-br from-primary via-primary to-chart-2 text-primary-foreground border-primary/20" 
+                    : "bg-muted text-muted-foreground border-border/40"
                 )}>
-                  {m.role === "assistant" ? <Bot className="h-4 w-4" /> : <User className="h-4 w-4" />}
+                  {m.role === "assistant" ? <Bot className="h-5 w-5" /> : <User className="h-5 w-5" />}
                 </div>
                 <div className={cn(
-                  "relative max-w-[85%] rounded-[1.5rem] px-4 py-3 text-sm shadow-sm",
+                  "relative max-w-[85%] rounded-[1.8rem] px-5 py-3.5 text-sm shadow-sm transition-all",
                   m.role === "user" 
-                    ? "bg-primary text-primary-foreground rounded-tr-none" 
-                    : "bg-card text-foreground rounded-tl-none border border-border/40 prose prose-sm prose-p:leading-relaxed prose-headings:mb-2 prose-headings:mt-4 prose-headings:text-foreground prose-strong:text-primary dark:prose-invert"
+                    ? "bg-primary text-primary-foreground rounded-tr-none shadow-primary/10" 
+                    : "bg-card text-foreground rounded-tl-none border border-border/40 prose prose-sm prose-p:leading-relaxed prose-headings:mb-2 prose-headings:mt-4 prose-headings:text-foreground prose-strong:text-primary dark:prose-invert shadow-black/[0.02]"
                 )}>
                   {m.role === "assistant" ? (
-                    <ReactMarkdown>{m.content}</ReactMarkdown>
+                    <div className="prose-h3:text-lg prose-h3:font-black prose-h3:mb-2 prose-p:mb-3 last:prose-p:mb-0 prose-li:my-1">
+                      <ReactMarkdown
+                        components={{
+                          h3: ({ node, ...props }) => <h3 className="text-primary flex items-center gap-2" {...props}><Sparkles className="h-4 w-4" /> {props.children}</h3>,
+                          strong: ({ node, ...props }) => <strong className="text-primary font-black" {...props} />,
+                          li: ({ node, ...props }) => <li className="list-disc ml-4 marker:text-primary" {...props} />,
+                          code: ({ node, ...props }) => <code className="bg-primary/10 text-primary px-1.5 py-0.5 rounded-md font-bold text-[0.8em]" {...props} />,
+                        }}
+                      >
+                        {m.content}
+                      </ReactMarkdown>
+                    </div>
                   ) : (
                     m.content
                   )}
