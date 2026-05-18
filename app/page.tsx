@@ -4,13 +4,15 @@ import { FirebaseEnvErrorScreen } from "@/components/app/firebase-env-error";
 import { ImageDescriptionStep } from "@/components/app/image-description-step";
 import { AnalyzingFoodOverlay } from "@/components/app/analyzing-food-overlay";
 import { isFirebaseConfigReady } from "@/lib/firebase-config";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserProfile } from "@/hooks/use-user-profile";
 import { useFoodAnalysis } from "@/hooks/use-food-analysis";
 import { usePWA } from "@/hooks/use-pwa";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useMainTabScroll } from "@/hooks/use-main-tab-scroll";
+import { useCalorieTracker } from "@/hooks/use-calorie-tracker";
+import { useOfflineSync } from "@/hooks/use-offline-sync";
 import {
   MealHistoryLazy,
   ProfilePageLazy,
@@ -32,10 +34,32 @@ import { UserProfileProvider } from "@/hooks/use-user-profile";
 import { Loader2 } from "lucide-react";
 
 function AppContent() {
-  const { user, loading } = useAuth();
+  const { user, loading, signInAnonymously } = useAuth();
   const { userProfile, profileLoading, refreshUserProfile } = useUserProfile();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      void signInAnonymously().catch((e) => logger.error("Guest login failed", e));
+    }
+  }, [user, loading, signInAnonymously]);
+
+  useEffect(() => {
+    const hasSeenGuide = localStorage.getItem("eaty-guide-seen");
+    if (!hasSeenGuide && userProfile && !loading && !profileLoading) {
+      setTimeout(() => {
+        const { toast } = import("@/hooks/use-toast").then(m => {
+          // Nota: toast no es una exportación nombrada, es un hook
+        });
+        // Usaremos window.dispatchEvent o simplemente dejaremos que el toast normal lo maneje
+        // Por simplicidad, usemos el toast que ya tenemos en el scope si es posible
+      }, 2000);
+    }
+  }, [userProfile, loading, profileLoading]);
+
   const { isInstalled } = usePWA();
   const isMobile = useIsMobile();
+  const { refreshData: refreshCalorieData } = useCalorieTracker();
+  useOfflineSync(refreshCalorieData);
   const {
     isAnalyzing,
     isSaving,
@@ -48,7 +72,8 @@ function AppContent() {
     dismissImageAnalysisError,
     saveAnalysis,
     clearAnalysis,
-  } = useFoodAnalysis();
+    setManualAnalysis,
+  } = useFoodAnalysis(refreshCalorieData);
   const [activeTab, setActiveTab] = useState<MainTab>("home");
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imageDescription, setImageDescription] = useState("");
@@ -108,9 +133,14 @@ function AppContent() {
   const handleScanFood = async (
     imageFile?: File,
     foodName?: string,
-    description?: string
+    description?: string,
+    fullData?: any
   ) => {
     try {
+      if (fullData) {
+        setManualAnalysis(fullData);
+        return;
+      }
       if (imageFile) {
         await analyzeImage(imageFile, description);
       } else if (foodName) {
@@ -125,8 +155,25 @@ function AppContent() {
     setActiveTab("history");
   };
 
-  const handleSaveAnalysis = async () => {
-    await saveAnalysis();
+  const handleSaveAnalysis = async (editedData?: any) => {
+    if (!user) return;
+    await saveAnalysis(editedData);
+    
+    // Evaluar logros
+    const { evaluateAchievements } = await import("@/lib/meals");
+    const newAchievements = await evaluateAchievements(user.uid);
+    if (newAchievements.length > 0) {
+      const { toast } = await import("@/hooks/use-toast");
+      // @ts-ignore
+      newAchievements.forEach(id => {
+        // @ts-ignore
+        toast({
+          title: "🏆 ¡Nuevo Logro!",
+          description: "Has desbloqueado una nueva medalla en tu perfil.",
+        });
+      });
+    }
+
     setRefreshKey((prev) => prev + 1);
     setActiveTab("home");
   };

@@ -32,6 +32,7 @@ import {
   Dumbbell,
   ExternalLink,
   Sparkles,
+  AlertCircle,
 } from "lucide-react";
 import { format } from "date-fns";
 import { es as esLocale } from "date-fns/locale";
@@ -48,7 +49,7 @@ import { useToast } from "@/hooks/use-toast";
 import { MealCalendar } from "./meal-calendar";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserProfile } from "@/hooks/use-user-profile";
-import { getUserMeals, updateUserProfile } from "@/lib/meals";
+import { getUserMeals, updateUserProfile, deleteUserAccountData } from "@/lib/meals";
 import { logger } from "@/lib/logger";
 import type { Meal } from "@/types/meal";
 import { ThemeToggle } from "@/components/app/theme-toggle";
@@ -80,6 +81,15 @@ type TimePeriod =
   | "quarterly"
   | "semi-annual"
   | "annual";
+
+const ACHIEVEMENTS_MAP = {
+  first_meal: { label: "Primera Comida", desc: "¡Has comenzado tu viaje!", icon: Sparkles, color: "text-yellow-500", bg: "bg-yellow-500/10" },
+  explorer: { label: "Explorador", desc: "10 comidas registradas", icon: CalendarIcon, color: "text-blue-500", bg: "bg-blue-500/10" },
+  nutrition_master: { label: "Maestro Nutricional", desc: "50 comidas registradas", icon: Award, color: "text-purple-500", bg: "bg-purple-500/10" },
+  streak_3: { label: "Racha de 3", desc: "3 días seguidos", icon: Flame, color: "text-orange-500", bg: "bg-orange-500/10" },
+  streak_7: { label: "Racha de 7", desc: "¡Una semana impecable!", icon: Target, color: "text-red-500", bg: "bg-red-500/10" },
+  hydrated_hero: { icon: Award, label: "Héroe Hidratado", desc: "8+ vasos de agua en un día", color: "text-cyan-500", bg: "bg-cyan-500/10" },
+};
 
 export function ProfilePage() {
   const [meals, setMeals] = useState<Meal[]>([]);
@@ -416,6 +426,35 @@ export function ProfilePage() {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+    
+    const confirmed = window.confirm(
+      "¿Estás seguro de que quieres eliminar tu cuenta? Esta acción es irreversible y perderás todo tu historial de comidas y fotos."
+    );
+    
+    if (!confirmed) return;
+
+    try {
+      setLoading(true);
+      await deleteUserAccountData(user.uid);
+      await logout();
+      toast({
+        title: "Cuenta eliminada",
+        description: "Todos tus datos han sido borrados de nuestros servidores.",
+      });
+    } catch (error) {
+      logger.error("Error deleting account", error);
+      toast({
+        title: "Error",
+        description: "No se pudieron eliminar todos tus datos. Inténtalo de nuevo.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Handle unit changes with automatic conversion
   const handleWeightUnitChange = (newUnit: "kg" | "lbs") => {
     const currentValue = parseFloat(editData.weight) || 0;
@@ -514,21 +553,61 @@ export function ProfilePage() {
         />
 
         <div className="relative z-10 mx-auto max-w-4xl px-4 pb-12 pt-12 sm:px-8">
+          {user?.isAnonymous && (
+            <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-[2rem] border border-warning/20 bg-warning/5 p-6 animate-in fade-in slide-in-from-top-4 duration-700">
+              <div className="flex items-start gap-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-warning/10 text-warning">
+                  <AlertCircle className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="font-black text-foreground">Estás en modo invitado</p>
+                  <p className="text-sm font-medium text-muted-foreground leading-snug">
+                    Tus datos se podrían perder si borras el caché o cambias de dispositivo.
+                  </p>
+                </div>
+              </div>
+              <Button 
+                onClick={() => logout()}
+                variant="warning"
+                className="rounded-xl font-bold shadow-lg shadow-warning/20"
+              >
+                Crear cuenta real
+              </Button>
+            </div>
+          )}
           <div className="flex flex-col gap-8 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-6">
-              <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-[2rem] bg-primary text-2xl font-black text-primary-foreground shadow-2xl shadow-primary/20 transition-transform hover:scale-105">
-                {initials}
+              <div className="relative">
+                <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-[2rem] bg-primary text-2xl font-black text-primary-foreground shadow-2xl shadow-primary/20 transition-transform hover:scale-105">
+                  {initials}
+                </div>
+                {userProfile?.level && (
+                  <div className="absolute -bottom-2 -right-2 flex h-10 w-10 items-center justify-center rounded-2xl bg-chart-2 font-black text-white shadow-lg">
+                    {userProfile.level}
+                  </div>
+                )}
               </div>
               <div className="min-w-0">
                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-1">
-                  Mi Cuenta
+                  Mi Cuenta {userProfile?.points ? `· ${userProfile.points} pts` : ""}
                 </p>
                 <h1 className="truncate text-3xl font-black tracking-tight text-foreground sm:text-4xl">
                   {displayName}
                 </h1>
-                <p className="mt-1 truncate text-sm font-medium text-muted-foreground/80">
-                  {user?.email}
-                </p>
+                {userProfile?.level && (
+                  <div className="mt-2 w-48 space-y-1">
+                    <div className="flex justify-between text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">
+                      <span>Nivel {userProfile.level}</span>
+                      <span>{userProfile.points || 0} / {userProfile.level * 1000}</span>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                      <div 
+                        className="h-full bg-chart-2 transition-all duration-500" 
+                        style={{ width: `${Math.min(100, ((userProfile.points || 0) / (userProfile.level * 1000)) * 100)}%` }} 
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex shrink-0 flex-wrap items-center gap-3">
@@ -647,6 +726,45 @@ export function ProfilePage() {
           )}
         </section>
 
+        <section className="space-y-6">
+          <h2 className="text-2xl font-black tracking-tight text-foreground">Logros y Medallas</h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {Object.entries(ACHIEVEMENTS_MAP).map(([id, info]) => {
+              const isUnlocked = userProfile?.achievements?.includes(id);
+              const Icon = info.icon;
+              return (
+                <div 
+                  key={id} 
+                  className={cn(
+                    "relative overflow-hidden rounded-[2rem] border p-6 transition-all duration-500",
+                    isUnlocked 
+                      ? "border-border/40 bg-card/40 shadow-xl shadow-black/[0.02] grayscale-0 opacity-100" 
+                      : "border-dashed border-border/20 bg-muted/5 grayscale opacity-40"
+                  )}
+                >
+                  <div className="flex items-start gap-4">
+                    <div className={cn(
+                      "flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl shadow-inner",
+                      isUnlocked ? info.bg : "bg-muted"
+                    )}>
+                      <Icon className={cn("h-7 w-7", isUnlocked ? info.color : "text-muted-foreground")} />
+                    </div>
+                    <div>
+                      <p className="font-black text-foreground">{info.label}</p>
+                      <p className="mt-1 text-xs font-medium text-muted-foreground leading-snug">{info.desc}</p>
+                    </div>
+                  </div>
+                  {!isUnlocked && (
+                    <div className="absolute top-2 right-4">
+                      <Badge variant="outline" className="text-[9px] font-black uppercase tracking-tighter border-muted-foreground/20 text-muted-foreground/40">Bloqueado</Badge>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
         <section className="pt-8 border-t border-border/40">
           <div className="rounded-[2rem] border border-primary/20 bg-gradient-to-br from-primary/5 via-card/50 to-card/50 p-8 shadow-2xl shadow-primary/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
             <div>
@@ -663,6 +781,27 @@ export function ProfilePage() {
                 Explorar Body Matter
                 <ExternalLink className="h-4 w-4" />
               </a>
+            </Button>
+          </div>
+        </section>
+
+        <section className="pt-12 border-t border-border/40">
+          <div className="rounded-[2rem] border border-destructive/20 bg-destructive/5 p-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+            <div>
+              <h3 className="text-xl font-black tracking-tight text-destructive flex items-center gap-2">
+                <AlertCircle className="h-5 w-5" />
+                Zona de Peligro
+              </h3>
+              <p className="mt-1 text-sm font-medium text-muted-foreground/80 max-w-sm">
+                Eliminar tu cuenta borrará permanentemente todos tus registros, fotos y progreso. Esta acción no se puede deshacer.
+              </p>
+            </div>
+            <Button 
+              variant="destructive" 
+              onClick={handleDeleteAccount}
+              className="rounded-2xl font-black h-12 px-8 shadow-xl shadow-destructive/20"
+            >
+              Eliminar Cuenta Definitivamente
             </Button>
           </div>
         </section>

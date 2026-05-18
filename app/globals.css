@@ -82,6 +82,20 @@
   --sidebar-ring: oklch(0.68 0.17 275 / 0.45);
 }
 
+.theme-nature {
+  --primary: oklch(0.55 0.15 150);
+  --primary-foreground: oklch(0.98 0.01 150);
+  --ring: oklch(0.55 0.15 150 / 0.4);
+  --chart-1: oklch(0.55 0.15 150);
+}
+
+.theme-sunset {
+  --primary: oklch(0.65 0.22 45);
+  --primary-foreground: oklch(0.98 0.01 45);
+  --ring: oklch(0.65 0.22 45 / 0.4);
+  --chart-1: oklch(0.65 0.22 45);
+}
+
 @theme inline {
   /* Coinciden con next/font en app/layout.tsx (--font-dm-sans, --font-space-grotesk) */
   --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;

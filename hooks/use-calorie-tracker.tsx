@@ -1,50 +1,44 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import useSWR from "swr";
 import { useAuth } from "./use-auth";
 import { getUserProfile } from "@/lib/meals";
 import { calculateTDEEPrecise } from "@/lib/tdee";
 import { getTodayStats } from "@/lib/meals";
 import { getProfileDisplayAge } from "@/lib/age-from-birthdate";
 
-interface CalorieData {
+export interface CalorieData {
   dailyGoal: number;
   consumed: number;
   remaining: number;
   bmr: number;
   tdee: number;
+  mealsCount: number;
   macros: {
     protein: number;
     carbs: number;
     fat: number;
   };
+  consumedMacros: {
+    protein: number;
+    carbs: number;
+    fat: number;
+  };
+  waterGlasses: number;
+  streak: number;
   explanation: string;
 }
 
 export function useCalorieTracker() {
   const { user } = useAuth();
-  const [calorieData, setCalorieData] = useState<CalorieData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (user) {
-      loadCalorieData();
-    }
-  }, [user]);
-
-  const loadCalorieData = async () => {
-    if (!user) return;
-
-    try {
-      setLoading(true);
-      setError(null);
-
+  const { data, error, isLoading, mutate } = useSWR<CalorieData, Error>(
+    user ? ["calorie-tracker", user.uid] : null,
+    async ([, uid]: [string, string]) => {
       // Get user profile
-      const profile = await getUserProfile(user.uid);
+      const profile = await getUserProfile(uid);
       if (!profile) {
-        setError("No se encontró el perfil del usuario");
-        return;
+        throw new Error("No se encontró el perfil del usuario");
       }
 
       const displayAge = getProfileDisplayAge(profile);
@@ -57,10 +51,9 @@ export function useCalorieTracker() {
         !profile.activityLevel ||
         !profile.fitnessGoal
       ) {
-        setError(
+        throw new Error(
           "El perfil está incompleto. Complete el onboarding para calcular calorías."
         );
-        return;
       }
 
       const tdeeData = calculateTDEEPrecise({
@@ -72,37 +65,37 @@ export function useCalorieTracker() {
         fitnessGoal: profile.fitnessGoal,
       });
 
-      // Get today's consumed calories
-      const todayStats = await getTodayStats(user.uid);
+      // Get today's consumed calories and other stats
+      const todayStats = await getTodayStats(uid);
 
       const consumed = todayStats.totalCalories;
       const remaining = Math.max(0, tdeeData.dailyCalories - consumed);
 
-      setCalorieData({
+      return {
         dailyGoal: tdeeData.dailyCalories,
         consumed,
         remaining,
         bmr: tdeeData.bmr,
         tdee: tdeeData.tdee,
+        mealsCount: todayStats.mealsCount,
         macros: tdeeData.macros,
+        consumedMacros: todayStats.macros,
+        waterGlasses: todayStats.waterGlasses,
+        streak: profile.currentStreak || 0,
         explanation: tdeeData.explanation,
-      });
-    } catch (err) {
-      console.error("Error loading calorie data:", err);
-      setError("Error al calcular las calorías diarias");
-    } finally {
-      setLoading(false);
+      };
+    },
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 5000,
     }
-  };
-
-  const refreshData = () => {
-    loadCalorieData();
-  };
+  );
 
   return {
-    calorieData,
-    loading,
-    error,
-    refreshData,
+    calorieData: data ?? null,
+    loading: isLoading,
+    error: error?.message ?? null,
+    refreshData: () => mutate(),
+    mutate,
   };
 }

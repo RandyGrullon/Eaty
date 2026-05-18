@@ -8,6 +8,8 @@ import {
   getTodayStats,
   getRecentActivities,
   getWeeklyProgress,
+  updateWaterGlasses,
+  awardPoints,
 } from "@/lib/meals";
 import { TipsCarousel } from "../home/tips-carousel";
 import { CalorieLoader } from "@/components/ui/calorie-loader";
@@ -23,6 +25,9 @@ import {
   Sparkles,
   ChevronRight,
   Loader2,
+  Droplets,
+  Plus,
+  Minus,
 } from "lucide-react";
 import { useState, useEffect, useMemo, type ReactNode } from "react";
 import type { Meal } from "@/types/meal";
@@ -30,23 +35,17 @@ import { cn } from "@/lib/utils";
 import { logger } from "@/lib/logger";
 import { MealDetailDrawer } from "./meal-detail-drawer";
 import { ThemeToggle } from "@/components/app/theme-toggle";
+import { motion, AnimatePresence } from "framer-motion";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { AICoachDrawer } from "./ai-coach-drawer";
 
 type WeeklyProgressData = Awaited<ReturnType<typeof getWeeklyProgress>>;
 
-function getGreeting(): string {
-  const h = new Date().getHours();
-  if (h < 12) return "Buenos días";
-  if (h < 19) return "Buenas tardes";
-  return "Buenas noches";
-}
-
-function formatTodayLong(): string {
-  return new Intl.DateTimeFormat("es-ES", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  }).format(new Date());
-}
+const MACRO_COLORS = {
+  protein: "var(--chart-1)",
+  carbs: "var(--chart-2)",
+  fat: "var(--chart-4)",
+};
 
 function CalorieProgressRing({
   consumed,
@@ -66,7 +65,6 @@ function CalorieProgressRing({
   return (
     <div className="flex flex-col items-center">
       <div className="relative mx-auto h-[220px] w-[220px] shrink-0 group">
-        {/* Glow effect */}
         <div className={cn(
           "absolute inset-8 rounded-full blur-2xl opacity-20 transition-all duration-700",
           overGoal ? "bg-warning" : "bg-primary"
@@ -87,7 +85,7 @@ function CalorieProgressRing({
             className="stroke-muted/40"
             strokeWidth="8"
           />
-          <circle
+          <motion.circle
             cx="70"
             cy="70"
             r={r}
@@ -95,15 +93,21 @@ function CalorieProgressRing({
             strokeWidth="8"
             strokeLinecap="round"
             strokeDasharray={c}
-            strokeDashoffset={dash}
+            initial={{ strokeDashoffset: c }}
+            animate={{ strokeDashoffset: dash }}
+            transition={{ duration: 1.5, ease: "easeInOut" }}
             className={cn(
-              "transition-[stroke-dashoffset] duration-1000 ease-in-out",
               overGoal ? "stroke-warning" : "stroke-primary"
             )}
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <div className="text-center">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.5 }}
+            className="text-center"
+          >
             <span className="text-4xl font-black tabular-nums tracking-tighter text-foreground sm:text-5xl">
               {Math.round(pctRaw * 100)}%
             </span>
@@ -113,7 +117,7 @@ function CalorieProgressRing({
                 Logrado
               </span>
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
       <div className="mt-6 flex items-center gap-10">
@@ -145,10 +149,13 @@ function StatTile({
   className?: string;
 }) {
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={{ y: -4 }}
       className={cn(
         "group rounded-[2rem] border border-border/40 bg-card/60 p-5 sm:p-6 shadow-2xl shadow-black/[0.03] backdrop-blur-md",
-        "flex flex-col justify-between min-h-[140px] transition-all duration-300 hover:shadow-primary/5 hover:-translate-y-1",
+        "flex flex-col justify-between min-h-[140px] transition-shadow duration-300 hover:shadow-primary/5",
         className
       )}
     >
@@ -168,8 +175,155 @@ function StatTile({
           <p className="text-xs font-medium text-muted-foreground mt-1.5 leading-snug">{sub}</p>
         ) : null}
       </div>
+    </motion.div>
+  );
+}
+
+function MacroPieChart({ macros }: { macros: { protein: number; carbs: number; fat: number } }) {
+  const data = [
+    { name: "Proteína", value: macros.protein, color: MACRO_COLORS.protein },
+    { name: "Carbos", value: macros.carbs, color: MACRO_COLORS.carbs },
+    { name: "Grasa", value: macros.fat, color: MACRO_COLORS.fat },
+  ].filter(d => d.value > 0);
+
+  if (data.length === 0) {
+    return (
+      <div className="flex h-full items-center justify-center text-xs text-muted-foreground italic">
+        Sin datos de macros hoy
+      </div>
+    );
+  }
+
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <PieChart>
+        <Pie
+          data={data}
+          cx="50%"
+          cy="50%"
+          innerRadius={35}
+          outerRadius={50}
+          paddingAngle={5}
+          dataKey="value"
+          stroke="none"
+        >
+          {data.map((entry, index) => (
+            <Cell key={`cell-${index}`} fill={entry.color} />
+          ))}
+        </Pie>
+        <Tooltip 
+          contentStyle={{ 
+            borderRadius: '12px', 
+            border: 'none', 
+            boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+            fontSize: '12px',
+            fontWeight: 'bold'
+          }}
+          itemStyle={{ padding: '2px 0' }}
+        />
+      </PieChart>
+    </ResponsiveContainer>
+  );
+}
+
+function HydrationTracker({ 
+  glasses, 
+  userId,
+  mutate
+}: { 
+  glasses: number; 
+  userId: string;
+  mutate: any;
+}) {
+  const [updating, setUpdating] = useState(false);
+
+  const handleUpdate = async (delta: number) => {
+    if (updating) return;
+    
+    // Actualización optimista
+    const newGlasses = Math.max(0, glasses + delta);
+    
+    mutate((prev: any) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        waterGlasses: newGlasses
+      };
+    }, false);
+
+    setUpdating(true);
+    try {
+      await updateWaterGlasses(userId, delta);
+      
+      // Otorga puntos por hidratación (ej: 10 por vaso, solo si suma)
+      if (delta > 0) {
+        awardPoints(userId, 10).catch(e => logger.error("Error awarding points for water", e));
+      }
+
+      // Revalidar para asegurar sincronización con servidor
+      mutate();
+    } catch (e) {
+      logger.error("Error updating water", e);
+      // Revalidar para revertir en caso de error
+      mutate();
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-full justify-between">
+      <div className="flex items-center justify-between">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-chart-2/10 text-chart-2">
+          <Droplets className="h-5 w-5" />
+        </div>
+        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">
+          Hidratación
+        </span>
+      </div>
+      <div className="flex items-center justify-between mt-4">
+        <div className="flex items-baseline gap-1">
+          <span className="text-3xl font-black tabular-nums">{glasses}</span>
+          <span className="text-[10px] font-bold text-muted-foreground">VASOS</span>
+        </div>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            size="icon" 
+            className="h-8 w-8 rounded-lg"
+            onClick={() => handleUpdate(-1)}
+            disabled={updating || glasses <= 0}
+          >
+            <Minus className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant="outline" 
+            size="icon" 
+            className="h-8 w-8 rounded-lg border-chart-2/40 hover:bg-chart-2/5"
+            onClick={() => handleUpdate(1)}
+            disabled={updating}
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
     </div>
   );
+}
+
+function getGreeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return "Buenos días";
+  if (h < 19) return "Buenas tardes";
+  return "Buenas noches";
+}
+
+function formatTodayLong(): string {
+  return new Intl.DateTimeFormat("es-ES", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(new Date());
 }
 
 export function DashboardScreen({
@@ -177,16 +331,13 @@ export function DashboardScreen({
 }: {
   onViewHistory: () => void;
 }) {
-  const [todayStats, setTodayStats] = useState({
-    mealsCount: 0,
-    totalCalories: 0,
-  });
   const [recentActivities, setRecentActivities] = useState<Meal[]>([]);
   const [weeklyProgress, setWeeklyProgress] =
     useState<WeeklyProgressData | null>(null);
   const [loadingActivities, setLoadingActivities] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(false);
   const [detailMeal, setDetailMeal] = useState<Meal | null>(null);
+  const [isCoachOpen, setIsCoachOpen] = useState(false);
 
   const { user, logout } = useAuth();
   const {
@@ -194,6 +345,7 @@ export function DashboardScreen({
     loading: calorieLoading,
     error: calorieError,
     refreshData,
+    mutate,
   } = useCalorieTracker();
 
   const displayName = useMemo(
@@ -203,22 +355,10 @@ export function DashboardScreen({
 
   useEffect(() => {
     if (user) {
-      loadTodayStats();
       loadRecentActivities();
       loadWeeklyProgress();
     }
   }, [user]);
-
-  const loadTodayStats = async () => {
-    if (!user) return;
-    try {
-      const stats = await getTodayStats(user.uid);
-      setTodayStats(stats);
-      refreshData();
-    } catch (error) {
-      logger.error("Error loading today stats", error);
-    }
-  };
 
   const loadRecentActivities = async () => {
     if (!user) return;
@@ -255,11 +395,15 @@ export function DashboardScreen({
   };
 
   const goal = calorieData?.dailyGoal ?? 0;
-  const consumed = todayStats.totalCalories;
+  const consumed = calorieData?.consumed ?? 0;
   const overGoal = calorieData ? calorieData.remaining < 0 : false;
 
   return (
-    <div className="min-h-screen bg-background pb-28 md:pb-10">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="min-h-screen bg-background pb-28 md:pb-10"
+    >
       <section className="relative overflow-hidden border-b border-border/60">
         <div
           className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/[0.08] via-background to-chart-2/[0.06]"
@@ -275,11 +419,27 @@ export function DashboardScreen({
         />
 
         <div className="relative z-10 mx-auto max-w-6xl px-4 pt-8 pb-10 sm:px-6 lg:pt-10 lg:pb-12">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between"
+          >
             <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-                Resumen diario
-              </p>
+              <div className="flex items-center gap-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                  Resumen diario
+                </p>
+                {calorieData?.streak ? (
+                  <motion.div 
+                    initial={{ scale: 0.5, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className="flex items-center gap-1 rounded-full bg-orange-500/10 px-2 py-0.5 text-[10px] font-black text-orange-600 dark:text-orange-400"
+                  >
+                    <Flame className="h-3 w-3 fill-current" />
+                    {calorieData.streak} DÍAS
+                  </motion.div>
+                ) : null}
+              </div>
               <h1 className="mt-2 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
                 {getGreeting()},{" "}
                 <span className="bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
@@ -292,6 +452,15 @@ export function DashboardScreen({
             </div>
             <div className="flex shrink-0 gap-2 self-start sm:self-auto">
               <ThemeToggle />
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setIsCoachOpen(true)}
+                className="h-11 w-11 rounded-xl border-primary/20 bg-primary/5 text-primary shadow-sm backdrop-blur-sm hover:bg-primary/10"
+                aria-label="Abrir Coach de IA"
+              >
+                <Sparkles className="h-5 w-5 fill-current opacity-70" />
+              </Button>
               <Button
                 variant="outline"
                 size="icon"
@@ -311,10 +480,15 @@ export function DashboardScreen({
                 <LogOut className="h-5 w-5" />
               </Button>
             </div>
-          </div>
+          </motion.div>
 
           <div className="mt-10 grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-5">
-            <div className="lg:col-span-5">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.1 }}
+              className="lg:col-span-5"
+            >
               <div className="flex h-full min-h-[300px] flex-col items-center justify-center rounded-3xl border border-border/80 bg-card/90 p-6 shadow-lg shadow-primary/5 backdrop-blur-sm sm:p-8">
                 {calorieLoading ? (
                   <div className="flex flex-col items-center gap-4 py-8">
@@ -350,23 +524,36 @@ export function DashboardScreen({
                   </div>
                 )}
               </div>
-            </div>
+            </motion.div>
 
             <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:col-span-7 lg:grid-cols-2">
               <StatTile
                 icon={Flame}
                 label="Calorías hoy"
-                value={todayStats.totalCalories}
+                value={consumed}
                 sub="Registradas en tus comidas"
                 className="col-span-2 sm:col-span-1"
               />
-              <StatTile
-                icon={UtensilsCrossed}
-                label="Comidas"
-                value={todayStats.mealsCount}
-                sub="Registros de hoy"
-                className="col-span-2 sm:col-span-1"
-              />
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="col-span-2 sm:col-span-1 rounded-[2rem] border border-border/40 bg-card/60 p-5 shadow-2xl shadow-black/[0.03] backdrop-blur-md"
+              >
+                {user && calorieData && (
+                  <HydrationTracker 
+                    glasses={calorieData.waterGlasses} 
+                    userId={user.uid}
+                    mutate={mutate}
+                  />
+                )}
+                {!calorieData && !calorieLoading && (
+                  <div className="h-full flex items-center justify-center text-[10px] text-muted-foreground">
+                    Cargando hidratación...
+                  </div>
+                )}
+              </motion.div>
+              
               {calorieLoading ? (
                 <div className="col-span-2">
                   <CalorieLoader message="Calculando tu meta calórica…" />
@@ -403,47 +590,83 @@ export function DashboardScreen({
               )}
 
               {calorieData && !calorieLoading && !calorieError ? (
-                <div className="col-span-2 grid grid-cols-3 gap-3 rounded-[2rem] border border-border/40 bg-card/40 p-5 shadow-inner backdrop-blur-sm">
-                  <div className="text-center group">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 mb-1">
-                      Proteína
-                    </p>
-                    <div className="flex flex-col items-center">
-                      <p className="text-2xl font-black tabular-nums text-chart-1 group-hover:scale-110 transition-transform">
-                        {calorieData.macros.protein}g
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="col-span-2 grid grid-cols-1 sm:grid-cols-12 gap-6 rounded-[2rem] border border-border/40 bg-card/40 p-6 shadow-inner backdrop-blur-sm"
+                >
+                  <div className="sm:col-span-4 h-32">
+                    <MacroPieChart macros={calorieData.consumedMacros} />
+                  </div>
+                  <div className="sm:col-span-8 grid grid-cols-3 gap-3">
+                    <div className="text-center group">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 mb-1">
+                        Proteína
                       </p>
-                      <div className="mt-1 h-1 w-8 rounded-full bg-chart-1/30" />
+                      <div className="flex flex-col items-center">
+                        <p className="text-2xl font-black tabular-nums text-chart-1 group-hover:scale-110 transition-transform">
+                          {calorieData.consumedMacros.protein}g
+                        </p>
+                        <p className="text-[9px] font-bold text-muted-foreground/60 mt-0.5">Meta {calorieData.macros.protein}g</p>
+                        <div className="mt-1 h-1 w-full max-w-[40px] rounded-full bg-chart-1/30 overflow-hidden">
+                           <motion.div 
+                             initial={{ width: 0 }}
+                             animate={{ width: `${Math.min(100, (calorieData.consumedMacros.protein / calorieData.macros.protein) * 100)}%` }}
+                             className="h-full bg-chart-1" 
+                           />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-center group border-x border-border/40 px-2">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 mb-1">
+                        Carbos
+                      </p>
+                      <div className="flex flex-col items-center">
+                        <p className="text-2xl font-black tabular-nums text-chart-2 group-hover:scale-110 transition-transform">
+                          {calorieData.consumedMacros.carbs}g
+                        </p>
+                        <p className="text-[9px] font-bold text-muted-foreground/60 mt-0.5">Meta {calorieData.macros.carbs}g</p>
+                        <div className="mt-1 h-1 w-full max-w-[40px] rounded-full bg-chart-2/30 overflow-hidden">
+                           <motion.div 
+                             initial={{ width: 0 }}
+                             animate={{ width: `${Math.min(100, (calorieData.consumedMacros.carbs / calorieData.macros.carbs) * 100)}%` }}
+                             className="h-full bg-chart-2" 
+                           />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-center group">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 mb-1">
+                        Grasa
+                      </p>
+                      <div className="flex flex-col items-center">
+                        <p className="text-2xl font-black tabular-nums text-chart-4 group-hover:scale-110 transition-transform">
+                          {calorieData.consumedMacros.fat}g
+                        </p>
+                        <p className="text-[9px] font-bold text-muted-foreground/60 mt-0.5">Meta {calorieData.macros.fat}g</p>
+                        <div className="mt-1 h-1 w-full max-w-[40px] rounded-full bg-chart-4/30 overflow-hidden">
+                           <motion.div 
+                             initial={{ width: 0 }}
+                             animate={{ width: `${Math.min(100, (calorieData.consumedMacros.fat / calorieData.macros.fat) * 100)}%` }}
+                             className="h-full bg-chart-4" 
+                           />
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <div className="text-center group border-x border-border/40">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 mb-1">
-                      Carbos
-                    </p>
-                    <div className="flex flex-col items-center">
-                      <p className="text-2xl font-black tabular-nums text-chart-2 group-hover:scale-110 transition-transform">
-                        {calorieData.macros.carbs}g
-                      </p>
-                      <div className="mt-1 h-1 w-8 rounded-full bg-chart-2/30" />
-                    </div>
-                  </div>
-                  <div className="text-center group">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 mb-1">
-                      Grasa
-                    </p>
-                    <div className="flex flex-col items-center">
-                      <p className="text-2xl font-black tabular-nums text-chart-4 group-hover:scale-110 transition-transform">
-                        {calorieData.macros.fat}g
-                      </p>
-                      <div className="mt-1 h-1 w-8 rounded-full bg-chart-4/30" />
-                    </div>
-                  </div>
-                </div>
+                </motion.div>
               ) : null}
             </div>
           </div>
 
           {calorieData && !calorieLoading && !calorieError ? (
-            <div className="mt-8 flex flex-wrap gap-4 items-center">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+              className="mt-8 flex flex-wrap gap-4 items-center"
+            >
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-card/40 border border-border/40 text-[11px] font-bold">
                 <span className="text-muted-foreground uppercase tracking-wider">BMR:</span>
                 <span className="text-foreground">{calorieData.bmr} kcal</span>
@@ -455,7 +678,7 @@ export function DashboardScreen({
               <p className="text-xs font-medium text-muted-foreground italic">
                 {calorieData.explanation}
               </p>
-            </div>
+            </motion.div>
           ) : null}
         </div>
       </section>
@@ -497,10 +720,27 @@ export function DashboardScreen({
                   <Loader2 className="h-10 w-10 animate-spin text-primary/40" />
                 </div>
               ) : recentActivities.length > 0 ? (
-                <div className="grid grid-cols-1 gap-3">
+                <motion.div 
+                  initial="hidden"
+                  animate="show"
+                  variants={{
+                    hidden: { opacity: 0 },
+                    show: {
+                      opacity: 1,
+                      transition: {
+                        staggerChildren: 0.05
+                      }
+                    }
+                  }}
+                  className="grid grid-cols-1 gap-3"
+                >
                   {recentActivities.map((meal) => (
-                    <button
+                    <motion.button
                       key={meal.id}
+                      variants={{
+                        hidden: { opacity: 0, x: -10 },
+                        show: { opacity: 1, x: 0 }
+                      }}
                       type="button"
                       onClick={() => setDetailMeal(meal)}
                       className="group flex w-full items-center gap-4 rounded-3xl border border-border/40 bg-card/40 p-3 pr-5 text-left transition-all hover:bg-card hover:shadow-xl hover:shadow-black/[0.02] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 sm:gap-5"
@@ -541,9 +781,9 @@ export function DashboardScreen({
                           kcal
                         </p>
                       </div>
-                    </button>
+                    </motion.button>
                   ))}
-                </div>
+                </motion.div>
               ) : (
                 <div className="rounded-[2.5rem] border-2 border-dashed border-border/40 bg-muted/20 py-16 text-center">
                   <UtensilsCrossed className="mx-auto h-12 w-12 text-muted-foreground/20 mb-4" />
@@ -571,7 +811,12 @@ export function DashboardScreen({
                 <Loader2 className="h-10 w-10 animate-spin text-primary/40" />
               </div>
             ) : weeklyProgress ? (
-              <div className="space-y-6">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.98 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                className="space-y-6"
+              >
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="relative overflow-hidden rounded-[2rem] border border-primary/20 bg-gradient-to-br from-primary/10 via-card/50 to-card/50 p-6 shadow-2xl shadow-primary/5">
                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">
@@ -653,7 +898,7 @@ export function DashboardScreen({
                     ))}
                   </div>
                 </div>
-              </div>
+              </motion.div>
             ) : (
               <div className="rounded-3xl border-2 border-dashed border-border/40 bg-muted/10 py-16 text-center">
                 <p className="text-sm font-bold text-muted-foreground/40">
@@ -676,6 +921,11 @@ export function DashboardScreen({
           refreshData();
         }}
       />
-    </div>
+
+      <AICoachDrawer 
+        open={isCoachOpen} 
+        onOpenChange={setIsCoachOpen} 
+      />
+    </motion.div>
   );
 }

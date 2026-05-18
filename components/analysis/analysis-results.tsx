@@ -13,19 +13,22 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Save, Share2, Info, Camera, Sparkles, Lightbulb, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, Share2, Info, Camera, Sparkles, Lightbulb, Loader2, Edit3, Heart, Zap, Coffee, Smile } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { macroCaloriesRough } from "@/lib/food-analysis-schema";
 import type { FoodAnalysisAiContext } from "@/lib/food-analysis-schema";
 import type { Meal } from "@/types/meal";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { motion } from "framer-motion";
 
 interface AnalysisResultsProps {
   result: Omit<Meal, "id" | "createdAt">;
   /** Vista previa local (objeto) cuando el análisis vino de una foto y aún no hay `imageUrl` en Firestore. */
   imagePreviewUrl?: string | null;
   onBack: () => void;
-  onSave: () => void | Promise<void>;
+  onSave: (editedData: Omit<Meal, "id" | "createdAt">) => void | Promise<void>;
   isSaving?: boolean;
 }
 
@@ -64,7 +67,7 @@ const MACRO_FIBER_SUGAR = [
 ] as const;
 
 export function AnalysisResults({
-  result,
+  result: initialResult,
   imagePreviewUrl = null,
   onBack,
   onSave,
@@ -72,25 +75,35 @@ export function AnalysisResults({
 }: AnalysisResultsProps) {
   const { toast } = useToast();
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [editedResult, setEditedResult] = useState(initialResult);
 
-  const fromMacros = macroCaloriesRough(result.macros);
+  const fromMacros = macroCaloriesRough(editedResult.macros);
   const macroKcal = {
-    protein: result.macros.protein * 4,
-    carbs: result.macros.carbs * 4,
-    fat: result.macros.fat * 9,
+    protein: editedResult.macros.protein * 4,
+    carbs: editedResult.macros.carbs * 4,
+    fat: editedResult.macros.fat * 9,
   };
   const pfcKcal = macroKcal.protein + macroKcal.carbs + macroKcal.fat;
   const pfcShare = (k: keyof typeof macroKcal) =>
     pfcKcal > 0 ? (macroKcal[k] / pfcKcal) * 100 : 0;
 
-  const totalGramsPfc =
-    result.macros.protein + result.macros.carbs + result.macros.fat;
+  const showAiBlock = editedResult.aiContext != null;
+  const ctx = editedResult.aiContext;
 
-  const showAiBlock = result.aiContext != null;
-  const ctx = result.aiContext;
+  const imageSrc = imagePreviewUrl || editedResult.imageUrl;
+  const imageAlt = editedResult.foodName;
 
-  const imageSrc = imagePreviewUrl || result.imageUrl;
-  const imageAlt = result.foodName;
+  const handleMacroChange = (key: keyof typeof editedResult.macros, val: string) => {
+    const num = parseFloat(val) || 0;
+    setEditedResult(prev => ({
+      ...prev,
+      macros: { ...prev.macros, [key]: num }
+    }));
+  };
+
+  const handleMoodSelect = (mood: Meal["mood"]) => {
+    setEditedResult(prev => ({ ...prev, mood }));
+  };
 
   const shareAnalysis = async () => {
     try {
@@ -101,19 +114,17 @@ export function AnalysisResults({
             }`
           : "";
       const shareText =
-        `🍽️ Análisis Nutricional - ${result.foodName}\n\n` +
-        `📊 Calorías: ${result.calories} kcal\n` +
-        `🥩 Proteínas: ${result.macros.protein} g\n` +
-        `🌾 Carbohidratos: ${result.macros.carbs} g\n` +
-        `🧈 Grasas: ${result.macros.fat} g\n` +
-        `🥦 Fibra: ${result.macros.fiber} g\n` +
-        `🍬 Azúcar: ${result.macros.sugar} g` +
+        `🍽️ Análisis Nutricional - ${editedResult.foodName}\n\n` +
+        `📊 Calorías: ${editedResult.calories} kcal\n` +
+        `🥩 Proteínas: ${editedResult.macros.protein} g\n` +
+        `🌾 Carbohidratos: ${editedResult.macros.carbs} g\n` +
+        `🧈 Grasas: ${editedResult.macros.fat} g\n` +
         aiShort +
         `\n\nAnalizado con Eaty`;
 
       if (navigator.share) {
         await navigator.share({
-          title: `Análisis de ${result.foodName} - Eaty`,
+          title: `Análisis de ${editedResult.foodName} - Eaty`,
           text: shareText,
           url: window.location.href,
         });
@@ -161,12 +172,21 @@ export function AnalysisResults({
               <Camera className="h-10 w-10 text-muted-foreground/20" />
             </div>
           )}
-          <div className="relative p-6 sm:p-8 text-center sm:text-left sm:flex sm:items-end sm:justify-between sm:gap-6">
-            <div className="min-w-0 flex-1">
-              <h2 className="text-3xl font-black tracking-tight text-foreground sm:text-4xl">
-                {result.foodName}
-              </h2>
-              <div className="mt-2 flex flex-wrap gap-2">
+          <div className="relative p-6 sm:p-8 space-y-6 sm:flex sm:items-center sm:justify-between sm:gap-6 sm:space-y-0">
+            <div className="min-w-0 flex-1 space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="foodName" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Nombre del plato</Label>
+                <div className="relative group">
+                  <Input 
+                    id="foodName"
+                    value={editedResult.foodName}
+                    onChange={(e) => setEditedResult(prev => ({ ...prev, foodName: e.target.value }))}
+                    className="h-12 text-xl font-black bg-background/50 border-border/40 rounded-2xl pr-10 focus-visible:ring-primary/20"
+                  />
+                  <Edit3 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
                 {ctx && (
                   <Badge variant="secondary" className={cn("px-3 py-1 font-bold", confidenceLabel(ctx.confidence).className)}>
                     Confianza: {confidenceLabel(ctx.confidence).text}
@@ -177,44 +197,85 @@ export function AnalysisResults({
                 </Badge>
               </div>
             </div>
-            <div className="mt-6 sm:mt-0 text-center sm:text-right shrink-0">
-              <div className="text-6xl font-black tracking-tighter text-primary tabular-nums">
-                {result.calories}
-              </div>
-              <p className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">
-                kcal estimadas
-              </p>
+            <div className="text-center sm:text-right shrink-0 space-y-2">
+              <Label htmlFor="calories" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Kcal Totales</Label>
+              <Input 
+                id="calories"
+                type="number"
+                value={editedResult.calories}
+                onChange={(e) => setEditedResult(prev => ({ ...prev, calories: parseInt(e.target.value) || 0 }))}
+                className="h-16 text-5xl font-black text-center sm:text-right bg-transparent border-none p-0 focus-visible:ring-0 text-primary tabular-nums"
+              />
             </div>
           </div>
         </section>
 
-        {/* Macros Summary Grid */}
         <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {MACRO_MAIN.map((m) => {
-            const val = result.macros[m.key];
+            const val = editedResult.macros[m.key];
             const kcal = macroKcal[m.key];
             const pct = pfcShare(m.key);
             return (
               <div key={m.key} className="relative overflow-hidden rounded-[2rem] border border-border/40 bg-card/40 p-6 shadow-xl shadow-black/[0.02] backdrop-blur-sm group">
                 <div className={cn("absolute -right-4 -top-4 h-20 w-20 rounded-full blur-3xl opacity-10 transition-opacity group-hover:opacity-20", m.color)} />
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80">
-                  {m.name}
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80 mb-3">
+                  {m.name} (g)
                 </p>
-                <div className="mt-3 flex items-baseline gap-2">
-                  <p className="text-4xl font-black tracking-tighter tabular-nums">{val}g</p>
-                </div>
+                <Input 
+                  type="number"
+                  value={val}
+                  onChange={(e) => handleMacroChange(m.key, e.target.value)}
+                  className="h-10 text-3xl font-black p-0 bg-transparent border-none focus-visible:ring-0 tabular-nums"
+                />
                 <div className="mt-4 space-y-2">
                   <div className="flex justify-between text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                    <span>{pct.toFixed(0)}% del total</span>
+                    <span>{pct.toFixed(0)}% energía</span>
                     <span>{kcal.toFixed(0)} kcal</span>
                   </div>
                   <div className="h-1.5 w-full rounded-full bg-muted shadow-inner">
-                    <div className={cn("h-full rounded-full shadow-lg", m.color)} style={{ width: `${pct}%` }} />
+                    <motion.div 
+                      className={cn("h-full rounded-full shadow-lg", m.color)} 
+                      initial={{ width: 0 }}
+                      animate={{ width: `${pct}%` }} 
+                    />
                   </div>
                 </div>
               </div>
             );
           })}
+        </section>
+
+        {/* Mood Selection */}
+        <section className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Heart className="h-5 w-5 text-pink-500" />
+            <h3 className="text-lg font-black tracking-tight text-foreground">¿Cómo te sientes tras comer?</h3>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              { id: "energetic" as const, label: "Energético", icon: Zap, color: "text-yellow-500", bg: "bg-yellow-500/10" },
+              { id: "satisfied" as const, label: "Satisfecho", icon: Smile, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+              { id: "neutral" as const, label: "Neutral", icon: Coffee, color: "text-blue-500", bg: "bg-blue-500/10" },
+              { id: "heavy" as const, label: "Pesado", icon: Info, color: "text-purple-500", bg: "bg-purple-500/10" },
+            ].map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => handleMoodSelect(m.id)}
+                className={cn(
+                  "flex flex-col items-center gap-3 p-4 rounded-3xl border transition-all duration-300",
+                  editedResult.mood === m.id 
+                    ? `border-primary bg-primary/5 shadow-lg shadow-primary/5 scale-[1.02]` 
+                    : "border-border/40 bg-card/40 opacity-60 hover:opacity-100 hover:bg-card"
+                )}
+              >
+                <div className={cn("h-10 w-10 flex items-center justify-center rounded-xl", editedResult.mood === m.id ? m.bg : "bg-muted")}>
+                  <m.icon className={cn("h-5 w-5", editedResult.mood === m.id ? m.color : "text-muted-foreground")} />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-widest">{m.label}</span>
+              </button>
+            ))}
+          </div>
         </section>
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:gap-12">
@@ -345,7 +406,7 @@ export function AnalysisResults({
               className="rounded-xl font-black"
               onClick={() => {
                 setSaveDialogOpen(false);
-                void onSave();
+                void onSave(editedResult);
               }}
             >
               Confirmar

@@ -23,6 +23,7 @@ const bodySchema = z
     imageMimeType: z.string().min(3).max(80).optional(),
     foodName: z.string().max(200).optional(),
     description: z.string().max(2000).optional(),
+    allergens: z.array(z.string()).optional(),
   })
   .refine(
     (b) =>
@@ -60,6 +61,7 @@ export async function POST(req: Request) {
       imageMimeType: body.imageMimeType?.trim(),
       foodName: body.foodName?.trim(),
       description: body.description?.trim(),
+      allergens: body.allergens,
     });
 
     // Contar cuota solo cuando el análisis se completó con éxito.

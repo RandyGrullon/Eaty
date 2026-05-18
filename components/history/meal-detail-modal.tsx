@@ -13,7 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { X, Trash2, Calendar, Loader2, Camera, Lightbulb, ChevronRight } from "lucide-react";
+import { X, Trash2, Calendar, Loader2, Camera, Lightbulb, ChevronRight, Share2, Download } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { doc, deleteDoc } from "firebase/firestore";
 import { appFirebase } from "@/lib/firebase";
@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
 import { cn } from "@/lib/utils";
 import type { Meal } from "@/types/meal";
+import { toPng } from "html-to-image";
 
 interface MealDetailModalProps {
   meal: Meal;
@@ -30,9 +31,58 @@ interface MealDetailModalProps {
 
 export function MealDetailModal({ meal, onClose, onDelete }: MealDetailModalProps) {
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const shareRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
   const { toast } = useToast();
+
+  const handleShare = async () => {
+    if (!shareRef.current) return;
+    setIsSharing(true);
+    try {
+      // Pequeño retardo para asegurar que los estilos estén listos
+      await new Promise(r => setTimeout(r, 100));
+      
+      const dataUrl = await toPng(shareRef.current, {
+        cacheBust: true,
+        backgroundColor: "hsl(var(--background))",
+        style: {
+          borderRadius: "0px", // Para que la imagen se vea bien
+        }
+      });
+
+      const blob = await (await fetch(dataUrl)).blob();
+      const file = new File([blob], `eaty-meal-${meal.id}.png`, { type: "image/png" });
+
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: `Eaty: Mi comida - ${meal.foodName}`,
+          text: `He comido ${meal.foodName} (${meal.calories} kcal). ¡Mira mi análisis en Eaty!`,
+        });
+      } else {
+        // Fallback: Descargar
+        const link = document.createElement("a");
+        link.download = `eaty-${meal.foodName.toLowerCase().replace(/\s+/g, "-")}.png`;
+        link.href = dataUrl;
+        link.click();
+        toast({
+          title: "Imagen descargada",
+          description: "Tu navegador no soporta compartir archivos directamente.",
+        });
+      }
+    } catch (error) {
+      logger.error("Error sharing meal", error);
+      toast({
+        title: "Error al compartir",
+        description: "No se pudo generar la imagen para compartir.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSharing(false);
+    }
+  };
 
   const macroData = [
     { name: "Proteínas", value: meal.macros.protein, color: "bg-chart-1", unit: "g" },
@@ -99,7 +149,21 @@ export function MealDetailModal({ meal, onClose, onDelete }: MealDetailModalProp
             <h2 className="text-xl font-black tracking-tight text-foreground">Detalle de Comida</h2>
             <p className="text-[10px] font-bold text-primary uppercase tracking-widest mt-0.5">Historial Nutricional</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleShare}
+              disabled={isSharing}
+              className="h-10 w-10 rounded-xl text-primary hover:bg-primary/10 transition-colors"
+              title="Compartir en redes"
+            >
+              {isSharing ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Share2 className="h-5 w-5" />
+              )}
+            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -119,7 +183,7 @@ export function MealDetailModal({ meal, onClose, onDelete }: MealDetailModalProp
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-8">
+        <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-8" ref={shareRef}>
           {/* Hero Section similar a AnalysisResults */}
           <section className="relative overflow-hidden rounded-[2.5rem] border border-border/40 bg-card/40 shadow-xl shadow-black/[0.02]">
             {meal.imageUrl ? (

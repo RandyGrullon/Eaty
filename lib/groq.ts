@@ -1,8 +1,3 @@
-import type {
-  FoodAnalysisMealFields,
-  PersonalizedNutritionTip,
-} from "@/lib/food-analysis-schema";
-import { parseNutritionTipsFromApi } from "@/lib/food-analysis-schema";
 import { GroqApiError } from "@/lib/groq-api-error";
 
 export type AnalyzeFoodParams = {
@@ -10,7 +5,31 @@ export type AnalyzeFoodParams = {
   imageMimeType?: string;
   foodName?: string;
   description?: string;
+  allergens?: string[];
 };
+
+// Simple in-memory cache for the session
+const ANALYSIS_CACHE: Record<string, { data: FoodAnalysisMealFields; timestamp: number }> = {};
+const CACHE_TTL = 1000 * 60 * 60; // 1 hour
+
+/**
+ * Genera una clave única para el cache basada en los parámetros.
+ * Para imágenes, no cacheamos (demasiado grandes para claves simples).
+ * Para texto, usamos el foodName y description.
+ */
+function getCacheKey(params: AnalyzeFoodParams): string | null {
+  if (params.imageBase64) return null; // No cacheamos imágenes por ahora
+  
+  const parts = [
+    params.foodName?.toLowerCase().trim(),
+    params.description?.toLowerCase().trim(),
+    (params.allergens || []).sort().join(",").toLowerCase()
+  ];
+  
+  if (!parts[0] && !parts[1]) return null;
+  
+  return parts.filter(Boolean).join("|");
+}
 
 /**
  * Analiza comida vía API interna (clave Groq solo en servidor).
@@ -20,6 +39,17 @@ export async function analyzeFood(
   params: AnalyzeFoodParams,
   idToken: string
 ): Promise<FoodAnalysisMealFields> {
+  const cacheKey = getCacheKey(params);
+  const now = Date.now();
+
+  if (cacheKey && ANALYSIS_CACHE[cacheKey]) {
+    const entry = ANALYSIS_CACHE[cacheKey];
+    if (now - entry.timestamp < CACHE_TTL) {
+      console.log(`[Cache] Returning cached result for: ${cacheKey}`);
+      return entry.data;
+    }
+  }
+
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
@@ -36,6 +66,7 @@ export async function analyzeFood(
       imageMimeType: params.imageMimeType,
       foodName: params.foodName,
       description: params.description,
+      allergens: params.allergens,
     }),
   });
 
@@ -52,7 +83,13 @@ export async function analyzeFood(
     throw new GroqApiError(errMsg, res.status);
   }
 
-  return data as FoodAnalysisMealFields;
+  const result = data as FoodAnalysisMealFields;
+
+  if (cacheKey) {
+    ANALYSIS_CACHE[cacheKey] = { data: result, timestamp: now };
+  }
+
+  return result;
 }
 
 export async function generateNutritionTips(

@@ -9,6 +9,10 @@ import {
   setDoc,
   getDoc,
   updateDoc,
+  arrayUnion,
+  increment,
+  writeBatch,
+  deleteDoc,
 } from "firebase/firestore";
 import { appFirebase } from "./firebase";
 import { uploadUserMealImage } from "@/lib/meal-image-storage";
@@ -114,7 +118,12 @@ export async function getUserMeals(userId: string): Promise<Meal[]> {
 
 export async function getTodayStats(
   userId: string
-): Promise<{ mealsCount: number; totalCalories: number }> {
+): Promise<{ 
+  mealsCount: number; 
+  totalCalories: number;
+  macros: { protein: number; carbs: number; fat: number };
+  waterGlasses: number;
+}> {
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -127,6 +136,7 @@ export async function getTodayStats(
 
     let mealsCount = 0;
     let totalCalories = 0;
+    const macros = { protein: 0, carbs: 0, fat: 0 };
 
     querySnapshot.docs.forEach((doc) => {
       const data = doc.data();
@@ -135,13 +145,94 @@ export async function getTodayStats(
       if (mealDate >= today && mealDate < tomorrow) {
         mealsCount++;
         totalCalories += data.calories || 0;
+        if (data.macros) {
+          macros.protein += data.macros.protein || 0;
+          macros.carbs += data.macros.carbs || 0;
+          macros.fat += data.macros.fat || 0;
+        }
       }
     });
 
-    return { mealsCount, totalCalories };
+    // Obtener hidratación del documento de stats diario
+    const dateKey = today.toISOString().split("T")[0];
+    const statsRef = doc(getDb(), "users", userId, "dailyStats", dateKey);
+    const statsSnap = await getDoc(statsRef);
+    const waterGlasses = statsSnap.exists() ? statsSnap.data().waterGlasses || 0 : 0;
+
+    return { mealsCount, totalCalories, macros, waterGlasses };
   } catch (error) {
     console.error("Error fetching today stats:", error);
-    return { mealsCount: 0, totalCalories: 0 };
+    return { 
+      mealsCount: 0, 
+      totalCalories: 0, 
+      macros: { protein: 0, carbs: 0, fat: 0 },
+      waterGlasses: 0 
+    };
+  }
+}
+
+/** Actualiza la racha del usuario basada en la última actividad. */
+export async function updateStreak(userId: string): Promise<number> {
+  try {
+    const userProfileRef = doc(getDb(), "users", userId, "profile", "main");
+    const docSnap = await getDoc(userProfileRef);
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      const lastActive = data.lastActiveDate?.toDate();
+      let currentStreak = data.currentStreak || 0;
+
+      if (!lastActive) {
+        currentStreak = 1;
+      } else {
+        lastActive.setHours(0, 0, 0, 0);
+        const diffDays = Math.floor((now.getTime() - lastActive.getTime()) / (1000 * 60 * 60 * 24));
+
+        if (diffDays === 1) {
+          currentStreak += 1;
+        } else if (diffDays > 1) {
+          currentStreak = 1;
+        }
+        // Si diffDays === 0, ya registró hoy, no incrementamos
+      }
+
+      await updateDoc(userProfileRef, {
+        currentStreak,
+        lastActiveDate: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+      });
+      return currentStreak;
+    }
+    return 0;
+  } catch (error) {
+    console.error("Error updating streak:", error);
+    return 0;
+  }
+}
+
+/** Incrementa o decrementa los vasos de agua del día actual. */
+export async function updateWaterGlasses(userId: string, delta: number): Promise<number> {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dateKey = today.toISOString().split("T")[0];
+    const statsRef = doc(getDb(), "users", userId, "dailyStats", dateKey);
+    
+    const statsSnap = await getDoc(statsRef);
+    let waterGlasses = statsSnap.exists() ? statsSnap.data().waterGlasses || 0 : 0;
+    waterGlasses = Math.max(0, waterGlasses + delta);
+
+    await setDoc(statsRef, { 
+      waterGlasses,
+      updatedAt: Timestamp.now()
+    }, { merge: true });
+
+    return waterGlasses;
+  } catch (error) {
+    console.error("Error updating water glasses:", error);
+    throw error;
   }
 }
 
@@ -460,5 +551,117 @@ export async function getWeeklyProgress(userId: string): Promise<{
       },
       progress: { mealsChange: 0, caloriesChange: 0, daysChange: 0 },
     };
+  }
+}
+
+/** Evalúa y otorga logros al usuario basados en su actividad. */
+export async function evaluateAchievements(userId: string): Promise<string[]> {
+  try {
+    const profile = await getUserProfile(userId);
+    if (!profile) return [];
+
+    const meals = await getUserMeals(userId);
+    const achievements: string[] = profile.achievements || [];
+    const newAchievements: string[] = [];
+
+    const checkAndAdd = (id: string) => {
+      if (!achievements.includes(id)) {
+        newAchievements.push(id);
+      }
+    };
+
+    // 1. Número de comidas
+    if (meals.length >= 1) checkAndAdd("first_meal");
+    if (meals.length >= 10) checkAndAdd("explorer");
+    if (meals.length >= 50) checkAndAdd("nutrition_master");
+
+    // 2. Rachas
+    if ((profile.currentStreak || 0) >= 3) checkAndAdd("streak_3");
+    if ((profile.currentStreak || 0) >= 7) checkAndAdd("streak_7");
+
+    // 3. Hidratación (necesitamos los stats de hoy)
+    const todayStats = await getTodayStats(userId);
+    if (todayStats.waterGlasses >= 8) checkAndAdd("hydrated_hero");
+
+    if (newAchievements.length > 0) {
+      const profileRef = doc(getDb(), "users", userId, "profile", "main");
+      await updateDoc(profileRef, {
+        achievements: arrayUnion(...newAchievements),
+        updatedAt: Timestamp.now(),
+      });
+    }
+
+    return newAchievements;
+  } catch (error) {
+    logger.error("Error evaluating achievements", error);
+    return [];
+  }
+}
+
+/** Otorga puntos al usuario y maneja subidas de nivel. */
+export async function awardPoints(userId: string, amount: number): Promise<{ newPoints: number; leveledUp: boolean }> {
+  try {
+    const profileRef = doc(getDb(), "users", userId, "profile", "main");
+    const docSnap = await getDoc(profileRef);
+    
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      const currentPoints = data.points || 0;
+      const currentLevel = data.level || 1;
+      const newPoints = currentPoints + amount;
+      
+      // Fórmula simple de nivel: cada nivel requiere 1000 puntos * nivel
+      const pointsToNextLevel = currentLevel * 1000;
+      let leveledUp = false;
+      let newLevel = currentLevel;
+
+      if (newPoints >= pointsToNextLevel) {
+        newLevel += 1;
+        leveledUp = true;
+      }
+
+      await updateDoc(profileRef, {
+        points: newPoints,
+        level: newLevel,
+        updatedAt: Timestamp.now(),
+      });
+
+      return { newPoints, leveledUp };
+    }
+    return { newPoints: 0, leveledUp: false };
+  } catch (error) {
+    console.error("Error awarding points:", error);
+    return { newPoints: 0, leveledUp: false };
+  }
+}
+
+/** Elimina todos los datos del usuario (comidas, perfil, stats). */
+export async function deleteUserAccountData(userId: string): Promise<void> {
+  try {
+    const db = getDb();
+    const batch = writeBatch(db);
+
+    // 1. Eliminar todas las comidas
+    const mealsRef = collection(db, "users", userId, "meals");
+    const mealsSnap = await getDocs(mealsRef);
+    mealsSnap.docs.forEach((doc) => {
+      batch.delete(doc.ref);
+    });
+
+    // 2. Eliminar todos los stats diarios
+    const statsRef = collection(db, "users", userId, "dailyStats");
+    const statsSnap = await getDocs(statsRef);
+    statsSnap.docs.forEach((doc) => {
+      batch.delete(doc.ref);
+    });
+
+    // 3. Eliminar el perfil
+    const profileRef = doc(db, "users", userId, "profile", "main");
+    batch.delete(profileRef);
+
+    await batch.commit();
+  } catch (error) {
+    console.error("Error deleting user data:", error);
+    throw new Error("No se pudieron eliminar todos los datos");
   }
 }

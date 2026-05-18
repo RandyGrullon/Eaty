@@ -16,12 +16,18 @@ import {
   Download,
   Loader2,
   ChevronRight,
+  Search,
+  Filter,
+  X,
+  Trash2,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { getUserMeals } from "@/lib/meals";
 import type { Meal } from "@/types/meal";
 import { MealDetailModal } from "./meal-detail-modal";
 import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface MealHistoryProps {
   onBack: () => void;
@@ -32,20 +38,26 @@ export function MealHistory({ onBack }: MealHistoryProps) {
   const [loading, setLoading] = useState(true);
   const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [filterPeriod, setFilterPeriod] = useState<"day" | "week" | "month">(
+  const [filterPeriod, setFilterPeriod] = useState<"day" | "week" | "month" | "all">(
     "week"
   );
+  const [searchQuery, setSearchQuery] = useState("");
+  const [calorieRange, setCalorieRange] = useState<"all" | "low" | "mid" | "high">("all");
   const [filteredMeals, setFilteredMeals] = useState<Meal[]>([]);
 
   const { user } = useAuth();
 
-  const applyFilter = useCallback(() => {
+  const applyFilters = useCallback(() => {
     if (meals.length === 0) {
       setFilteredMeals([]);
       return;
     }
+    
+    let result = [...meals];
+
+    // 1. Filtro de Período
     const now = new Date();
-    let startDate: Date;
+    let startDate: Date | null = null;
 
     switch (filterPeriod) {
       case "day":
@@ -60,12 +72,35 @@ export function MealHistory({ onBack }: MealHistoryProps) {
       case "month":
         startDate = new Date(now.getFullYear(), now.getMonth(), 1);
         break;
-      default:
-        startDate = new Date(0);
+      case "all":
+        startDate = null;
+        break;
     }
 
-    setFilteredMeals(meals.filter((meal) => meal.createdAt >= startDate));
-  }, [meals, filterPeriod]);
+    if (startDate) {
+      result = result.filter((meal) => meal.createdAt >= startDate!);
+    }
+
+    // 2. Filtro de Búsqueda
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(meal => 
+        meal.foodName.toLowerCase().includes(q)
+      );
+    }
+
+    // 3. Filtro de Calorías
+    if (calorieRange !== "all") {
+      result = result.filter(meal => {
+        if (calorieRange === "low") return meal.calories < 200;
+        if (calorieRange === "mid") return meal.calories >= 200 && meal.calories < 500;
+        if (calorieRange === "high") return meal.calories >= 500;
+        return true;
+      });
+    }
+
+    setFilteredMeals(result);
+  }, [meals, filterPeriod, searchQuery, calorieRange]);
 
   useEffect(() => {
     if (user) {
@@ -74,8 +109,8 @@ export function MealHistory({ onBack }: MealHistoryProps) {
   }, [user]);
 
   useEffect(() => {
-    applyFilter();
-  }, [applyFilter]);
+    applyFilters();
+  }, [applyFilters]);
 
   const loadMeals = async () => {
     if (!user) return;
@@ -140,7 +175,7 @@ export function MealHistory({ onBack }: MealHistoryProps) {
     );
   };
 
-  const getFilterIcon = (period: "day" | "week" | "month") => {
+  const getFilterIcon = (period: "day" | "week" | "month" | "all") => {
     switch (period) {
       case "day":
         return <Clock className="h-3.5 w-3.5" />;
@@ -148,10 +183,12 @@ export function MealHistory({ onBack }: MealHistoryProps) {
         return <CalendarDays className="h-3.5 w-3.5" />;
       case "month":
         return <CalendarIcon className="h-3.5 w-3.5" />;
+      case "all":
+        return <Calendar className="h-3.5 w-3.5" />;
     }
   };
 
-  const getFilterLabel = (period: "day" | "week" | "month") => {
+  const getFilterLabel = (period: "day" | "week" | "month" | "all") => {
     switch (period) {
       case "day":
         return "Hoy";
@@ -159,6 +196,8 @@ export function MealHistory({ onBack }: MealHistoryProps) {
         return "Semana";
       case "month":
         return "Mes";
+      case "all":
+        return "Todo";
     }
   };
 
@@ -281,24 +320,74 @@ export function MealHistory({ onBack }: MealHistoryProps) {
         {header}
       </section>
 
-      <div className="mx-auto max-w-4xl space-y-12 px-4 py-4 sm:px-8">
-        <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-none snap-x">
-          {(["day", "week", "month"] as const).map((period) => (
-            <button
-              key={period}
-              type="button"
-              onClick={() => setFilterPeriod(period)}
-              className={cn(
-                "inline-flex shrink-0 snap-start items-center gap-2.5 rounded-2xl border px-6 py-3 text-sm font-black tracking-tight transition-all duration-300",
-                filterPeriod === period
-                  ? "border-primary bg-primary text-primary-foreground shadow-xl shadow-primary/20 scale-[1.02]"
-                  : "border-border/40 bg-card/40 text-muted-foreground hover:bg-card hover:text-foreground hover:border-border"
+      <div className="mx-auto max-w-4xl space-y-8 px-4 py-4 sm:px-8">
+        <div className="flex flex-col gap-6">
+          {/* Barra de Búsqueda y Botones de Período */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nombre..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-11 rounded-xl border-border/40 bg-card/40 pl-10 pr-10 focus-visible:ring-primary/20"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 hover:bg-muted"
+                >
+                  <X className="h-3 w-3 text-muted-foreground" />
+                </button>
               )}
-            >
-              {getFilterIcon(period)}
-              {getFilterLabel(period)}
-            </button>
-          ))}
+            </div>
+            
+            <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none sm:pb-0">
+              {(["day", "week", "month", "all"] as const).map((period) => (
+                <button
+                  key={period}
+                  type="button"
+                  onClick={() => setFilterPeriod(period)}
+                  className={cn(
+                    "inline-flex shrink-0 items-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-black tracking-tight transition-all duration-300",
+                    filterPeriod === period
+                      ? "border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/10"
+                      : "border-border/40 bg-card/40 text-muted-foreground hover:bg-card hover:text-foreground"
+                  )}
+                >
+                  {period !== "all" && getFilterIcon(period)}
+                  {period === "all" ? "Todo" : getFilterLabel(period)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Filtros de Calorías */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 mr-2">
+              <Filter className="h-3 w-3" />
+              Calorías:
+            </div>
+            {[
+              { id: "all", label: "Cualquiera" },
+              { id: "low", label: "< 200 kcal" },
+              { id: "mid", label: "200-500 kcal" },
+              { id: "high", label: "> 500 kcal" },
+            ].map((range) => (
+              <button
+                key={range.id}
+                onClick={() => setCalorieRange(range.id as any)}
+                className={cn(
+                  "rounded-full px-4 py-1.5 text-[10px] font-bold border transition-all",
+                  calorieRange === range.id
+                    ? "bg-primary/10 border-primary text-primary shadow-sm"
+                    : "bg-muted/30 border-transparent text-muted-foreground hover:bg-muted/50"
+                )}
+              >
+                {range.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {filteredMeals.length === 0 ? (
@@ -369,51 +458,73 @@ export function MealHistory({ onBack }: MealHistoryProps) {
                     </div>
 
                     <div className="grid gap-3 sm:pl-20">
-                      {dayMeals.map((meal) => (
-                        <button
-                          key={meal.id}
-                          type="button"
-                          onClick={() => setSelectedMeal(meal)}
-                          className="group flex w-full items-center gap-4 rounded-[2rem] border border-border/40 bg-card/40 p-3 pr-6 text-left transition-all hover:bg-card hover:shadow-2xl hover:shadow-black/[0.03] hover:-translate-y-1 sm:p-4 sm:pr-8"
-                        >
-                          <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-border/40 bg-muted shadow-inner sm:h-20 sm:w-20">
-                            {meal.imageUrl ? (
-                              <img
-                                src={meal.imageUrl}
-                                alt=""
-                                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                              />
-                            ) : (
-                              <div className="flex h-full w-full items-center justify-center bg-muted/50">
-                                <Camera className="h-8 w-8 text-muted-foreground/20" />
-                              </div>
-                            )}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-lg font-black tracking-tight text-foreground truncate group-hover:text-primary transition-colors">
-                              {meal.foodName}
-                            </p>
-                            <div className="mt-1 flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-60">
-                              <Clock className="h-3 w-3" />
-                              {date.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
+                      <AnimatePresence mode="popLayout">
+                        {dayMeals.map((meal) => (
+                          <motion.div
+                            key={meal.id}
+                            layout
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, x: -100 }}
+                            className="relative"
+                          >
+                            {/* Background for swipe */}
+                            <div className="absolute inset-0 flex items-center justify-end rounded-[2rem] bg-destructive px-8 text-white">
+                              <Trash2 className="h-6 w-6" />
                             </div>
-                            
-                            <div className="mt-4 flex flex-wrap items-center gap-3">
-                              <div className={cn("rounded-full px-3 py-1 text-[11px] font-black tabular-nums shadow-sm", getCaloriesBadgeColor(meal.calories))}>
-                                {meal.calories} kcal
+
+                            <motion.button
+                              drag="x"
+                              dragConstraints={{ left: -100, right: 0 }}
+                              onDragEnd={(_, info) => {
+                                if (info.offset.x < -70) {
+                                  setSelectedMeal(meal);
+                                }
+                              }}
+                              type="button"
+                              onClick={() => setSelectedMeal(meal)}
+                              className="group relative flex w-full items-center gap-4 rounded-[2rem] border border-border/40 bg-card p-3 pr-6 text-left transition-all hover:shadow-2xl hover:shadow-black/[0.03] sm:p-4 sm:pr-8"
+                            >
+                              <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-border/40 bg-muted shadow-inner sm:h-20 sm:w-20">
+                                {meal.imageUrl ? (
+                                  <img
+                                    src={meal.imageUrl}
+                                    alt=""
+                                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                  />
+                                ) : (
+                                  <div className="flex h-full w-full items-center justify-center bg-muted/50">
+                                    <Camera className="h-8 w-8 text-muted-foreground/20" />
+                                  </div>
+                                )}
                               </div>
-                              <div className="text-[10px] font-bold text-muted-foreground tracking-tight bg-accent/50 px-2 py-0.5 rounded-lg">
-                                P <span className="text-foreground">{meal.macros.protein}g</span> · 
-                                C <span className="text-foreground">{meal.macros.carbs}g</span> · 
-                                G <span className="text-foreground">{meal.macros.fat}g</span>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-lg font-black tracking-tight text-foreground truncate group-hover:text-primary transition-colors">
+                                  {meal.foodName}
+                                </p>
+                                <div className="mt-1 flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-60">
+                                  <Clock className="h-3 w-3" />
+                                  {date.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
+                                </div>
+                                
+                                <div className="mt-4 flex flex-wrap items-center gap-3">
+                                  <div className={cn("rounded-full px-3 py-1 text-[11px] font-black tabular-nums shadow-sm", getCaloriesBadgeColor(meal.calories))}>
+                                    {meal.calories} kcal
+                                  </div>
+                                  <div className="text-[10px] font-bold text-muted-foreground tracking-tight bg-accent/50 px-2 py-0.5 rounded-lg">
+                                    P <span className="text-foreground">{meal.macros.protein}g</span> · 
+                                    C <span className="text-foreground">{meal.macros.carbs}g</span> · 
+                                    G <span className="text-foreground">{meal.macros.fat}g</span>
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                          </div>
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/50 text-muted-foreground transition-all group-hover:bg-primary/10 group-hover:text-primary">
-                            <ChevronRight className="h-5 w-5" />
-                          </div>
-                        </button>
-                      ))}
+                              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/50 text-muted-foreground transition-all group-hover:bg-primary/10 group-hover:text-primary">
+                                <ChevronRight className="h-5 w-5" />
+                              </div>
+                            </motion.button>
+                          </motion.div>
+                        ))}
+                      </AnimatePresence>
                     </div>
                   </div>
                 );

@@ -15,6 +15,8 @@ export interface Meal {
   recommendations: string[];
   /** Qué vio/interpretó el modelo (descripción, confianza, porción, etc.). */
   aiContext?: FoodAnalysisAiContext;
+  /** Humor o estado de ánimo tras la comida. */
+  mood?: "energetic" | "heavy" | "neutral" | "satisfied";
   createdAt: Date;
 }
 
@@ -38,6 +40,13 @@ export interface UserProfile {
   heightUnit?: "cm" | "inches";
   activityLevel?: "sedentary" | "light" | "moderate" | "active" | "very_active";
   fitnessGoal?: "bulking" | "shedding" | "maintenance";
+  currentStreak?: number;
+  lastActiveDate?: Date;
+  achievements?: string[];
+  points?: number;
+  level?: number;
+  /** Alérgenos o ingredientes a evitar configurados por el usuario. */
+  allergens?: string[];
   createdAt: Date;
   updatedAt: Date;
 }

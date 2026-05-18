@@ -302,6 +302,15 @@ async function runTextRetryPass(params: {
   return parseFoodAnalysisContent(content);
 }
 
+export async function runGroqChat(params: {
+  messages: ChatMessage[];
+  responseFormatJson?: boolean;
+  temperature?: number;
+  maxTokens?: number;
+}): Promise<string> {
+  return groqChatCompletion(params);
+}
+
 export class FoodAnalysisExhaustedError extends Error {
   constructor(cause?: unknown) {
     const causeMsg =
@@ -323,12 +332,14 @@ export async function runFoodAnalysisGroq(params: {
   imageMimeType?: string;
   foodName?: string;
   description?: string;
+  allergens?: string[];
 }): Promise<FoodAnalysisMealFields> {
   const hasImage = Boolean(params.imageBase64?.trim());
   const userText = buildFoodAnalysisUserPrompt({
     hasImage,
     foodName: params.foodName,
     description: params.description,
+    allergens: params.allergens,
   });
 
   const userContent: ChatContentPart[] = hasImage

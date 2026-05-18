@@ -10,6 +10,7 @@ import {
   signInWithPopup,
   signOut,
   onAuthStateChanged,
+  signInAnonymously as firebaseSignInAnonymously,
 } from "firebase/auth"
 import { appFirebase, googleProvider } from "@/lib/firebase"
 
@@ -19,6 +20,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string) => Promise<void>
   signInWithGoogle: () => Promise<void>
+  signInAnonymously: () => Promise<void>
   logout: () => Promise<void>
 }
 
@@ -89,6 +91,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const signInAnonymously = async () => {
+    const auth = appFirebase.auth
+    try {
+      await firebaseSignInAnonymously(auth)
+    } catch (error: any) {
+      throw new Error("No se pudo iniciar sesión como invitado")
+    }
+  }
+
   const logout = async () => {
     const auth = appFirebase.auth
     try {
@@ -108,6 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signIn,
     signUp,
     signInWithGoogle,
+    signInAnonymously,
     logout,
   }
 

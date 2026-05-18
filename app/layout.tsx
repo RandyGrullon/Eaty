@@ -59,7 +59,12 @@ export default function RootLayout({
       <body
         className={`font-sans ${spaceGrotesk.variable} ${dmSans.variable} antialiased`}
       >
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <ThemeProvider 
+          attribute="class" 
+          defaultTheme="system" 
+          enableSystem 
+          themes={["light", "dark", "theme-nature", "theme-sunset"]}
+        >
           <Suspense fallback={<ShellLoading />}>{children}</Suspense>
         </ThemeProvider>
         <Analytics />

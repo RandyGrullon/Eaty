@@ -7,6 +7,7 @@ Debes seguir un orden mental estricto y reflejarlo en el JSON:
 5) SOLO entonces estimar foodName (español, nombre corto del plato: lo que un usuario vería en un menú), calories, macros y recommendations (español, 2-5 frases cortas y accionables). Las calorías (calories) deben ser coherentes con los gramos: aprox. 4×proteína + 4×carbohidratos + 9×grasa + 2×fibra (kcal). Cada plato y cada foto son distintos: no reutilices el mismo total para imágenes diferentes. Sin texto del usuario, foodName y dishDescription salen solo de la observación (foto o descripción, según lo disponible).
 
 Reglas anti-alucinación:
+- Si detectas una ETIQUETA NUTRICIONAL o texto con valores de macros en la imagen, prioriza extraer esos datos textuales exactos (OCR) sobre cualquier estimación visual.
 - Si no es comida o no se distingue, confidence=low, foodName honesto (ej. "No se identifica claramente comida") y estimaciones conservadoras.
 - No inventes ingredientes no visibles salvo deducción muy razonable (ej. salsa en un taco); en ese caso ambiguityNotes debe explicarlo.
 - Si el usuario da nombre o descripción, úsalo; si contradice levemente la imagen, prioriza el nombre del usuario salvo error evidente.
@@ -17,12 +18,19 @@ export function buildFoodAnalysisUserPrompt(params: {
   hasImage: boolean;
   foodName?: string;
   description?: string;
+  allergens?: string[];
 }): string {
   const parts: string[] = [
     "Genera el JSON según el esquema acordado (observación primero, números después).",
     "Claves obligatorias: visibleComponents, dishDescription, portionHypothesis { relativeSize, notes? }, confidence, foodName, calories, macros { protein, carbs, fat, fiber, sugar }, recommendations.",
     "Opcionales: cuisineOrStyle, cookingClues, ambiguityNotes.",
   ];
+
+  if (params.allergens && params.allergens.length > 0) {
+    parts.push(
+      `IMPORTANTE: El usuario debe evitar los siguientes alérgenos o ingredientes: ${params.allergens.join(", ")}. Si detectas o sospechas la presencia de alguno, inclúyelo en recommendations con una advertencia clara.`
+    );
+  }
 
   if (params.hasImage) {
     parts.push(
@@ -125,6 +133,43 @@ export function buildNutritionTipsUserPrompt(
   ];
 
   return blocks.filter(Boolean).join("\n");
+}
+
+export const SYSTEM_COACH_CHAT = `Eres Eaty Coach, un asistente de nutrición cercano, motivador y experto. 
+Tu objetivo es ayudar al usuario a entender sus hábitos alimenticios, dar consejos prácticos y responder dudas sobre nutrición basándote en lo que han comido recientemente.
+
+Reglas:
+- Sé amable pero profesional.
+- Usa los datos de las comidas proporcionadas para dar respuestas ESPECÍFICAS (ej: "Veo que hoy desayunaste avena, ¡excelente elección de fibra!").
+- Si el usuario te pregunta algo fuera de nutrición o salud básica, redirígelo amablemente a tu propósito principal.
+- No des diagnósticos médicos ni prescribas dietas extremas. 
+- Responde en español de forma concisa (máx 2-3 párrafos).
+- Usa emojis de forma moderada para ser amigable.`;
+
+export function buildCoachUserPrompt(params: {
+  userMessage: string;
+  mealsHistory: Array<{
+    foodName: string;
+    calories: number;
+    macros: { protein: number; carbs: number; fat: number };
+    createdAt: Date;
+  }>;
+  dailyGoal?: number;
+}): string {
+  const historyLines = params.mealsHistory
+    .map(
+      (m) =>
+        `- [${m.createdAt.toLocaleDateString()}] ${m.foodName}: ${m.calories} kcal`
+    )
+    .join("\n");
+
+  return `Mensaje del usuario: "${params.userMessage}"
+
+Historial reciente de comidas:
+${historyLines || "(No hay comidas registradas aún)"}
+${params.dailyGoal ? `Meta diaria: ${params.dailyGoal} kcal` : ""}
+
+Responde al mensaje del usuario considerando este contexto.`;
 }
 
 export const SYSTEM_JSON_REPAIR = `Devuelve SOLO un objeto JSON que cumpla exactamente el esquema pedido por el usuario, sin markdown.
