@@ -2,16 +2,18 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { X, Camera, Zap, ScanLine, Loader2, Aperture, Focus } from "lucide-react";
+import { X, Camera, Zap, ScanLine, Loader2, Aperture, Focus, Flame, Beef, Wheat, Droplets as FatIcon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { logger } from "@/lib/logger";
 
 interface LiveScannerProps {
   onCapture: (file: File) => void;
   onClose: () => void;
+  isAnalyzingRealTime?: boolean;
+  analysisResult?: any;
 }
 
-export function LiveScanner({ onCapture, onClose }: LiveScannerProps) {
+export function LiveScanner({ onCapture, onClose, isAnalyzingRealTime, analysisResult }: LiveScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [error, setError] = useState<string | null>(null);
@@ -161,10 +163,62 @@ export function LiveScanner({ onCapture, onClose }: LiveScannerProps) {
             </div>
           )}
 
+          {/* AR Floating Labels when result is ready */}
+          <AnimatePresence>
+            {analysisResult && !isAnalyzingRealTime && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none p-6"
+              >
+                <div className="relative group">
+                  <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full animate-pulse" />
+                  <div className="relative bg-black/60 backdrop-blur-xl border border-primary/40 rounded-[2rem] p-6 shadow-2xl min-w-[280px]">
+                    <div className="flex flex-col items-center text-center mb-6">
+                      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-1">Detección Live</p>
+                      <h3 className="text-xl font-black text-white">{analysisResult.foodName}</h3>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-white/5 rounded-2xl p-3 border border-white/10">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Flame className="h-3 w-3 text-orange-500" />
+                          <span className="text-[9px] font-black uppercase text-muted-foreground">Calorías</span>
+                        </div>
+                        <p className="text-lg font-black text-white">{analysisResult.calories} <span className="text-[10px]">kcal</span></p>
+                      </div>
+                      <div className="bg-white/5 rounded-2xl p-3 border border-white/10">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Beef className="h-3 w-3 text-red-400" />
+                          <span className="text-[9px] font-black uppercase text-muted-foreground">Proteína</span>
+                        </div>
+                        <p className="text-lg font-black text-white">{analysisResult.macros.protein}g</p>
+                      </div>
+                      <div className="bg-white/5 rounded-2xl p-3 border border-white/10">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Wheat className="h-3 w-3 text-amber-400" />
+                          <span className="text-[9px] font-black uppercase text-muted-foreground">Carbos</span>
+                        </div>
+                        <p className="text-lg font-black text-white">{analysisResult.macros.carbs}g</p>
+                      </div>
+                      <div className="bg-white/5 rounded-2xl p-3 border border-white/10">
+                        <div className="flex items-center gap-2 mb-1">
+                          <FatIcon className="h-3 w-3 text-yellow-400" />
+                          <span className="text-[9px] font-black uppercase text-muted-foreground">Grasa</span>
+                        </div>
+                        <p className="text-lg font-black text-white">{analysisResult.macros.fat}g</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Bottom Controls */}
           <div className="flex flex-col items-center justify-end pb-8 gap-6 z-10 pointer-events-auto">
             <AnimatePresence mode="wait">
-              {isAnalyzing ? (
+              {isAnalyzing || isAnalyzingRealTime ? (
                 <motion.div 
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -174,8 +228,32 @@ export function LiveScanner({ onCapture, onClose }: LiveScannerProps) {
                   <Loader2 className="h-8 w-8 text-primary animate-spin" />
                   <div className="bg-black/70 backdrop-blur-md border border-primary/30 rounded-xl px-5 py-3 text-center min-w-[280px]">
                     <p className="text-primary font-black text-sm uppercase tracking-widest mb-1">Analizando Malla</p>
-                    <p className="text-white text-xs font-medium">{phasesText[analysisPhase]}</p>
+                    <p className="text-white text-xs font-medium">{isAnalyzingRealTime ? "Sintetizando datos de visión..." : phasesText[analysisPhase]}</p>
                   </div>
+                </motion.div>
+              ) : analysisResult ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex gap-3 w-full max-w-sm px-6"
+                >
+                  <Button 
+                    variant="outline" 
+                    className="flex-1 rounded-2xl h-14 font-black border-white/20 bg-white/10 text-white"
+                    onClick={() => {
+                      onCapture(new File([], "reset")); 
+                    }}
+                  >
+                    Reintentar
+                  </Button>
+                  <Button 
+                    className="flex-[2] rounded-2xl h-14 font-black shadow-xl shadow-primary/20"
+                    onClick={() => {
+                      onCapture(new File([], "confirm")); 
+                    }}
+                  >
+                    Confirmar Datos
+                  </Button>
                 </motion.div>
               ) : (
                 <motion.div

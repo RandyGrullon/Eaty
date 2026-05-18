@@ -18,10 +18,13 @@ import {
   Barcode,
   QrCode,
 } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { pasteImageOrTextFromClipboard } from "@/lib/clipboard-scan";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import { prepareImageForGroq } from "@/lib/image-for-llm";
+import { analyzeFood } from "@/lib/groq";
 import { BarcodeScanner } from "./barcode-scanner";
 import { LiveScanner } from "./live-scanner";
 import { getProductByBarcode } from "@/lib/barcode";
@@ -91,11 +94,31 @@ export function ScanScreen({ onScanFood, onImageSelected }: ScanScreenProps) {
   const [pasteLoading, setPasteLoading] = useState(false);
   const [isBarcodeOpen, setIsBarcodeOpen] = useState(false);
   const [isLiveScannerOpen, setIsLiveScannerOpen] = useState(false);
+  const [isAnalyzingRealTime, setIsAnalyzingRealTime] = useState(false);
+  const [arResult, setArResult] = useState<any>(null);
   const [isBarcodeLoading, setIsBarcodeLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const { user } = useAuth();
   const { toast } = useToast();
+
+  const handleImageAnalysisInternal = async (imageFile: File) => {
+    try {
+      const { base64WithoutPrefix, mimeType } = await prepareImageForGroq(imageFile);
+      const idToken = user ? await user.getIdToken() : "";
+      const result = await analyzeFood(
+        {
+          imageBase64: base64WithoutPrefix,
+          imageMimeType: mimeType,
+        },
+        idToken
+      );
+      return result;
+    } catch (e) {
+      throw e;
+    }
+  };
 
   const routeImageFile = (file: File) => {
     if (onImageSelected) {
@@ -263,11 +286,38 @@ export function ScanScreen({ onScanFood, onImageSelected }: ScanScreenProps) {
         )}
         {isLiveScannerOpen && (
           <LiveScanner 
-            onCapture={(file) => {
-              setIsLiveScannerOpen(false);
-              routeImageFile(file);
+            isAnalyzingRealTime={isAnalyzingRealTime}
+            analysisResult={arResult}
+            onCapture={async (file) => {
+              if (file.name.includes("reset")) {
+                setArResult(null);
+                setIsAnalyzingRealTime(false);
+                return;
+              }
+              if (file.name.includes("confirm")) {
+                setIsLiveScannerOpen(false);
+                const finalResult = arResult;
+                setArResult(null);
+                onScanFood(undefined, undefined, undefined, finalResult);
+                return;
+              }
+
+              // Real-time analysis start
+              setIsAnalyzingRealTime(true);
+              try {
+                const result = await handleImageAnalysisInternal(file);
+                setArResult(result);
+              } catch (e) {
+                toast({ title: "Error", description: "No se pudo analizar el plato.", variant: "destructive" });
+              } finally {
+                setIsAnalyzingRealTime(false);
+              }
             }} 
-            onClose={() => setIsLiveScannerOpen(false)} 
+            onClose={() => {
+              setIsLiveScannerOpen(false);
+              setArResult(null);
+              setIsAnalyzingRealTime(false);
+            }} 
           />
         )}
       </AnimatePresence>
