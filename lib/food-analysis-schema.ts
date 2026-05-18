@@ -85,12 +85,16 @@ export function buildAiContextFromRaw(
   };
 }
 
-/** Un consejo accionable: qué cambiar, dónde, por qué y cómo buscar recetas. */
+/** Un consejo accionable: qué cambiar, dónde, por qué y la receta generada. */
 export const personalizedNutritionTipSchema = z.object({
   whatToChange: z.string().min(12).max(260),
   whereApply: z.string().min(12).max(200),
   whyItHelps: z.string().min(12).max(220).optional(),
-  recipeSearchQuery: z.string().min(4).max(100),
+  recipe: z.object({
+    title: z.string().min(4).max(100),
+    ingredients: z.array(z.string().min(2)).min(2),
+    steps: z.array(z.string().min(10)).min(2),
+  }),
   miniSteps: z.array(z.string().min(12).max(160)).min(2).max(3),
 });
 

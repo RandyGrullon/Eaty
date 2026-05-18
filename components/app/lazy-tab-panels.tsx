@@ -26,3 +26,11 @@ export const ProfilePageLazy = dynamic(
   { ssr: true }
 );
 
+export const WeeklyPlannerLazy = dynamic(
+  () =>
+    import("@/components/planning/weekly-planner").then((m) => ({
+      default: m.WeeklyPlanner,
+    })),
+  { ssr: true }
+);
+

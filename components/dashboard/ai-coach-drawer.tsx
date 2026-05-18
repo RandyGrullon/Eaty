@@ -16,6 +16,7 @@ import { useCalorieTracker } from "@/hooks/use-calorie-tracker";
 import { getRecentActivities } from "@/lib/meals";
 import { logger } from "@/lib/logger";
 import { cn } from "@/lib/utils";
+import ReactMarkdown from "react-markdown";
 
 interface Message {
   role: "user" | "assistant";
@@ -143,12 +144,16 @@ export function AICoachDrawer({
                   {m.role === "assistant" ? <Bot className="h-4 w-4" /> : <User className="h-4 w-4" />}
                 </div>
                 <div className={cn(
-                  "relative max-w-[80%] rounded-2xl px-4 py-3 text-sm shadow-sm",
+                  "relative max-w-[85%] rounded-[1.5rem] px-4 py-3 text-sm shadow-sm",
                   m.role === "user" 
                     ? "bg-primary text-primary-foreground rounded-tr-none" 
-                    : "bg-muted/50 text-foreground rounded-tl-none border border-border/40"
+                    : "bg-card text-foreground rounded-tl-none border border-border/40 prose prose-sm prose-p:leading-relaxed prose-headings:mb-2 prose-headings:mt-4 prose-headings:text-foreground prose-strong:text-primary dark:prose-invert"
                 )}>
-                  {m.content}
+                  {m.role === "assistant" ? (
+                    <ReactMarkdown>{m.content}</ReactMarkdown>
+                  ) : (
+                    m.content
+                  )}
                 </div>
               </div>
             ))}

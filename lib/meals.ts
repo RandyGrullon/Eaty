@@ -66,14 +66,17 @@ export type SaveMealResult = {
 export async function saveMeal(
   userId: string,
   mealData: Omit<Meal, "id" | "createdAt">,
-  options?: SaveMealOptions
+  options?: SaveMealOptions & { plannedDate?: Date }
 ): Promise<SaveMealResult> {
   try {
     const mealsRef = collection(getDb(), "users", userId, "meals");
     const docRef = await addDoc(mealsRef, {
       ...mealData,
       imageUrl: mealData.imageUrl ?? null,
-      createdAt: Timestamp.now(),
+      createdAt: options?.plannedDate 
+        ? Timestamp.fromDate(options.plannedDate) 
+        : Timestamp.now(),
+      isPlanned: mealData.isPlanned ?? false,
     });
     let imageStored = false;
     if (options?.imageFile) {

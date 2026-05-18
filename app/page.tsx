@@ -18,6 +18,7 @@ import {
   MealHistoryLazy,
   ProfilePageLazy,
   ScanScreenLazy,
+  WeeklyPlannerLazy,
 } from "@/components/app/lazy-tab-panels";
 import { AuthScreen } from "@/components/auth/auth-screen";
 import { DashboardScreen } from "@/components/dashboard/dashboard-screen";
@@ -283,6 +284,13 @@ function AppContent() {
               />
             </section>
             <section
+              aria-hidden={activeTab !== "planning"}
+              inert={activeTab !== "planning" ? true : undefined}
+              className="flex h-full max-h-full min-h-0 w-full max-w-full shrink-0 grow-0 basis-full snap-start [scroll-snap-stop:always] flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain min-w-0"
+            >
+              <WeeklyPlannerLazy onAddMeal={() => setActiveTab("scan")} />
+            </section>
+            <section
               aria-hidden={activeTab !== "scan"}
               inert={activeTab !== "scan" ? true : undefined}
               className="flex h-full max-h-full min-h-0 w-full max-w-full shrink-0 grow-0 basis-full snap-start [scroll-snap-stop:always] flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain min-w-0"
@@ -309,18 +317,23 @@ function AppContent() {
           </div>
         ) : (
           <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-            <main className="flex-1 overflow-y-auto overflow-x-hidden p-6 sm:p-10">
-              <div className="mx-auto w-full max-w-5xl">
+            <main className="flex-1 overflow-y-auto overflow-x-hidden p-0 sm:p-0">
+              <div className="w-full h-full">
                 {activeTab === "home" ? (
-                  <section className={tabPanelClass}>
+                  <section className="w-full h-full">
                     <DashboardScreen
                       key={refreshKey}
                       onViewHistory={handleViewHistory}
                     />
                   </section>
                 ) : null}
+                {activeTab === "planning" ? (
+                  <section className="w-full h-full">
+                    <WeeklyPlannerLazy onAddMeal={() => setActiveTab("scan")} />
+                  </section>
+                ) : null}
                 {activeTab === "scan" ? (
-                  <section className={tabPanelClass}>
+                  <section className="w-full h-full">
                     <ScanScreenLazy
                       onScanFood={handleScanFood}
                       onImageSelected={handleImageSelected}
@@ -328,12 +341,12 @@ function AppContent() {
                   </section>
                 ) : null}
                 {activeTab === "history" ? (
-                  <section className={tabPanelClass}>
+                  <section className="w-full h-full">
                     <MealHistoryLazy onBack={() => setActiveTab("home")} />
                   </section>
                 ) : null}
                 {activeTab === "profile" ? (
-                  <section className={tabPanelClass}>
+                  <section className="w-full h-full">
                     <ProfilePageLazy />
                   </section>
                 ) : null}

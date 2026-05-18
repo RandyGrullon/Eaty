@@ -1,5 +1,6 @@
 export const MAIN_TAB_ORDER = [
   "home",
+  "planning",
   "scan",
   "history",
   "profile",

@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import type { MainTab } from "@/lib/main-tab"
-import { Home, Camera, History, User } from "lucide-react"
+import { Home, Camera, History, User, CalendarDays } from "lucide-react"
 
 interface BottomNavProps {
   activeTab: MainTab
@@ -12,6 +12,7 @@ interface BottomNavProps {
 export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
   const tabs = [
     { id: "home" as const, icon: Home, label: "Inicio" },
+    { id: "planning" as const, icon: CalendarDays, label: "Plan" },
     { id: "scan" as const, icon: Camera, label: "Escanear" },
     { id: "history" as const, icon: History, label: "Historial" },
     { id: "profile" as const, icon: User, label: "Perfil" },

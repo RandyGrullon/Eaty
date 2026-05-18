@@ -17,6 +17,8 @@ export interface Meal {
   aiContext?: FoodAnalysisAiContext;
   /** Humor o estado de ánimo tras la comida. */
   mood?: "energetic" | "heavy" | "neutral" | "satisfied";
+  /** Si la comida es un plan futuro. */
+  isPlanned?: boolean;
   createdAt: Date;
 }
 

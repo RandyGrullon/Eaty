@@ -201,7 +201,7 @@ export function useFoodAnalysis(onSaveSuccess?: () => void) {
     }
   }, [analysisResult]);
 
-  const saveAnalysis = useCallback(async (editedData?: AnalysisState): Promise<void> => {
+  const saveAnalysis = useCallback(async (editedData?: AnalysisState & { isPlanned?: boolean; plannedDate?: Date }): Promise<void> => {
     const dataToSave = editedData || analysisResult;
     if (!dataToSave || !user) return;
     if (saveInFlightRef.current) return;
@@ -216,7 +216,7 @@ export function useFoodAnalysis(onSaveSuccess?: () => void) {
       try {
         await saveMealOffline(user.uid, dataToSave, imageFileForStorage ?? undefined);
         toast({
-          title: "Guardado offline",
+          title: editedData?.isPlanned ? "Plan guardado offline" : "Guardado offline",
           description: "La comida se guardó localmente y se sincronizará cuando vuelvas a tener conexión.",
         });
         setAnalysisResult(null);
@@ -243,22 +243,25 @@ export function useFoodAnalysis(onSaveSuccess?: () => void) {
     try {
       const { imageStored } = await saveMeal(user.uid, dataToSave, {
         imageFile: imageFileForStorage ?? undefined,
+        plannedDate: editedData?.plannedDate,
       });
 
-      // Actualizar racha después de guardar con éxito
-      void updateStreak(user.uid).catch((e) =>
-        logger.error("Error updating streak", e)
-      );
+      // Actualizar racha después de guardar con éxito (solo si no es planeado o si es para hoy)
+      if (!editedData?.isPlanned) {
+        void updateStreak(user.uid).catch((e) =>
+          logger.error("Error updating streak", e)
+        );
 
-      // Otorga puntos (ej: 50 por comida)
-      void awardPoints(user.uid, 50).then(({ leveledUp }) => {
-        if (leveledUp) {
-          toast({
-            title: "¡Subida de nivel!",
-            description: "Has alcanzado un nuevo nivel. ¡Sigue así!",
-          });
-        }
-      }).catch((e) => logger.error("Error awarding points", e));
+        // Otorga puntos (ej: 50 por comida)
+        void awardPoints(user.uid, 50).then(({ leveledUp }) => {
+          if (leveledUp) {
+            toast({
+              title: "¡Subida de nivel!",
+              description: "Has alcanzado un nuevo nivel. ¡Sigue así!",
+            });
+          }
+        }).catch((e) => logger.error("Error awarding points", e));
+      }
 
       if (onSaveSuccess) onSaveSuccess();
 
@@ -268,8 +271,10 @@ export function useFoodAnalysis(onSaveSuccess?: () => void) {
       lastImageRetryRef.current = null;
       lastAnalyzedImageFileRef.current = null;
       toast({
-        title: "Guardada en el historial",
-        description: "La comida se añadió a tu registro.",
+        title: editedData?.isPlanned ? "Agregado al plan" : "Guardada en el historial",
+        description: editedData?.isPlanned 
+          ? "La comida se añadió a tu plan semanal." 
+          : "La comida se añadió a tu registro.",
       });
       if (imageFileForStorage && !imageStored) {
         toast({

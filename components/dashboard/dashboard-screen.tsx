@@ -418,7 +418,7 @@ export function DashboardScreen({
           aria-hidden
         />
 
-        <div className="relative z-10 mx-auto max-w-6xl px-4 pt-8 pb-10 sm:px-6 lg:pt-10 lg:pb-12">
+        <div className="relative z-10 mx-auto max-w-full px-4 pt-8 pb-10 sm:px-8 lg:pt-10 lg:pb-12">
           <motion.div 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -683,8 +683,9 @@ export function DashboardScreen({
         </div>
       </section>
 
-      <div className="mx-auto max-w-6xl space-y-16 px-4 py-12 sm:px-6 lg:py-20">
-        <TipsCarousel
+      <div className="mx-auto max-w-full px-4 sm:px-8 mt-12 pb-20">
+        <TipsCarousel 
+          className="mb-12 border-none shadow-none bg-transparent p-0"
           dailyGoal={
             calorieData && !calorieLoading && !calorieError
               ? calorieData.dailyGoal
@@ -693,6 +694,7 @@ export function DashboardScreen({
         />
 
         <div className="grid gap-12 lg:grid-cols-12 lg:gap-16">
+
           <div className="lg:col-span-7">
             <div className="mb-8 flex items-end justify-between gap-4">
               <div>

@@ -1,8 +1,8 @@
-# 🚀 Hoja de Ruta Eaty: Pendientes (18/50)
+# 🚀 Hoja de Ruta Eaty: Pendientes (17/50)
 
 Hemos avanzado significativamente en la implementación de las 50 mejoras. Aquí tienes el listado de lo que queda pendiente para continuar mañana, segmentado por categorías.
 
-## 🟢 Progreso Actual: 32 / 50 Completadas
+## 🟢 Progreso Actual: 33 / 50 Completadas
 
 ---
 
@@ -10,10 +10,10 @@ Hemos avanzado significativamente en la implementación de las 50 mejoras. Aquí
 - [x] **#7 Drag & Drop de Imágenes:** Permitir arrastrar fotos directamente al navegador en la versión de escritorio.
 - [x] **#10 Estados de Error Ilustrados:** Crear componentes visuales amigables con ilustraciones para fallos de cámara o red (reemplazando textos).
 
-### 2. Nutrición e Inteligencia Especializada (Pendientes: 4)
+### 2. Nutrición e Inteligencia Especializada (Pendientes: 3)
 - [ ] **#12 Estimación por Referencia:** Pedir al usuario que incluya un objeto común (moneda/mano) para que la IA calcule mejor el tamaño de las porciones.
 - [ ] **#16 Integración con Salud:** Conexión con Apple HealthKit o Google Fit para sincronizar pasos y calorías quemadas.
-- [ ] **#17 Planificador Semanal:** Una vista de calendario para que el usuario registre lo que planea comer a futuro.
+- [x] **#17 Planificador Semanal:** Una vista de calendario para que el usuario registre lo que planea comer a futuro.
 - [x] **#20 Metas Basadas en Actividad:** Ajustar el TDEE automáticamente según el nivel de actividad física diaria reportado.
 
 ### 3. Rendimiento y Optimización Extrema (Pendientes: 6)

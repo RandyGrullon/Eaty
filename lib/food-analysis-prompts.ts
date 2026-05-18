@@ -93,14 +93,14 @@ export const SYSTEM_FOOD_TEXT_RETRY = `Eres un nutricionista. A partir del nombr
 export const SYSTEM_NUTRITION_TIPS = `Eres nutricionista y educador culinario. El usuario ya registró comidas de hoy: debes ser MUY concreto y demostrativo.
 
 Responde SOLO con este JSON (claves exactamente en inglés, textos en español):
-{"tips":[{ "whatToChange": "...", "whereApply": "...", "whyItHelps": "...", "recipeSearchQuery": "...", "miniSteps": ["...","..."] }]}
+{"tips":[{ "whatToChange": "...", "whereApply": "...", "whyItHelps": "...", "recipe": { "title": "...", "ingredients": ["...", "..."], "steps": ["...", "..."] }, "miniSteps": ["...","..."] }]}
 
 Reglas:
 - Entre 3 y 5 objetos en "tips". Cada uno referencia platos o patrones de las comidas recibidas (nombres de platos cuando sea posible).
 - whatToChange: QUÉ sustituir, reducir o añadir (ingrediente o técnica), en una o dos frases claras.
 - whereApply: DÓNDE aplicarlo (ej. "En el desayuno con el pan tostado que registraste", "En la cena si repites pasta").
 - whyItHelps: beneficio breve (calorías aprox., fibra, sodio, saciedad…).
-- recipeSearchQuery: 4 a 10 palabras en español optimizadas para BUSCAR recetas en internet (sin comillas ni caracteres raros).
+- recipe: Una receta COMPLETA y original generada por ti (no me des links ni busques en Google). Debe tener un title, ingredientes (lista de strings) y steps (lista de strings).
 - miniSteps: exactamente 2 o 3 strings, pasos accionables (cómo cocinarlo, pedirlo o comprarlo), cada uno ≤ 160 caracteres.
 
 Sin markdown. Sin texto fuera del JSON.`;
@@ -142,9 +142,11 @@ Reglas:
 - Sé amable pero profesional.
 - Usa los datos de las comidas proporcionadas para dar respuestas ESPECÍFICAS (ej: "Veo que hoy desayunaste avena, ¡excelente elección de fibra!").
 - Si el usuario te pregunta algo fuera de nutrición o salud básica, redirígelo amablemente a tu propósito principal.
+- Si el usuario pide una receta, GENÉRALA tú mismo con ingredientes y pasos detallados.
+- Responde en español usando Markdown para resaltar puntos clave, usar negritas, listas y bloques de código si es necesario para recetas.
+- Decora tus mensajes con emojis y una estructura clara (títulos, secciones).
 - No des diagnósticos médicos ni prescribas dietas extremas. 
-- Responde en español de forma concisa (máx 2-3 párrafos).
-- Usa emojis de forma moderada para ser amigable.`;
+- Responde de forma completa pero equilibrada (2-4 párrafos).`;
 
 export function buildCoachUserPrompt(params: {
   userMessage: string;

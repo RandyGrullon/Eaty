@@ -30,6 +30,7 @@ import {
   MapPin,
   Sparkles,
   ExternalLink,
+  Utensils,
 } from "lucide-react";
 import { generateNutritionTips } from "@/lib/groq";
 import { GroqApiError } from "@/lib/groq-api-error";
@@ -51,10 +52,13 @@ function formatTipForShare(tip: PersonalizedNutritionTip): string {
     `🔧 Qué cambiar: ${tip.whatToChange}`,
     `📍 Dónde aplicarlo: ${tip.whereApply}`,
     ...(tip.whyItHelps ? [`💡 Por qué ayuda: ${tip.whyItHelps}`] : []),
-    `🔎 Buscar recetas: ${tip.recipeSearchQuery}`,
+    "",
+    `📖 Receta: ${tip.recipe.title}`,
+    "Ingredientes:",
+    ...tip.recipe.ingredients.map(ing => `- ${ing}`),
     "",
     "Pasos:",
-    ...tip.miniSteps.map((s, i) => `${i + 1}. ${s}`),
+    ...tip.recipe.steps.map((s, i) => `${i + 1}. ${s}`),
     "",
     "Consejo de Eaty",
   ];
@@ -443,100 +447,77 @@ export function TipsCarousel({ className, dailyGoal }: TipsCarouselProps) {
       >
         <SheetContent
           side="bottom"
-          className="max-h-[90vh] overflow-y-auto rounded-t-2xl sm:max-w-lg"
+          className="max-h-[90vh] overflow-y-auto rounded-t-[2.5rem] sm:max-w-2xl mx-auto border-t-0 shadow-2xl"
         >
           {howToTip ? (
-            <>
-              <SheetHeader className="text-left">
-                <SheetTitle className="flex items-center gap-2 pr-8">
-                  <ChefHat className="h-5 w-5 text-primary" />
-                  Cómo hacerlo
-                </SheetTitle>
-                <SheetDescription className="text-left text-base font-medium text-foreground">
+            <div className="max-w-xl mx-auto py-6">
+              <SheetHeader className="text-left mb-8">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="h-10 w-10 rounded-2xl bg-primary/10 flex items-center justify-center">
+                    <ChefHat className="h-6 w-6 text-primary" />
+                  </div>
+                  <SheetTitle className="text-2xl font-black tracking-tight">
+                    {howToTip.recipe.title}
+                  </SheetTitle>
+                </div>
+                <SheetDescription className="text-base font-semibold text-muted-foreground leading-snug">
                   {howToTip.whatToChange}
                 </SheetDescription>
               </SheetHeader>
 
-              <div className="space-y-4 px-4">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                    Dónde aplicarlo
-                  </p>
-                  <p className="mt-1 text-sm text-foreground">
-                    {howToTip.whereApply}
-                  </p>
-                </div>
-                {howToTip.whyItHelps ? (
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                      Por qué ayuda
-                    </p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {howToTip.whyItHelps}
+              <div className="space-y-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">📍 Aplicación</p>
+                    <p className="text-sm font-medium text-foreground bg-muted/30 p-3 rounded-2xl border border-border/40">
+                      {howToTip.whereApply}
                     </p>
                   </div>
-                ) : null}
-                <Separator />
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wide text-primary">
-                    Pasos en la cocina (o al pedir)
-                  </p>
-                  <ol className="mt-2 list-decimal space-y-2 pl-4 text-sm text-foreground">
-                    {howToTip.miniSteps.map((step, i) => (
-                      <li key={i} className="leading-relaxed">
-                        {step}
+                  {howToTip.whyItHelps && (
+                    <div className="space-y-3">
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-chart-2">💡 Beneficio</p>
+                      <p className="text-sm font-medium text-muted-foreground bg-chart-2/5 p-3 rounded-2xl border border-chart-2/10">
+                        {howToTip.whyItHelps}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-4">
+                  <h4 className="text-lg font-black tracking-tight flex items-center gap-2">
+                    <Utensils className="h-5 w-5 text-primary" />
+                    Ingredientes
+                  </h4>
+                  <ul className="grid grid-cols-1 gap-2">
+                    {howToTip.recipe.ingredients.map((ing, i) => (
+                      <li key={i} className="flex items-center gap-3 text-sm font-medium text-foreground bg-card p-3 rounded-xl border border-border/40">
+                        <div className="h-1.5 w-1.5 rounded-full bg-primary/40" />
+                        {ing}
                       </li>
                     ))}
-                  </ol>
+                  </ul>
                 </div>
-                <Separator />
-                <p className="text-xs text-muted-foreground">
-                  Abre búsquedas en el navegador con ideas de recetas alineadas a
-                  este cambio. Eaty no controla el contenido externo.
-                </p>
-              </div>
 
-              <SheetFooter className="flex-col gap-2 sm:flex-col">
-                {(() => {
-                  const links = buildRecipeSearchLinks(
-                    howToTip.recipeSearchQuery
-                  );
-                  return (
-                    <>
-                      <Button
-                        type="button"
-                        className="w-full gap-2"
-                        asChild
-                      >
-                        <a
-                          href={links.googleRecipes}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                          Recetas en la web (Google)
-                        </a>
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="w-full gap-2"
-                        asChild
-                      >
-                        <a
-                          href={links.youtubeHowTo}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                          Vídeos paso a paso (YouTube)
-                        </a>
-                      </Button>
-                    </>
-                  );
-                })()}
-              </SheetFooter>
-            </>
+                <div className="space-y-4 pb-10">
+                  <h4 className="text-lg font-black tracking-tight flex items-center gap-2">
+                    <Play className="h-5 w-5 text-primary fill-current" />
+                    Preparación paso a paso
+                  </h4>
+                  <div className="space-y-4">
+                    {howToTip.recipe.steps.map((step, i) => (
+                      <div key={i} className="flex gap-4">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-xs font-black text-white shadow-lg shadow-primary/20">
+                          {i + 1}
+                        </span>
+                        <p className="text-sm font-medium leading-relaxed text-muted-foreground pt-1">
+                          {step}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
           ) : null}
         </SheetContent>
       </Sheet>

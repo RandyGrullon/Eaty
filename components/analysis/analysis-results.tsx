@@ -13,7 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Save, Share2, Info, Camera, Sparkles, Lightbulb, Loader2, Edit3, Heart, Zap, Coffee, Smile } from "lucide-react";
+import { ArrowLeft, Save, Share2, Info, Camera, Sparkles, Lightbulb, Loader2, Edit3, Heart, Zap, Coffee, Smile, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { macroCaloriesRough } from "@/lib/food-analysis-schema";
@@ -29,6 +29,7 @@ interface AnalysisResultsProps {
   imagePreviewUrl?: string | null;
   onBack: () => void;
   onSave: (editedData: Omit<Meal, "id" | "createdAt">) => void | Promise<void>;
+  onSavePlanned?: (data: Omit<Meal, "id" | "createdAt">, date: Date) => void | Promise<void>;
   isSaving?: boolean;
 }
 
@@ -75,6 +76,8 @@ export function AnalysisResults({
 }: AnalysisResultsProps) {
   const { toast } = useToast();
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [planDialogOpen, setPlanDialogOpen] = useState(false);
+  const [plannedDate, setPlannedDate] = useState<Date>(new Date());
   const [editedResult, setEditedResult] = useState(initialResult);
 
   const fromMacros = macroCaloriesRough(editedResult.macros);
@@ -373,19 +376,29 @@ export function AnalysisResults({
 
       {/* Botón de Guardar flotante */}
       <div className="fixed bottom-0 left-0 right-0 z-40 p-4 pb-8 bg-gradient-to-t from-background via-background/95 to-transparent flex justify-center sm:pb-4">
-        <div className="w-full max-w-4xl">
+        <div className="w-full max-w-4xl flex gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setPlanDialogOpen(true)}
+            disabled={isSaving}
+            className="flex-1 h-14 rounded-2xl text-lg font-black border-primary/20 bg-background/50 shadow-xl backdrop-blur-sm transition-all active:scale-95"
+          >
+            <Calendar className="mr-2 h-5 w-5 text-primary" />
+            Planear
+          </Button>
           <Button
             type="button"
             onClick={() => setSaveDialogOpen(true)}
             disabled={isSaving}
-            className="w-full h-14 rounded-2xl text-lg font-black shadow-2xl shadow-primary/30 transition-all active:scale-95"
+            className="flex-[2] h-14 rounded-2xl text-lg font-black shadow-2xl shadow-primary/30 transition-all active:scale-95"
           >
             {isSaving ? (
               <Loader2 className="mr-2 h-5 w-5 animate-spin" />
             ) : (
               <Save className="mr-2 h-5 w-5" />
             )}
-            {isSaving ? "Guardando..." : "Registrar Comida"}
+            {isSaving ? "Guardando..." : "Registrar hoy"}
           </Button>
         </div>
       </div>
@@ -395,7 +408,7 @@ export function AnalysisResults({
           <AlertDialogHeader>
             <AlertDialogTitle className="text-xl font-black">¿Registrar comida?</AlertDialogTitle>
             <AlertDialogDescription className="font-medium">
-              Este análisis se guardará en tu historial personal para el seguimiento de tus metas diarias.
+              Este análisis se guardará en tu historial personal de hoy para el seguimiento de tus metas diarias.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-4">
@@ -409,6 +422,41 @@ export function AnalysisResults({
               }}
             >
               Confirmar
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={planDialogOpen} onOpenChange={setPlanDialogOpen}>
+        <AlertDialogContent className="rounded-[2rem]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-xl font-black">Planificar para el futuro</AlertDialogTitle>
+            <AlertDialogDescription className="font-medium">
+              Selecciona una fecha para añadir esta comida a tu plan semanal.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <Input 
+              type="date" 
+              className="rounded-xl h-12 font-bold"
+              min={new Date().toISOString().split('T')[0]}
+              value={plannedDate.toISOString().split('T')[0]}
+              onChange={(e) => setPlannedDate(new Date(e.target.value))}
+            />
+          </div>
+          <AlertDialogFooter className="mt-4">
+            <AlertDialogCancel className="rounded-xl font-bold">Cancelar</AlertDialogCancel>
+            <Button
+              type="button"
+              className="rounded-xl font-black"
+              onClick={() => {
+                setPlanDialogOpen(false);
+                // Usamos un cast temporal o expandimos el tipo en la llamada si es necesario, 
+                // pero onSave en app/page.tsx ya maneja el objeto expandido.
+                void onSave({ ...editedResult, isPlanned: true, plannedDate } as any);
+              }}
+            >
+              Añadir al plan
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
