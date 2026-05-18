@@ -7,6 +7,7 @@ import { isFirebaseConfigReady } from "@/lib/firebase-config";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserProfile } from "@/hooks/use-user-profile";
+import { useToast } from "@/hooks/use-toast";
 import { useFoodAnalysis } from "@/hooks/use-food-analysis";
 import { usePWA } from "@/hooks/use-pwa";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -43,23 +44,24 @@ function AppContent() {
     }
   }, [user, loading, signInAnonymously]);
 
+  const { isInstalled } = usePWA();
+  const isMobile = useIsMobile();
+  const { toast } = useToast();
+  const { refreshData: refreshCalorieData } = useCalorieTracker();
+  useOfflineSync(refreshCalorieData);
+
   useEffect(() => {
     const hasSeenGuide = localStorage.getItem("eaty-guide-seen");
     if (!hasSeenGuide && userProfile && !loading && !profileLoading) {
       setTimeout(() => {
-        const { toast } = import("@/hooks/use-toast").then(m => {
-          // Nota: toast no es una exportación nombrada, es un hook
+        toast({
+          title: "¡Bienvenido a Eaty!",
+          description: "Desliza para ver tus estadísticas o pulsa en Escanear para analizar tu comida.",
         });
-        // Usaremos window.dispatchEvent o simplemente dejaremos que el toast normal lo maneje
-        // Por simplicidad, usemos el toast que ya tenemos en el scope si es posible
+        localStorage.setItem("eaty-guide-seen", "true");
       }, 2000);
     }
-  }, [userProfile, loading, profileLoading]);
-
-  const { isInstalled } = usePWA();
-  const isMobile = useIsMobile();
-  const { refreshData: refreshCalorieData } = useCalorieTracker();
-  useOfflineSync(refreshCalorieData);
+  }, [userProfile, loading, profileLoading, toast]);
   const {
     isAnalyzing,
     isSaving,

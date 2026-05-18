@@ -95,7 +95,7 @@ export function ImageAnalysisFailure({
 
         <div className="rounded-2xl border border-destructive/10 bg-destructive/5 p-4">
           <p className="text-xs font-semibold text-destructive/80 italic">
-            "{message}"
+            &quot;{message}&quot;
           </p>
         </div>
 

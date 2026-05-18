@@ -29,7 +29,7 @@ import {
   Plus,
   Minus,
 } from "lucide-react";
-import { useState, useEffect, useMemo, type ReactNode } from "react";
+import { useState, useEffect, useMemo, useCallback, type ReactNode } from "react";
 import type { Meal } from "@/types/meal";
 import { cn } from "@/lib/utils";
 import { logger } from "@/lib/logger";
@@ -360,7 +360,7 @@ export function DashboardScreen({
     }
   }, [user]);
 
-  const loadRecentActivities = async () => {
+  const loadRecentActivities = useCallback(async () => {
     if (!user) return;
     setLoadingActivities(true);
     try {
@@ -371,9 +371,9 @@ export function DashboardScreen({
     } finally {
       setLoadingActivities(false);
     }
-  };
+  }, [user]);
 
-  const loadWeeklyProgress = async () => {
+  const loadWeeklyProgress = useCallback(async () => {
     if (!user) return;
     setLoadingProgress(true);
     try {
@@ -384,7 +384,7 @@ export function DashboardScreen({
     } finally {
       setLoadingProgress(false);
     }
-  };
+  }, [user]);
 
   const handleLogout = async () => {
     try {

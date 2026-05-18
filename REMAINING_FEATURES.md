@@ -1,8 +1,8 @@
-# 🚀 Hoja de Ruta Eaty: Pendientes (20/50)
+# 🚀 Hoja de Ruta Eaty: Pendientes (18/50)
 
 Hemos avanzado significativamente en la implementación de las 50 mejoras. Aquí tienes el listado de lo que queda pendiente para continuar mañana, segmentado por categorías.
 
-## 🟢 Progreso Actual: 30 / 50 Completadas
+## 🟢 Progreso Actual: 32 / 50 Completadas
 
 ---
 
@@ -14,7 +14,7 @@ Hemos avanzado significativamente en la implementación de las 50 mejoras. Aquí
 - [ ] **#12 Estimación por Referencia:** Pedir al usuario que incluya un objeto común (moneda/mano) para que la IA calcule mejor el tamaño de las porciones.
 - [ ] **#16 Integración con Salud:** Conexión con Apple HealthKit o Google Fit para sincronizar pasos y calorías quemadas.
 - [ ] **#17 Planificador Semanal:** Una vista de calendario para que el usuario registre lo que planea comer a futuro.
-- [ ] **#20 Metas Basadas en Actividad:** Ajustar el TDEE automáticamente según el nivel de actividad física diaria reportado.
+- [x] **#20 Metas Basadas en Actividad:** Ajustar el TDEE automáticamente según el nivel de actividad física diaria reportado.
 
 ### 3. Rendimiento y Optimización Extrema (Pendientes: 6)
 - [x] **#22 Actualizaciones Optimistas:** Implementar SWR o React Query para que los cambios en la UI sean instantáneos antes de confirmar con Firestore.
@@ -36,7 +36,7 @@ Hemos avanzado significativamente en la implementación de las 50 mejoras. Aquí
 ### 5. Seguridad, Privacidad y Estándares (Pendientes: 7)
 - [ ] **#41 Navegación por Teclado:** Asegurar que toda la app sea 100% navegable mediante `Tab` y `Enter`.
 - [ ] **#42 Contraste WCAG:** Verificación de paletas de colores para cumplir con los estándares de legibilidad AA/AAA.
-- [ ] **#44 Exportación GDPR:** Botón en el perfil para descargar toda la información del usuario en un paquete ZIP con JSON y fotos.
+- [x] **#44 Exportación GDPR:** Botón en el perfil para descargar toda la información del usuario en un paquete ZIP con JSON y fotos.
 - [x] **#45 Eliminación Total de Cuenta:** Proceso automatizado para borrar perfil, comidas y fotos de Storage de forma definitiva.
 - [ ] **#46 Autenticación Biométrica:** Integrar WebAuthn para permitir login con FaceID o Huella dactilar.
 - [ ] **#48 Cifrado de Datos Sensibles:** Implementar cifrado en el cliente para campos específicos del perfil del usuario.

@@ -5,6 +5,7 @@ export function calculateTDEEPrecise(userProfile: {
   height: number;
   activityLevel: "sedentary" | "light" | "moderate" | "active" | "very_active";
   fitnessGoal: "bulking" | "shedding" | "maintenance";
+  extraActivityKcal?: number; // Nueva propiedad opcional
 }): {
   bmr: number;
   tdee: number;
@@ -45,8 +46,13 @@ export function calculateTDEEPrecise(userProfile: {
     very_active: 1.9,
   };
 
-  const tdee = Math.round(bmr * activityFactors[userProfile.activityLevel]);
+  let tdee = Math.round(bmr * activityFactors[userProfile.activityLevel]);
   const bmrRounded = Math.round(bmr);
+
+  // Ajuste dinámico por actividad extra (pasos, ejercicio reportado)
+  if (userProfile.extraActivityKcal && userProfile.extraActivityKcal > 0) {
+    tdee += userProfile.extraActivityKcal;
+  }
 
   let dailyCalories: number;
   let explanation: string;
@@ -54,7 +60,7 @@ export function calculateTDEEPrecise(userProfile: {
   switch (userProfile.fitnessGoal) {
     case "maintenance":
       dailyCalories = tdee;
-      explanation = `Tu TDEE es de ${tdee} calorías diarias para mantener tu peso actual. Este cálculo se basa en tu metabolismo basal de ${bmrRounded} calorías y tu nivel de actividad.`;
+      explanation = `Tu TDEE es de ${tdee} calorías diarias para mantener tu peso actual. Este cálculo se basa en tu metabolismo basal de ${bmrRounded} calorías y tu nivel de actividad habitual${userProfile.extraActivityKcal ? ` más ${userProfile.extraActivityKcal} kcal de actividad extra detectada` : ""}.`;
       break;
 
     case "bulking":

@@ -102,17 +102,7 @@ export function MealHistory({ onBack }: MealHistoryProps) {
     setFilteredMeals(result);
   }, [meals, filterPeriod, searchQuery, calorieRange]);
 
-  useEffect(() => {
-    if (user) {
-      loadMeals();
-    }
-  }, [user]);
-
-  useEffect(() => {
-    applyFilters();
-  }, [applyFilters]);
-
-  const loadMeals = async () => {
+  const loadMeals = useCallback(async () => {
     if (!user) return;
 
     setLoading(true);
@@ -126,7 +116,13 @@ export function MealHistory({ onBack }: MealHistoryProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      loadMeals();
+    }
+  }, [user, loadMeals]);
 
   const formatDate = (date: Date) => {
     const today = new Date();

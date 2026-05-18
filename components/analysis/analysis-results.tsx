@@ -319,14 +319,13 @@ export function AnalysisResults({
               </div>
             )}
 
-            {/* Recomendaciones */}
             <section className="space-y-4">
               <div className="flex items-center gap-2">
                 <Lightbulb className="h-5 w-5 text-chart-2" />
                 <h3 className="text-lg font-black tracking-tight text-foreground">Consejos de Salud</h3>
               </div>
               <div className="grid gap-3">
-                {result.recommendations.map((rec, i) => (
+                {editedResult.recommendations.map((rec, i) => (
                   <div key={i} className="flex gap-4 items-start rounded-2xl border border-border/40 bg-card/40 p-4 transition-colors hover:bg-card">
                     <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-[10px] font-black text-primary">
                       {i + 1}
@@ -349,10 +348,10 @@ export function AnalysisResults({
                   <div key={m.key} className="group">
                     <div className="flex justify-between items-end mb-2">
                       <span className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">{m.name}</span>
-                      <span className="text-lg font-black tabular-nums">{result.macros[m.key]}g</span>
+                      <span className="text-lg font-black tabular-nums">{editedResult.macros[m.key]}g</span>
                     </div>
                     <div className="h-1.5 w-full rounded-full bg-muted shadow-inner overflow-hidden">
-                      <div className={cn("h-full rounded-full opacity-60", m.color)} style={{ width: `${Math.min((result.macros[m.key]/20)*100, 100)}%` }} />
+                      <div className={cn("h-full rounded-full opacity-60", m.color)} style={{ width: `${Math.min(((editedResult.macros[m.key] as number)/20)*100, 100)}%` }} />
                     </div>
                   </div>
                 ))}
@@ -362,7 +361,7 @@ export function AnalysisResults({
                     <Info className="h-4 w-4 shrink-0 text-primary/40" />
                     <p>
                       La suma técnica es de <span className="font-bold text-foreground">{fromMacros.toFixed(0)} kcal</span>. 
-                      La diferencia con las {result.calories} kcal mostradas es normal debido al redondeo nutricional estándar.
+                      La diferencia con las {editedResult.calories} kcal mostradas es normal debido al redondeo nutricional estándar.
                     </p>
                   </div>
                 </div>

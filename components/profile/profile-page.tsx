@@ -33,6 +33,7 @@ import {
   ExternalLink,
   Sparkles,
   AlertCircle,
+  Download,
 } from "lucide-react";
 import { format } from "date-fns";
 import { es as esLocale } from "date-fns/locale";
@@ -50,6 +51,7 @@ import { MealCalendar } from "./meal-calendar";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserProfile } from "@/hooks/use-user-profile";
 import { getUserMeals, updateUserProfile, deleteUserAccountData } from "@/lib/meals";
+import { exportUserData, downloadBlob } from "@/lib/gdpr-export";
 import { logger } from "@/lib/logger";
 import type { Meal } from "@/types/meal";
 import { ThemeToggle } from "@/components/app/theme-toggle";
@@ -97,6 +99,7 @@ export function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saveProfilePending, setSaveProfilePending] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>("weekly");
   const [editData, setEditData] = useState<{
@@ -126,7 +129,7 @@ export function ProfilePage() {
       | "active"
       | "very_active",
   });
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { userProfile, refreshUserProfile } = useUserProfile();
   const { toast } = useToast();
 
@@ -455,6 +458,28 @@ export function ProfilePage() {
     }
   };
 
+  const handleExportData = async () => {
+    if (!user) return;
+    setExporting(true);
+    try {
+      const zipBlob = await exportUserData(user.uid);
+      downloadBlob(zipBlob, `eaty-datos-${user.uid.slice(0, 5)}.zip`);
+      toast({
+        title: "Exportación lista",
+        description: "Se ha descargado un archivo ZIP con todos tus datos.",
+      });
+    } catch (error) {
+      logger.error("Error exporting data", error);
+      toast({
+        title: "Error al exportar",
+        description: "No se pudieron generar tus archivos de datos.",
+        variant: "destructive",
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
+
   // Handle unit changes with automatic conversion
   const handleWeightUnitChange = (newUnit: "kg" | "lbs") => {
     const currentValue = parseFloat(editData.weight) || 0;
@@ -566,11 +591,12 @@ export function ProfilePage() {
                   </p>
                 </div>
               </div>
-              <Button 
+              <Button
                 onClick={() => logout()}
-                variant="warning"
-                className="rounded-xl font-bold shadow-lg shadow-warning/20"
+                variant="outline"
+                className="rounded-xl font-bold border-warning/50 text-warning-foreground hover:bg-warning/10"
               >
+
                 Crear cuenta real
               </Button>
             </div>
@@ -793,16 +819,36 @@ export function ProfilePage() {
                 Zona de Peligro
               </h3>
               <p className="mt-1 text-sm font-medium text-muted-foreground/80 max-w-sm">
-                Eliminar tu cuenta borrará permanentemente todos tus registros, fotos y progreso. Esta acción no se puede deshacer.
+                Eliminar tu cuenta borrará permanentemente todos tus registros. Te recomendamos descargar tus datos antes.
               </p>
             </div>
-            <Button 
-              variant="destructive" 
-              onClick={handleDeleteAccount}
-              className="rounded-2xl font-black h-12 px-8 shadow-xl shadow-destructive/20"
-            >
-              Eliminar Cuenta Definitivamente
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button 
+                variant="outline" 
+                onClick={handleExportData}
+                disabled={exporting}
+                className="rounded-2xl font-black h-12 px-6 border-destructive/20 text-destructive hover:bg-destructive/5"
+              >
+                {exporting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Exportando...
+                  </>
+                ) : (
+                  <>
+                    <Download className="mr-2 h-4 w-4" />
+                    Descargar mis Datos (GDPR)
+                  </>
+                )}
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={handleDeleteAccount}
+                className="rounded-2xl font-black h-12 px-8 shadow-xl shadow-destructive/20"
+              >
+                Eliminar Cuenta Definitivamente
+              </Button>
+            </div>
           </div>
         </section>
       </div>

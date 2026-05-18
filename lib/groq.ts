@@ -1,4 +1,6 @@
 import { GroqApiError } from "@/lib/groq-api-error";
+import type { FoodAnalysisMealFields, PersonalizedNutritionTip } from "./food-analysis-schema";
+import { parseNutritionTipsFromApi } from "./food-analysis-schema";
 
 export type AnalyzeFoodParams = {
   imageBase64?: string;
