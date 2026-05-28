@@ -91,9 +91,11 @@ async function groqChatCompletion(params: {
   const body: Record<string, unknown> = {
     model: getModel(),
     messages: params.messages,
-    temperature: params.temperature ?? 0.35,
-    max_tokens: params.maxTokens ?? 2048,
-    top_p: 1,
+    // Más determinista para análisis nutricional (antes 0.35).
+    temperature: params.temperature ?? 0.2,
+    // Aumentado para alojar el JSON con componentBreakdown y referencias.
+    max_tokens: params.maxTokens ?? 2800,
+    top_p: 0.9,
     stream: false,
   };
 
@@ -231,8 +233,8 @@ async function repairFoodJson(
       { role: "user", content: userContent },
     ],
     responseFormatJson: true,
-    temperature: 0.2,
-    maxTokens: 2048,
+    temperature: 0.15,
+    maxTokens: 2800,
   });
   const obj = parseJsonObject<unknown>(content);
   const parsed = validateFoodAnalysis(obj);
@@ -277,8 +279,8 @@ async function runVisionRetryPass(params: {
       { role: "user", content: userContent },
     ],
     responseFormatJson: true,
-    temperature: 0.3,
-    maxTokens: 2048,
+    temperature: 0.2,
+    maxTokens: 2800,
   });
   return parseFoodAnalysisContent(content);
 }
@@ -299,8 +301,8 @@ async function runTextRetryPass(params: {
       { role: "user", content: userText },
     ],
     responseFormatJson: true,
-    temperature: 0.3,
-    maxTokens: 2048,
+    temperature: 0.2,
+    maxTokens: 2800,
   });
   return parseFoodAnalysisContent(content);
 }
@@ -370,8 +372,8 @@ export async function runFoodAnalysisGroq(params: {
         { role: "user", content: userContent },
       ],
       responseFormatJson: true,
-      temperature: 0.35,
-      maxTokens: 2048,
+      temperature: 0.2,
+      maxTokens: 2800,
     });
   } catch (e) {
     logger.error("Análisis Groq: primera llamada", e);

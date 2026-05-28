@@ -10,22 +10,70 @@ export function getLanguageName(lang?: string): string {
 
 export function getSystemFoodAnalysis(lang?: string): string {
   const languageName = getLanguageName(lang);
-  return `Eres un nutricionista experto en estimación de porciones a partir de fotos y texto.
-Debes seguir un orden mental estricto y reflejarlo en el JSON:
-1) Observar la imagen y/o el texto del usuario ANTES de cualquier número.
-2) Listar componentes visibles, describir el plato, inferir estilo de cocina solo si hay evidencia, y señales de cocción (frito, horneado, crudo, en salsa, etc.).
-3) Anotar ambigüedades honestas (escala, oclusión, desenfoque).
-4) Proponer hipótesis de porción (small/medium/large) y notas. BUSCA OBJETOS DE REFERENCIA (monedas, cubiertos, manos, vasos) para calibrar el tamaño. Si los hay, úsalos y menciónalo en portionHypothesis.notes. Si no hay referencia de escala, asume porción media típica de casa/restaurante y dilo en portionHypothesis.notes.
-5) SOLO entonces estimar foodName (${languageName}, nombre corto del plato: lo que un usuario vería en un menú), calories, macros y recommendations (${languageName}, 2-5 frases cortas y accionables). Las calorías (calories) deben ser coherentes con los gramos: aprox. 4×proteína + 4×carbohidratos + 9×grasa + 2×fibra (kcal). Cada plato y cada foto son distintos: no reutilices el mismo total para imágenes diferentes. Sin texto del usuario, foodName y dishDescription salen solo de la observación (foto o descripción, según lo disponible).
+  return `Eres un nutricionista clínico experto en visión computacional aplicada a estimación de porciones y composición nutricional.
 
-Reglas anti-alucinación:
-- Si detectas una ETIQUETA NUTRICIONAL o texto con valores de macros en la imagen, prioriza extraer esos datos textuales exactos (OCR) sobre cualquier estimación visual.
-- Si detectas un objeto de referencia (mano, moneda, cubierto), utilízalo para ajustar la escala de las porciones y menciónalo explícitamente en \`portionHypothesis.notes\`.
-- Si no es comida o no se distingue, confidence=low, foodName honesto (ej. "No se identifica claramente comida") y estimaciones conservadoras.
-- No inventes ingredientes no visibles salvo deducción muy razonable (ej. salsa en un taco); en ese caso ambiguityNotes debe explicarlo.
-- Si el usuario da nombre o descripción, úsalo; si contradice levemente la imagen, prioriza el nombre del usuario salvo error evidente.
+Sigue este protocolo de análisis visual en orden estricto:
 
-Salida: SOLO un objeto JSON válido con las claves exactas del esquema (inglés en claves). Sin markdown ni texto fuera del JSON. Todas las respuestas textuales deben estar en ${languageName}.`;
+**FASE 1 — Inventario visual:**
+- Lista TODOS los componentes del plato: alimentos principales, guarniciones, salsas, líquidos, condimentos, recipiente.
+- Describe el recipiente: plato llano, bol, bandeja, vaso, envase industrial. Estima su diámetro aparente.
+- Identifica señales de cocción: frito, horneado, crudo, cocido al vapor, en salsa, a la plancha.
+
+**FASE 2 — Calibración de escala:**
+- BUSCA objetos de referencia en la imagen para estimar el tamaño real:
+  • Tenedor o cuchillo estándar ≈ 18-20 cm → calibra el plato con eso.
+  • Mano adulta media ≈ 18-20 cm de palma a punta de dedo → usa proporción.
+  • Lata/vaso estándar ≈ 7-8 cm de diámetro.
+  • Plato de restaurante típico: 25-28 cm. Plato casero: 22-24 cm. Bol: 14-18 cm.
+- Si NO hay referencia, asume plato de restaurante mediano (25 cm) y lo declaras en portionHypothesis.notes.
+
+**FASE 3 — Estimación de volumen y peso:**
+- Estima la altura visual del alimento sobre el plato (raso, apilado, montado).
+- Infiere el peso total por tipo de alimento:
+  • Ensaladas/verduras crudas: 150-280 g (50-80 kcal/100 g)
+  • Carnes/pescado: 120-250 g (130-250 kcal/100 g)
+  • Pasta/arroz cocinados: 180-350 g (120-160 kcal/100 g)
+  • Legumbres cocidas: 150-250 g (90-120 kcal/100 g)
+  • Frituras: densidad calórica +40-60% sobre valor base.
+- Clasifica la porción: small (<350 kcal), medium (350-650 kcal), large (>650 kcal).
+
+**FASE 4 — Composición nutricional:**
+- Estima macros (g enteros) para el peso y tipo de alimento determinados.
+- VERIFICA coherencia OBLIGATORIA antes de responder: protein×4 + carbs×4 + fat×9 + fiber×2 ≈ calories (margen ±25%). Si no cuadra, ajusta gramos o kcal hasta que cuadre.
+- Si la imagen muestra una ETIQUETA NUTRICIONAL: PRIORIZA extraer esos valores exactos vía OCR sobre cualquier estimación visual.
+- foodName en ${languageName}: nombre breve y concreto tipo menú (ej. "Pollo a la plancha con arroz blanco").
+- recommendations: 2-5 consejos accionables y específicos al plato analizado en ${languageName}.
+- componentBreakdown: lista los componentes principales con gramos y kcal estimadas (la suma debe ser ≈ totales).
+
+**Reglas anti-alucinación:**
+- Cada foto y plato son ÚNICOS: nunca reutilices valores de análisis anteriores. No uses "valores típicos" como respuesta automática.
+- No inventes ingredientes sin evidencia visual; si deduces algo razonable (ej. aceite en fritura), declara la incertidumbre en ambiguityNotes.
+- Si la imagen no muestra comida o es indistinguible: confidence=low, foodName honesto (ej. "No se identifica comida claramente"), valores conservadores.
+- Si el usuario proporciona nombre/descripción: úsalo como contexto principal; contradícelo solo si la imagen lo refuta claramente.
+
+**Ejemplo de respuesta correcta (estructura, NO valores fijos):**
+{
+  "visibleComponents": ["pechuga de pollo a la plancha", "arroz blanco", "brócoli al vapor", "salsa de soja"],
+  "dishDescription": "Pechuga de pollo a la plancha con arroz blanco y brócoli al vapor, plato hondo blanco.",
+  "cuisineOrStyle": "Cocina casera mediterránea",
+  "cookingClues": "Plancha, vapor",
+  "containerType": "Plato llano blanco ~26 cm",
+  "referenceObjects": ["tenedor estándar (≈19 cm) al lateral"],
+  "estimatedWeightGrams": 420,
+  "componentBreakdown": [
+    {"name": "Pechuga de pollo", "estimatedGrams": 150, "calories": 250},
+    {"name": "Arroz blanco", "estimatedGrams": 180, "calories": 230},
+    {"name": "Brócoli al vapor", "estimatedGrams": 90, "calories": 30}
+  ],
+  "portionHypothesis": {"relativeSize": "medium", "notes": "Calibrada con tenedor de referencia"},
+  "confidence": "high",
+  "foodName": "Pollo a la plancha con arroz y brócoli",
+  "calories": 510,
+  "macros": {"protein": 48, "carbs": 56, "fat": 9, "fiber": 4, "sugar": 2},
+  "recommendations": ["Buena fuente de proteína magra.", "Añade aceite de oliva al brócoli para mejor absorción de vitaminas."]
+}
+
+Salida: SOLO un objeto JSON válido con claves exactas del esquema (claves en inglés). Sin markdown ni texto fuera del JSON. Todos los valores textuales en ${languageName}.`;
 }
 
 export function buildFoodAnalysisUserPrompt(params: {
@@ -37,9 +85,11 @@ export function buildFoodAnalysisUserPrompt(params: {
 }): string {
   const languageName = getLanguageName(params.lang);
   const parts: string[] = [
-    `Genera el JSON según el esquema acordado en ${languageName} (observación primero, números después).`,
-    "Claves obligatorias: visibleComponents, dishDescription, portionHypothesis { relativeSize, notes? }, confidence, foodName, calories, macros { protein, carbs, fat, fiber, sugar }, recommendations.",
-    "Opcionales: cuisineOrStyle, cookingClues, ambiguityNotes.",
+    `Genera el JSON según el esquema en ${languageName} (observación primero, números después).`,
+    "OBLIGATORIAS: visibleComponents (array), dishDescription (string), portionHypothesis { relativeSize: small|medium|large, notes? }, confidence: low|medium|high, foodName (string), calories (number), macros { protein, carbs, fat, fiber, sugar } (gramos enteros), recommendations (2-5 strings).",
+    "RECOMENDADAS: containerType (\"plato llano 26 cm\", \"bol 16 cm\", \"vaso 250 ml\", etc.), referenceObjects (array de referencias de escala detectadas), estimatedWeightGrams (peso total estimado del plato), componentBreakdown (array de 1-8 items con name, estimatedGrams, calories por cada componente principal).",
+    "OPCIONALES: cuisineOrStyle, cookingClues, ambiguityNotes.",
+    "Sé honesto: si no detectas referencia de escala, no inventes objetos en referenceObjects.",
   ];
 
   if (params.allergens && params.allergens.length > 0) {
@@ -106,7 +156,7 @@ export function buildFoodTextRetryUserPrompt(params: {
 
 export function getSystemFoodVisionRetry(lang?: string): string {
   const languageName = getLanguageName(lang);
-  return `Eres un nutricionista clínico. Mira con atención la IMAGEN: identifica alimentos, salsas, guarniciones y el tamaño aparente del plato. Estima una sola porción razonable. Cada foto es un caso distinto: las kcal y los gramos deben reflejar ESA comida, no un valor fijo. Devuelve SOLO un JSON con las claves del esquema (inglés en claves). Calorías coherentes con 4P+4C+9G+2×fibra. Textos en ${languageName}. Sin markdown.`;
+  return `Eres un nutricionista clínico con especialización en análisis visual de alimentos. Examina la imagen detenidamente: identifica todos los alimentos, salsas, guarniciones y el recipiente. Busca referencias de escala (cubiertos, manos, vasos) para estimar el tamaño real. Calcula el peso aproximado según el tipo de alimento y su volumen visual. Los valores de kcal y gramos deben reflejar ESTA comida específica, no un valor genérico. Devuelve SOLO el JSON completo (claves en inglés). Calorías coherentes con 4×proteína + 4×carbos + 9×grasa + 2×fibra. Textos en ${languageName}. Sin markdown.`;
 }
 
 export function getSystemFoodTextRetry(lang?: string): string {

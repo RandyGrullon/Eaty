@@ -175,14 +175,62 @@ export function ScanScreen({ onScanFood, onImageSelected }: ScanScreenProps) {
     try {
       const product = await getProductByBarcode(barcode);
       if (product) {
+        // Preferimos los valores por porción (más realistas que "por 100 g").
+        const useServing = Boolean(product.perServing && product.servingSizeGrams);
+        const calories = useServing ? product.perServing!.calories : product.calories;
+        const macros = useServing
+          ? {
+              protein: product.perServing!.macros.protein,
+              carbs: product.perServing!.macros.carbs,
+              fat: product.perServing!.macros.fat,
+              fiber: product.perServing!.macros.fiber ?? 0,
+              sugar: product.perServing!.macros.sugar ?? 0,
+            }
+          : {
+              protein: product.macros.protein,
+              carbs: product.macros.carbs,
+              fat: product.macros.fat,
+              fiber: product.macros.fiber ?? 0,
+              sugar: product.macros.sugar ?? 0,
+            };
+
+        const recommendations: string[] = [];
+        if (useServing) {
+          recommendations.push(
+            `Valores calculados para 1 ración (${product.servingSizeGrams} g).`
+          );
+        } else {
+          recommendations.push("Valores nutricionales por 100 g del envase.");
+        }
+        if (product.nutriScore) {
+          recommendations.push(
+            `Nutri-Score del producto: ${product.nutriScore.toUpperCase()}.`
+          );
+        }
+        if (product.novaGroup) {
+          recommendations.push(
+            product.novaGroup >= 4
+              ? "Producto ultra-procesado (NOVA 4): modera su consumo."
+              : product.novaGroup === 3
+                ? "Alimento procesado (NOVA 3): consumo ocasional."
+                : "Alimento poco procesado."
+          );
+        }
+
         toast({
           title: "Producto encontrado",
-          description: product.foodName,
+          description: product.brand
+            ? `${product.foodName} — ${product.brand}`
+            : product.foodName,
         });
         onScanFood(undefined, undefined, undefined, {
-          ...product,
-          imageUrl: null,
-          recommendations: ["Producto escaneado por código de barras."],
+          foodName: product.brand
+            ? `${product.foodName} (${product.brand})`
+            : product.foodName,
+          calories,
+          macros,
+          imageUrl: product.imageUrl ?? null,
+          recommendations,
         });
       } else {
         toast({

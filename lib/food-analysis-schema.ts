@@ -27,6 +27,13 @@ export const foodMacrosSchema = z.object({
   sugar: z.number().nonnegative(),
 });
 
+/** Desglose opcional por componente (mejor explicabilidad). */
+export const componentBreakdownSchema = z.object({
+  name: z.string().min(1).max(80),
+  estimatedGrams: z.number().min(1).max(2000).optional(),
+  calories: z.number().min(0).max(3000).optional(),
+});
+
 /** Respuesta completa esperada del modelo (JSON mode). */
 export const foodAnalysisRawSchema = z.object({
   visibleComponents: z.array(z.string()).min(1).max(24),
@@ -37,6 +44,14 @@ export const foodAnalysisRawSchema = z.object({
     .transform((val) => (Array.isArray(val) ? val.join(", ") : val))
     .optional(),
   ambiguityNotes: z.string().max(400).optional(),
+  /** Recipiente detectado: "plato llano 26 cm", "bol 16 cm", etc. */
+  containerType: z.string().max(120).optional(),
+  /** Objetos de referencia detectados para calibración de escala. */
+  referenceObjects: z.array(z.string()).max(6).optional(),
+  /** Peso total estimado del plato en gramos. */
+  estimatedWeightGrams: z.number().min(1).max(3000).optional(),
+  /** Desglose opcional por componente (1-8 items). */
+  componentBreakdown: z.array(componentBreakdownSchema).max(8).optional(),
   portionHypothesis: portionHypothesisSchema,
   confidence: confidenceLevelSchema,
   foodName: z.string().min(1).max(200),
@@ -56,6 +71,14 @@ export type FoodAnalysisAiContext = {
   cuisineOrStyle?: string;
   cookingClues?: string;
   ambiguityNotes?: string;
+  containerType?: string;
+  referenceObjects?: string[];
+  estimatedWeightGrams?: number;
+  componentBreakdown?: Array<{
+    name: string;
+    estimatedGrams?: number;
+    calories?: number;
+  }>;
 };
 
 function portionHypothesisToLabel(
@@ -82,6 +105,16 @@ export function buildAiContextFromRaw(
     cuisineOrStyle: raw.cuisineOrStyle?.trim() || undefined,
     cookingClues: raw.cookingClues?.trim() || undefined,
     ambiguityNotes: raw.ambiguityNotes?.trim() || undefined,
+    containerType: raw.containerType?.trim() || undefined,
+    referenceObjects: raw.referenceObjects?.length ? [...raw.referenceObjects] : undefined,
+    estimatedWeightGrams: raw.estimatedWeightGrams,
+    componentBreakdown: raw.componentBreakdown?.length
+      ? raw.componentBreakdown.map((c) => ({
+          name: c.name.trim(),
+          estimatedGrams: c.estimatedGrams,
+          calories: c.calories,
+        }))
+      : undefined,
   };
 }
 
@@ -136,7 +169,7 @@ export type FoodAnalysisMealFields = {
   aiContext?: FoodAnalysisAiContext;
 };
 
-const MACRO_CALORIE_TOLERANCE = 0.38;
+const MACRO_CALORIE_TOLERANCE = 0.3;
 
 export function macroCaloriesRough(macros: FoodAnalysisMealFields["macros"]): number {
   return (
