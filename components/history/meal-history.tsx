@@ -503,6 +503,11 @@ export function MealHistory({ onBack }: MealHistoryProps) {
                                 <div className="mt-1 flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-60">
                                   <Clock className="h-3 w-3" />
                                   {date.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
+                                  {meal.isPlanned && (
+                                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[9px] text-primary opacity-100">
+                                      Planeado
+                                    </span>
+                                  )}
                                 </div>
                                 
                                 <div className="mt-4 flex flex-wrap items-center gap-3">

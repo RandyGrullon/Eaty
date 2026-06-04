@@ -31,6 +31,22 @@ interface AnalysisResultsProps {
   onSave: (editedData: Omit<Meal, "id" | "createdAt">) => void | Promise<void>;
   onSavePlanned?: (data: Omit<Meal, "id" | "createdAt">, date: Date) => void | Promise<void>;
   isSaving?: boolean;
+  /** Día preseleccionado desde el planificador: prerellena el diálogo "Planear". */
+  defaultPlannedDate?: Date | null;
+}
+
+/** Fecha -> "YYYY-MM-DD" en hora LOCAL (evita el desfase de un día de toISOString). */
+function toDateInputValue(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/** "YYYY-MM-DD" -> Date en hora LOCAL al mediodía (estable frente a husos/DST). */
+function fromDateInputValue(value: string): Date {
+  const [y, m, d] = value.split("-").map(Number);
+  return new Date(y, (m ?? 1) - 1, d ?? 1, 12, 0, 0, 0);
 }
 
 function confidenceLabel(
@@ -73,12 +89,20 @@ export function AnalysisResults({
   onBack,
   onSave,
   isSaving = false,
+  defaultPlannedDate = null,
 }: AnalysisResultsProps) {
   const { toast } = useToast();
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [planDialogOpen, setPlanDialogOpen] = useState(false);
-  const [plannedDate, setPlannedDate] = useState<Date>(new Date());
+  const [plannedDate, setPlannedDate] = useState<Date>(
+    defaultPlannedDate ?? new Date()
+  );
   const [editedResult, setEditedResult] = useState(initialResult);
+
+  // ¿Venimos del planificador con un día concreto (distinto de hoy)?
+  const plannedForOtherDay =
+    defaultPlannedDate != null &&
+    defaultPlannedDate.toDateString() !== new Date().toDateString();
 
   const fromMacros = macroCaloriesRough(editedResult.macros);
   const macroKcal = {
@@ -163,6 +187,22 @@ export function AnalysisResults({
       </header>
 
       <div className="mx-auto mt-6 max-w-4xl space-y-8 px-4">
+        {plannedForOtherDay && (
+          <div className="flex items-center gap-3 rounded-2xl border border-primary/25 bg-primary/5 p-4">
+            <Calendar className="h-5 w-5 shrink-0 text-primary" />
+            <p className="text-sm font-semibold text-foreground">
+              Planificando para el{" "}
+              <span className="text-primary">
+                {plannedDate.toLocaleDateString("es-ES", {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                })}
+              </span>
+              . Pulsa <span className="font-black">Planear</span> para guardarlo ese día.
+            </p>
+          </div>
+        )}
         {/* Hero Section */}
         <section className="relative overflow-hidden rounded-[2.5rem] border border-border/40 bg-card/40 shadow-2xl shadow-black/[0.03]">
           {imageSrc ? (
@@ -438,12 +478,14 @@ export function AnalysisResults({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-4">
-            <Input 
-              type="date" 
+            <Input
+              type="date"
               className="rounded-xl h-12 font-bold"
-              min={new Date().toISOString().split('T')[0]}
-              value={plannedDate.toISOString().split('T')[0]}
-              onChange={(e) => setPlannedDate(new Date(e.target.value))}
+              min={toDateInputValue(new Date())}
+              value={toDateInputValue(plannedDate)}
+              onChange={(e) => {
+                if (e.target.value) setPlannedDate(fromDateInputValue(e.target.value));
+              }}
             />
           </div>
           <AlertDialogFooter className="mt-4">

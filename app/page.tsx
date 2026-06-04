@@ -96,6 +96,8 @@ function AppContent() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imageDescription, setImageDescription] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
+  /** Día elegido en el planificador antes de ir a "Escanear" (se usa al "Planear"). */
+  const [plannedDateForScan, setPlannedDateForScan] = useState<Date | null>(null);
 
   const mainTabsVisible =
     !loading &&
@@ -173,6 +175,18 @@ function AppContent() {
     setActiveTab("history");
   };
 
+  /** Desde el planificador: recordamos el día elegido y abrimos "Escanear". */
+  const handleAddMealFromPlanner = (date: Date) => {
+    setPlannedDateForScan(date);
+    setActiveTab("scan");
+  };
+
+  /** Navegación manual (barra inferior / lateral): descarta el día del planificador. */
+  const handleTabChange = (tab: MainTab) => {
+    setPlannedDateForScan(null);
+    setActiveTab(tab);
+  };
+
   const handleSaveAnalysis = async (editedData?: any) => {
     if (!user) return;
     await saveAnalysis(editedData);
@@ -192,12 +206,14 @@ function AppContent() {
       });
     }
 
+    setPlannedDateForScan(null);
     setRefreshKey((prev) => prev + 1);
     setActiveTab("home");
   };
 
   const handleBackToHome = () => {
     clearAnalysis();
+    setPlannedDateForScan(null);
     setActiveTab("home");
   };
 
@@ -243,6 +259,7 @@ function AppContent() {
           onBack={handleBackToHome}
           onSave={handleSaveAnalysis}
           isSaving={isSaving}
+          defaultPlannedDate={plannedDateForScan}
         />
         <OfflineIndicator />
       </>
@@ -278,7 +295,7 @@ function AppContent() {
   return (
     <div className="flex h-[100dvh] min-h-0 flex-col overflow-hidden bg-background">
       {!isMobile && (
-        <SidebarNav activeTab={activeTab} onTabChange={setActiveTab} />
+        <SidebarNav activeTab={activeTab} onTabChange={handleTabChange} />
       )}
       <div
         className={`flex min-h-0 flex-1 flex-col ${!isMobile ? "ml-64" : "w-full"}`}
@@ -306,7 +323,7 @@ function AppContent() {
               className="flex h-full max-h-full min-h-0 w-full max-w-full shrink-0 grow-0 basis-full snap-start [scroll-snap-stop:always] flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain min-w-0"
             >
               <LazyTabContent isActive={activeTab === "planning"} className="w-full h-full">
-                <WeeklyPlannerLazy onAddMeal={() => setActiveTab("scan")} />
+                <WeeklyPlannerLazy key={refreshKey} onAddMeal={handleAddMealFromPlanner} />
               </LazyTabContent>
             </section>
             <section
@@ -327,7 +344,7 @@ function AppContent() {
               className="flex h-full max-h-full min-h-0 w-full max-w-full shrink-0 grow-0 basis-full snap-start [scroll-snap-stop:always] flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain min-w-0"
             >
               <LazyTabContent isActive={activeTab === "history"} className="w-full h-full">
-                <MealHistoryLazy onBack={() => setActiveTab("home")} />
+                <MealHistoryLazy key={refreshKey} onBack={() => setActiveTab("home")} />
               </LazyTabContent>
             </section>
             <section
@@ -354,7 +371,7 @@ function AppContent() {
                 ) : null}
                 {activeTab === "planning" ? (
                   <section className="w-full h-full">
-                    <WeeklyPlannerLazy onAddMeal={() => setActiveTab("scan")} />
+                    <WeeklyPlannerLazy key={refreshKey} onAddMeal={handleAddMealFromPlanner} />
                   </section>
                 ) : null}
                 {activeTab === "scan" ? (
@@ -367,7 +384,7 @@ function AppContent() {
                 ) : null}
                 {activeTab === "history" ? (
                   <section className="w-full h-full">
-                    <MealHistoryLazy onBack={() => setActiveTab("home")} />
+                    <MealHistoryLazy key={refreshKey} onBack={() => setActiveTab("home")} />
                   </section>
                 ) : null}
                 {activeTab === "profile" ? (
@@ -381,7 +398,7 @@ function AppContent() {
         )}
       </div>
       {isMobile && (
-        <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+        <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
       )}
       <OfflineIndicator />
       {!isInstalled && <InstallPrompt />}

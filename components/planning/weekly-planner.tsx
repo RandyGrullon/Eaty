@@ -29,7 +29,8 @@ import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
 
 interface WeeklyPlannerProps {
-  onAddMeal: () => void;
+  /** Abre "Escanear" recordando el día seleccionado para planificar esa comida. */
+  onAddMeal: (date: Date) => void;
 }
 
 export function WeeklyPlanner({ onAddMeal }: WeeklyPlannerProps) {
@@ -161,9 +162,9 @@ export function WeeklyPlanner({ onAddMeal }: WeeklyPlannerProps) {
             <p className="mt-2 text-sm font-medium text-muted-foreground max-w-xs mx-auto">
               Empieza a planificar tu alimentación para mantenerte en el camino hacia tus metas.
             </p>
-            <Button 
+            <Button
               className="mt-8 rounded-2xl font-black h-12 px-8 shadow-xl shadow-primary/20 gap-2"
-              onClick={onAddMeal}
+              onClick={() => onAddMeal(selectedDate)}
             >
               <Plus className="h-5 w-5" />
               Añadir comida al plan
@@ -222,10 +223,10 @@ export function WeeklyPlanner({ onAddMeal }: WeeklyPlannerProps) {
               ))}
             </AnimatePresence>
             
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="w-full mt-4 rounded-2xl h-14 border-dashed border-border/60 hover:bg-muted/50 font-bold gap-2"
-              onClick={onAddMeal}
+              onClick={() => onAddMeal(selectedDate)}
             >
               <Plus className="h-5 w-5" />
               Añadir otra comida
