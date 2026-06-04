@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { useMealFilters, type FilterPeriod } from "@/hooks/use-meal-filters";
 import { exportMealsJson, exportMealsCsv } from "@/lib/meal-export";
+import { PageHeader } from "@/components/app/page-header";
 
 interface MealHistoryProps {
   onBack: () => void;
@@ -111,74 +112,71 @@ export function MealHistory({ onBack }: MealHistoryProps) {
   }, [user, loadMeals]);
 
   const header = (
-    <div className="relative z-10 mx-auto flex max-w-4xl items-center gap-4 px-4 pt-10 pb-8 sm:px-8">
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={onBack}
-        className="h-12 w-12 shrink-0 rounded-[1.25rem] border border-border/40 bg-card/40 shadow-sm backdrop-blur-xl hover:bg-card"
-        aria-label="Volver"
-      >
-        <ArrowLeft className="h-6 w-6" />
-      </Button>
-      <div className="min-w-0 flex-1">
-        <h1 className="text-3xl font-black tracking-tight text-foreground sm:text-4xl">
-          Historial
-        </h1>
-        <div className="mt-1 flex items-center gap-2">
-          <Badge variant="secondary" className="bg-primary/10 text-primary border-none font-bold px-2 py-0">
-            {filteredMeals.length} registros
-          </Badge>
-          <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest opacity-60">
-            {getFilterLabel(filterPeriod)}
-          </span>
-        </div>
-      </div>
-      <div className="hidden sm:flex shrink-0 gap-2">
+    <PageHeader
+      title="Historial"
+      subtitle={getFilterLabel(filterPeriod)}
+      leading={
         <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="gap-2 rounded-2xl border-border/40 bg-card/40 font-bold shadow-sm backdrop-blur-sm"
-          onClick={() => exportMealsJson(filteredMeals, filterPeriod)}
-          disabled={filteredMeals.length === 0}
+          variant="ghost"
+          size="icon"
+          onClick={onBack}
+          className="h-12 w-12 shrink-0 rounded-[1.25rem] border border-border/40 bg-card/40 shadow-sm backdrop-blur-xl hover:bg-card"
+          aria-label="Volver"
         >
-          <Download className="h-4 w-4" />
-          JSON
+          <ArrowLeft className="h-6 w-6" />
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="gap-2 rounded-2xl border-border/40 bg-card/40 font-bold shadow-sm backdrop-blur-sm"
-          onClick={() => exportMealsCsv(filteredMeals, filterPeriod)}
-          disabled={filteredMeals.length === 0}
-        >
-          <FileText className="h-4 w-4" />
-          CSV
-        </Button>
-      </div>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="flex sm:hidden h-12 w-12 shrink-0 rounded-[1.25rem] border border-border/40 bg-card/40 shadow-sm backdrop-blur-xl hover:bg-card disabled:opacity-40"
-        onClick={() => exportMealsCsv(filteredMeals, filterPeriod)}
-        disabled={filteredMeals.length === 0}
-        aria-label="Exportar historial (CSV)"
-      >
-        <Download className="h-5 w-5" />
-      </Button>
-    </div>
+      }
+      badge={
+        <Badge variant="secondary" className="bg-primary/10 text-primary border-none font-bold px-2 py-0">
+          {filteredMeals.length} registros
+        </Badge>
+      }
+      actions={
+        <>
+          <div className="hidden sm:flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-2 rounded-2xl border-border/40 bg-card/40 font-bold shadow-sm backdrop-blur-sm"
+              onClick={() => exportMealsJson(filteredMeals, filterPeriod)}
+              disabled={filteredMeals.length === 0}
+            >
+              <Download className="h-4 w-4" />
+              JSON
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-2 rounded-2xl border-border/40 bg-card/40 font-bold shadow-sm backdrop-blur-sm"
+              onClick={() => exportMealsCsv(filteredMeals, filterPeriod)}
+              disabled={filteredMeals.length === 0}
+            >
+              <FileText className="h-4 w-4" />
+              CSV
+            </Button>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="flex sm:hidden h-12 w-12 shrink-0 rounded-[1.25rem] border border-border/40 bg-card/40 shadow-sm backdrop-blur-xl hover:bg-card disabled:opacity-40"
+            onClick={() => exportMealsCsv(filteredMeals, filterPeriod)}
+            disabled={filteredMeals.length === 0}
+            aria-label="Exportar historial (CSV)"
+          >
+            <Download className="h-5 w-5" />
+          </Button>
+        </>
+      }
+    />
   );
 
   if (loading) {
     return (
       <div className="min-h-screen bg-background pb-32">
-        <section className="relative overflow-hidden">
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-primary/[0.08] to-transparent" />
-          {header}
-        </section>
+        {header}
         <div className="flex justify-center py-20">
           <Loader2 className="h-12 w-12 animate-spin text-primary/40" />
         </div>
@@ -189,10 +187,7 @@ export function MealHistory({ onBack }: MealHistoryProps) {
   if (error) {
     return (
       <div className="min-h-screen bg-background pb-32">
-        <section className="relative overflow-hidden">
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-primary/[0.08] to-transparent" />
-          {header}
-        </section>
+        {header}
         <div className="mx-auto max-w-md px-4 py-16 text-center">
           <div className="mb-6 inline-flex h-20 w-20 items-center justify-center rounded-3xl bg-destructive/10 text-destructive">
             <UtensilsCrossed className="h-10 w-10" />
@@ -212,11 +207,7 @@ export function MealHistory({ onBack }: MealHistoryProps) {
 
   return (
     <div className="min-h-screen bg-background pb-32">
-      <section className="relative overflow-hidden">
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-primary/[0.08] to-transparent" aria-hidden />
-        <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-primary/10 blur-3xl opacity-50" aria-hidden />
-        {header}
-      </section>
+      {header}
 
       <div className="mx-auto max-w-4xl space-y-8 px-4 py-4 sm:px-8">
         <div className="flex flex-col gap-6">

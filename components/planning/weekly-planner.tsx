@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +27,7 @@ import { format, addDays, startOfWeek, isSameDay, isToday, isFuture } from "date
 import { es } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
+import { PageHeader } from "@/components/app/page-header";
 
 interface WeeklyPlannerProps {
   /** Abre "Escanear" recordando el día seleccionado para planificar esa comida. */
@@ -64,6 +65,21 @@ export function WeeklyPlanner({ onAddMeal }: WeeklyPlannerProps) {
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   const mealsForSelectedDate = plannedMeals.filter(m => isSameDay(m.createdAt, selectedDate));
+  const selectedDayKcal = mealsForSelectedDate.reduce((s, m) => s + m.calories, 0);
+
+  /** Resumen por día de la semana visible: nº de comidas y kcal planificadas. */
+  const weekSummary = useMemo(() => {
+    return weekDays.map((day) => {
+      const dayMeals = plannedMeals.filter((m) => isSameDay(m.createdAt, day));
+      return {
+        meals: dayMeals.length,
+        kcal: dayMeals.reduce((s, m) => s + m.calories, 0),
+      };
+    });
+  }, [weekDays, plannedMeals]);
+
+  const weekTotalMeals = weekSummary.reduce((s, d) => s + d.meals, 0);
+  const weekTotalKcal = weekSummary.reduce((s, d) => s + d.kcal, 0);
 
   const handleDelete = async (id: string) => {
     if (!user) return;
@@ -94,49 +110,77 @@ export function WeeklyPlanner({ onAddMeal }: WeeklyPlannerProps) {
 
   return (
     <div className="min-h-screen bg-background pb-32">
-      <section className="relative overflow-hidden bg-gradient-to-b from-primary/[0.05] to-transparent pt-10 pb-8 px-4 sm:px-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h1 className="text-3xl font-black tracking-tight text-foreground sm:text-4xl">Planificador</h1>
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-1">Organiza tu semana</p>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="icon" className="rounded-xl" onClick={() => setSelectedDate(addDays(selectedDate, -7))}>
-                <ChevronLeft className="h-5 w-5" />
-              </Button>
-              <Button variant="outline" size="icon" className="rounded-xl" onClick={() => setSelectedDate(addDays(selectedDate, 7))}>
-                <ChevronRight className="h-5 w-5" />
-              </Button>
-            </div>
-          </div>
-
+      <PageHeader
+        title="Planificador"
+        subtitle="Organiza tu semana"
+        actions={
+          <>
+            <Button variant="outline" size="icon" className="rounded-xl" onClick={() => setSelectedDate(addDays(selectedDate, -7))}>
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <Button variant="outline" size="icon" className="rounded-xl" onClick={() => setSelectedDate(addDays(selectedDate, 7))}>
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+          </>
+        }
+      >
+        <div className="mt-8">
           <div className="flex justify-between gap-2 overflow-x-auto pb-4 scrollbar-none">
-            {weekDays.map((day) => {
+            {weekDays.map((day, i) => {
               const active = isSameDay(day, selectedDate);
               const today = isToday(day);
+              const summary = weekSummary[i];
               return (
                 <button
                   key={day.toISOString()}
                   onClick={() => setSelectedDate(day)}
                   className={cn(
-                    "flex flex-col items-center min-w-[50px] py-3 rounded-2xl border transition-all duration-300",
-                    active 
-                      ? "bg-primary border-primary text-primary-foreground shadow-lg scale-105" 
+                    "relative flex flex-col items-center min-w-[50px] py-3 rounded-2xl border transition-all duration-300",
+                    active
+                      ? "bg-primary border-primary text-primary-foreground shadow-lg scale-105"
                       : "bg-card/40 border-border/40 text-muted-foreground hover:bg-card"
                   )}
                 >
+                  {summary.meals > 0 && (
+                    <span
+                      className={cn(
+                        "absolute -top-1.5 -right-1.5 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full px-1 text-[10px] font-black shadow",
+                        active ? "bg-primary-foreground text-primary" : "bg-primary text-primary-foreground"
+                      )}
+                    >
+                      {summary.meals}
+                    </span>
+                  )}
                   <span className="text-[10px] font-black uppercase opacity-60 mb-1">
                     {format(day, "eee", { locale: es })}
                   </span>
                   <span className="text-lg font-black">{day.getDate()}</span>
-                  {today && !active && <div className="mt-1 h-1 w-1 rounded-full bg-primary" />}
+                  {summary.kcal > 0 ? (
+                    <span className={cn("mt-1 text-[8px] font-bold tabular-nums", active ? "opacity-80" : "text-primary/70")}>
+                      {summary.kcal}
+                    </span>
+                  ) : today && !active ? (
+                    <div className="mt-1 h-1 w-1 rounded-full bg-primary" />
+                  ) : null}
                 </button>
               );
             })}
           </div>
+
+          {weekTotalMeals > 0 && (
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <div className="rounded-full bg-card/60 border border-border/40 px-4 py-1.5 text-[11px] font-bold backdrop-blur-sm">
+                <span className="text-muted-foreground uppercase tracking-wider">Semana:</span>{" "}
+                <span className="text-foreground">{weekTotalMeals} comidas</span>
+              </div>
+              <div className="rounded-full bg-card/60 border border-border/40 px-4 py-1.5 text-[11px] font-bold backdrop-blur-sm">
+                <span className="text-muted-foreground uppercase tracking-wider">Total:</span>{" "}
+                <span className="text-primary tabular-nums">{weekTotalKcal} kcal</span>
+              </div>
+            </div>
+          )}
         </div>
-      </section>
+      </PageHeader>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-8 mt-6">
         <div className="flex items-center justify-between mb-6">
@@ -144,9 +188,16 @@ export function WeeklyPlanner({ onAddMeal }: WeeklyPlannerProps) {
             <Utensils className="h-5 w-5 text-primary" />
             {isToday(selectedDate) ? "Hoy" : format(selectedDate, "eeee d 'de' MMMM", { locale: es })}
           </h2>
-          <Badge variant="secondary" className="bg-primary/10 text-primary border-none font-bold">
-            {mealsForSelectedDate.length} planeadas
-          </Badge>
+          <div className="flex items-center gap-2">
+            {selectedDayKcal > 0 && (
+              <Badge variant="secondary" className="bg-chart-2/10 text-chart-2 border-none font-bold tabular-nums">
+                {selectedDayKcal} kcal
+              </Badge>
+            )}
+            <Badge variant="secondary" className="bg-primary/10 text-primary border-none font-bold">
+              {mealsForSelectedDate.length} planeadas
+            </Badge>
+          </div>
         </div>
 
         {loading ? (
