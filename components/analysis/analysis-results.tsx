@@ -99,10 +99,30 @@ export function AnalysisResults({
   );
   const [editedResult, setEditedResult] = useState(initialResult);
 
-  // ¿Venimos del planificador con un día concreto (distinto de hoy)?
-  const plannedForOtherDay =
-    defaultPlannedDate != null &&
-    defaultPlannedDate.toDateString() !== new Date().toDateString();
+  // ¿Venimos del planificador con un día ya elegido? En ese caso se guarda
+  // directamente en esa fecha (sin elegir fecha ni "Registrar hoy").
+  const fromPlanner = defaultPlannedDate != null;
+  const plannedIsToday =
+    plannedDate.toDateString() === new Date().toDateString();
+  const plannedLabel = plannedIsToday
+    ? "hoy"
+    : plannedDate.toLocaleDateString("es-ES", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+      });
+  // Versión corta para el botón (evita desbordes en móvil): "vie 6 jun".
+  const plannedShort = plannedIsToday
+    ? "hoy"
+    : plannedDate.toLocaleDateString("es-ES", {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+      });
+
+  const handleSavePlanned = () => {
+    void onSave({ ...editedResult, isPlanned: true, plannedDate } as any);
+  };
 
   const fromMacros = macroCaloriesRough(editedResult.macros);
   const macroKcal = {
@@ -187,19 +207,12 @@ export function AnalysisResults({
       </header>
 
       <div className="mx-auto mt-6 max-w-4xl space-y-8 px-4">
-        {plannedForOtherDay && (
+        {fromPlanner && (
           <div className="flex items-center gap-3 rounded-2xl border border-primary/25 bg-primary/5 p-4">
             <Calendar className="h-5 w-5 shrink-0 text-primary" />
             <p className="text-sm font-semibold text-foreground">
-              Planificando para el{" "}
-              <span className="text-primary">
-                {plannedDate.toLocaleDateString("es-ES", {
-                  weekday: "long",
-                  day: "numeric",
-                  month: "long",
-                })}
-              </span>
-              . Pulsa <span className="font-black">Planear</span> para guardarlo ese día.
+              Planificando para <span className="text-primary capitalize">{plannedLabel}</span>.
+              Se guardará directamente en ese día.
             </p>
           </div>
         )}
@@ -419,29 +432,48 @@ export function AnalysisResults({
       {/* Botón de Guardar flotante */}
       <div className="fixed bottom-0 left-0 right-0 z-40 p-4 pb-8 bg-gradient-to-t from-background via-background/95 to-transparent flex justify-center sm:pb-4">
         <div className="w-full max-w-4xl flex gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setPlanDialogOpen(true)}
-            disabled={isSaving}
-            className="flex-1 h-14 rounded-2xl text-lg font-black border-primary/20 bg-background/50 shadow-xl backdrop-blur-sm transition-all active:scale-95"
-          >
-            <Calendar className="mr-2 h-5 w-5 text-primary" />
-            Planear
-          </Button>
-          <Button
-            type="button"
-            onClick={() => setSaveDialogOpen(true)}
-            disabled={isSaving}
-            className="flex-[2] h-14 rounded-2xl text-lg font-black shadow-2xl shadow-primary/30 transition-all active:scale-95"
-          >
-            {isSaving ? (
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-            ) : (
-              <Save className="mr-2 h-5 w-5" />
-            )}
-            {isSaving ? "Guardando..." : "Registrar hoy"}
-          </Button>
+          {fromPlanner ? (
+            // Venimos del planificador: guardado directo en la fecha elegida.
+            <Button
+              type="button"
+              onClick={handleSavePlanned}
+              disabled={isSaving}
+              className="flex-1 h-14 rounded-2xl text-lg font-black shadow-2xl shadow-primary/30 transition-all active:scale-95"
+            >
+              {isSaving ? (
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              ) : (
+                <Calendar className="mr-2 h-5 w-5" />
+              )}
+              {isSaving ? "Guardando..." : `Guardar para ${plannedShort}`}
+            </Button>
+          ) : (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setPlanDialogOpen(true)}
+                disabled={isSaving}
+                className="flex-1 h-14 rounded-2xl text-lg font-black border-primary/20 bg-background/50 shadow-xl backdrop-blur-sm transition-all active:scale-95"
+              >
+                <Calendar className="mr-2 h-5 w-5 text-primary" />
+                Planear
+              </Button>
+              <Button
+                type="button"
+                onClick={() => setSaveDialogOpen(true)}
+                disabled={isSaving}
+                className="flex-[2] h-14 rounded-2xl text-lg font-black shadow-2xl shadow-primary/30 transition-all active:scale-95"
+              >
+                {isSaving ? (
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                ) : (
+                  <Save className="mr-2 h-5 w-5" />
+                )}
+                {isSaving ? "Guardando..." : "Registrar hoy"}
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
