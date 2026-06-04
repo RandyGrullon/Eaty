@@ -17,11 +17,12 @@ import { ArrowLeft, Save, Share2, Info, Camera, Sparkles, Lightbulb, Loader2, Ed
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { macroCaloriesRough } from "@/lib/food-analysis-schema";
-import type { FoodAnalysisAiContext } from "@/lib/food-analysis-schema";
 import type { Meal } from "@/types/meal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
+import { toDateInputValue, fromDateInputValue } from "@/lib/date-format";
+import { confidenceLabel } from "@/lib/confidence";
 
 interface AnalysisResultsProps {
   result: Omit<Meal, "id" | "createdAt">;
@@ -33,43 +34,6 @@ interface AnalysisResultsProps {
   isSaving?: boolean;
   /** Día preseleccionado desde el planificador: prerellena el diálogo "Planear". */
   defaultPlannedDate?: Date | null;
-}
-
-/** Fecha -> "YYYY-MM-DD" en hora LOCAL (evita el desfase de un día de toISOString). */
-function toDateInputValue(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
-/** "YYYY-MM-DD" -> Date en hora LOCAL al mediodía (estable frente a husos/DST). */
-function fromDateInputValue(value: string): Date {
-  const [y, m, d] = value.split("-").map(Number);
-  return new Date(y, (m ?? 1) - 1, d ?? 1, 12, 0, 0, 0);
-}
-
-function confidenceLabel(
-  c: FoodAnalysisAiContext["confidence"]
-): { text: string; className: string } {
-  switch (c) {
-    case "high":
-      return {
-        text: "Alta",
-        className: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
-      };
-    case "medium":
-      return {
-        text: "Media",
-        className: "bg-amber-500/15 text-amber-800 dark:text-amber-300",
-      };
-    case "low":
-    default:
-      return {
-        text: "Baja",
-        className: "bg-muted text-muted-foreground",
-      };
-  }
 }
 
 const MACRO_MAIN = [
