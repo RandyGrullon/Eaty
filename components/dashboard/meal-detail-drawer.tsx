@@ -22,15 +22,6 @@ import { Loader2, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
 import { cn } from "@/lib/utils";
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
 type MealDetailDrawerProps = {
   meal: Meal | null;
@@ -78,6 +69,7 @@ export function MealDetailDrawer({
       setSaving(false);
       setDeleting(false);
       setSaveConfirmOpen(false);
+      setDeleteOpen(false);
     }
   }, [open]);
 
@@ -87,6 +79,7 @@ export function MealDetailDrawer({
     setSaving(false);
     setDeleting(false);
     setSaveConfirmOpen(false);
+    setDeleteOpen(false);
   }, [meal?.id]);
 
   const requestSaveConfirm = () => {
@@ -352,55 +345,86 @@ export function MealDetailDrawer({
                 {saving ? "Guardando..." : "Guardar Cambios"}
               </Button>
             </DrawerFooter>
+
+            {/* Confirmaciones como overlay DENTRO del drawer: vaul (modal) deja
+                inertes los diálogos Radix anidados, por eso aquí usamos DOM
+                plano para garantizar que los botones sean clicables. */}
+            {saveConfirmOpen && (
+              <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 p-6 backdrop-blur-sm">
+                <div className="w-full max-w-sm rounded-3xl border border-border/40 bg-card p-6 shadow-2xl">
+                  <h3 className="text-lg font-black text-foreground">
+                    ¿Guardar los cambios?
+                  </h3>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Se actualizarán nombre, calorías, macros y recomendaciones de
+                    esta entrada.
+                  </p>
+                  <div className="mt-6 flex gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1 rounded-xl font-bold"
+                      onClick={() => setSaveConfirmOpen(false)}
+                      disabled={saving}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      type="button"
+                      className="flex-1 rounded-xl font-black"
+                      onClick={() => void performSave()}
+                      disabled={saving}
+                    >
+                      {saving ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        "Guardar"
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {deleteOpen && (
+              <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 p-6 backdrop-blur-sm">
+                <div className="w-full max-w-sm rounded-3xl border border-border/40 bg-card p-6 shadow-2xl">
+                  <h3 className="text-lg font-black text-foreground">
+                    ¿Eliminar esta comida?
+                  </h3>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Se borrará del historial. Esta acción no se puede deshacer.
+                  </p>
+                  <div className="mt-6 flex gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1 rounded-xl font-bold"
+                      onClick={() => setDeleteOpen(false)}
+                      disabled={deleting}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      className="flex-1 rounded-xl font-black"
+                      onClick={() => void performDelete()}
+                      disabled={deleting}
+                    >
+                      {deleting ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        "Eliminar"
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         ) : null}
       </DrawerContent>
-
-      <AlertDialog open={saveConfirmOpen} onOpenChange={setSaveConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Guardar los cambios?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Se actualizarán nombre, calorías, macros y recomendaciones de esta
-              entrada.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <Button
-              type="button"
-              onClick={() => {
-                void performSave();
-              }}
-            >
-              Guardar
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar esta comida?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Se borrará del historial. Esta acción no se puede deshacer.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={() => {
-                void performDelete();
-              }}
-            >
-              Eliminar
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </Drawer>
   );
 }
