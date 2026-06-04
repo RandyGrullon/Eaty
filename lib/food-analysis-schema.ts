@@ -23,8 +23,10 @@ export const foodMacrosSchema = z.object({
   protein: z.number().nonnegative(),
   carbs: z.number().nonnegative(),
   fat: z.number().nonnegative(),
-  fiber: z.number().nonnegative(),
-  sugar: z.number().nonnegative(),
+  // fiber y sugar son secundarios y el modelo los omite con frecuencia
+  // (sobre todo en el análisis por texto): por defecto 0 para no fallar.
+  fiber: z.number().nonnegative().default(0),
+  sugar: z.number().nonnegative().default(0),
 });
 
 /** Desglose opcional por componente (mejor explicabilidad). */
@@ -36,28 +38,38 @@ export const componentBreakdownSchema = z.object({
 
 /** Respuesta completa esperada del modelo (JSON mode). */
 export const foodAnalysisRawSchema = z.object({
-  visibleComponents: z.array(z.string()).min(1).max(24),
+  // En el análisis por texto (sin imagen) el modelo suele devolver esta lista
+  // vacía: la aceptamos en lugar de fallar. La UI la oculta si está vacía.
+  visibleComponents: z.array(z.string()).max(24).default([]),
   dishDescription: z.string().min(1).max(500),
-  cuisineOrStyle: z.string().max(120).optional(),
+  // Los campos opcionales/decorativos usan .catch(undefined): si el modelo
+  // los devuelve fuera de rango (p. ej. estimatedWeightGrams=0 en análisis por
+  // texto) se descartan en lugar de invalidar TODA la respuesta.
+  cuisineOrStyle: z.string().max(120).optional().catch(undefined),
   cookingClues: z
     .union([z.string(), z.array(z.string())])
     .transform((val) => (Array.isArray(val) ? val.join(", ") : val))
-    .optional(),
-  ambiguityNotes: z.string().max(400).optional(),
+    .optional()
+    .catch(undefined),
+  ambiguityNotes: z.string().max(400).optional().catch(undefined),
   /** Recipiente detectado: "plato llano 26 cm", "bol 16 cm", etc. */
-  containerType: z.string().max(120).optional(),
+  containerType: z.string().max(120).optional().catch(undefined),
   /** Objetos de referencia detectados para calibración de escala. */
-  referenceObjects: z.array(z.string()).max(6).optional(),
+  referenceObjects: z.array(z.string()).max(6).optional().catch(undefined),
   /** Peso total estimado del plato en gramos. */
-  estimatedWeightGrams: z.number().min(1).max(3000).optional(),
+  estimatedWeightGrams: z.number().min(1).max(3000).optional().catch(undefined),
   /** Desglose opcional por componente (1-8 items). */
-  componentBreakdown: z.array(componentBreakdownSchema).max(8).optional(),
+  componentBreakdown: z
+    .array(componentBreakdownSchema)
+    .max(8)
+    .optional()
+    .catch(undefined),
   portionHypothesis: portionHypothesisSchema,
   confidence: confidenceLevelSchema,
   foodName: z.string().min(1).max(200),
   calories: z.number().min(1).max(3500),
   macros: foodMacrosSchema,
-  recommendations: z.array(z.string()).min(1).max(5),
+  recommendations: z.array(z.string()).max(5).default([]),
 });
 
 export type FoodAnalysisRaw = z.infer<typeof foodAnalysisRawSchema>;

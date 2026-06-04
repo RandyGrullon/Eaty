@@ -304,16 +304,18 @@ export function AnalysisResults({
                     </div>
                   )}
 
-                  <div className="pt-4 border-t border-border/40">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 mb-3">Componentes identificados</p>
-                    <div className="flex flex-wrap gap-2">
-                      {ctx.visibleComponents.map((c) => (
-                        <span key={c} className="px-3 py-1 rounded-full bg-accent/50 border border-border/40 text-[10px] font-bold text-foreground/80">
-                          {c}
-                        </span>
-                      ))}
+                  {ctx.visibleComponents.length > 0 && (
+                    <div className="pt-4 border-t border-border/40">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 mb-3">Componentes identificados</p>
+                      <div className="flex flex-wrap gap-2">
+                        {ctx.visibleComponents.map((c) => (
+                          <span key={c} className="px-3 py-1 rounded-full bg-accent/50 border border-border/40 text-[10px] font-bold text-foreground/80">
+                            {c}
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </section>
             ) : (

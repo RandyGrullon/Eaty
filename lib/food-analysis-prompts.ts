@@ -115,6 +115,9 @@ export function buildFoodAnalysisUserPrompt(params: {
     parts.push(
       "No hay imagen: basa el análisis en el nombre y la descripción del usuario; asume porción media razonable y decláralo en ambiguityNotes."
     );
+    parts.push(
+      "Aunque no haya imagen, rellena visibleComponents con los ingredientes/componentes deducidos del plato (p. ej. para \"pizza de pepperoni\": masa, salsa de tomate, queso, pepperoni). Las claves del JSON SIEMPRE en inglés."
+    );
   }
 
   if (params.foodName?.trim()) {
@@ -144,13 +147,16 @@ export function buildFoodTextRetryUserPrompt(params: {
   const n = params.foodName?.trim();
   const d = params.description?.trim();
   const parts: string[] = [
-    `No hay imagen. Estima el plato y la porción en ${languageName} a partir de:`,
+    `No hay imagen. Estima el plato y la porción a partir de:`,
   ];
   if (n) parts.push(`Nombre: "${n}"`);
   if (d) parts.push(`Descripción: "${d}"`);
   if (!n && !d) {
     parts.push("(sin nombre ni descripción: responde con error honesto en foodName y confidence baja)");
   }
+  parts.push(
+    `Rellena TODAS las claves obligatorias del esquema (claves en inglés). Valores de texto en ${languageName}.`
+  );
   return parts.join("\n");
 }
 
@@ -161,7 +167,26 @@ export function getSystemFoodVisionRetry(lang?: string): string {
 
 export function getSystemFoodTextRetry(lang?: string): string {
   const languageName = getLanguageName(lang);
-  return `Eres un nutricionista. A partir del nombre o descripción del plato (sin imagen), estima una porción típica. Devuelve SOLO el JSON con el esquema acordado; calorías coherentes con los macros. Textos en ${languageName}. Sin markdown.`;
+  return `Eres un nutricionista. A partir del nombre o la descripción de un plato (SIN imagen), estima una porción típica y su composición nutricional.
+
+Devuelve SOLO un objeto JSON válido, sin markdown, con EXACTAMENTE estas claves (las CLAVES en inglés; SOLO los valores de texto en ${languageName}):
+{
+  "visibleComponents": ["ingrediente o componente 1", "componente 2"],
+  "dishDescription": "descripción breve del plato y la porción asumida",
+  "portionHypothesis": { "relativeSize": "small|medium|large", "notes": "supuestos de la porción" },
+  "confidence": "low|medium|high",
+  "foodName": "nombre breve del plato",
+  "calories": 0,
+  "macros": { "protein": 0, "carbs": 0, "fat": 0, "fiber": 0, "sugar": 0 },
+  "recommendations": ["consejo 1", "consejo 2"]
+}
+
+Reglas estrictas:
+- NUNCA uses claves en español (nada de "plato", "calorías", "proteínas", "grasas", "carbohidratos"). Usa SIEMPRE las claves en inglés mostradas arriba.
+- visibleComponents debe listar los ingredientes/componentes deducidos del plato; no lo dejes vacío.
+- macros en gramos enteros; incluye SIEMPRE protein, carbs, fat, fiber y sugar.
+- Coherencia obligatoria: protein×4 + carbs×4 + fat×9 + fiber×2 ≈ calories (margen ±25%).
+- Todos los valores de texto en ${languageName}.`;
 }
 
 export function getSystemNutritionTips(lang?: string): string {

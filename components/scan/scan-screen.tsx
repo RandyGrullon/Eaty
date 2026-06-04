@@ -94,8 +94,6 @@ export function ScanScreen({ onScanFood, onImageSelected }: ScanScreenProps) {
   const [pasteLoading, setPasteLoading] = useState(false);
   const [isBarcodeOpen, setIsBarcodeOpen] = useState(false);
   const [isLiveScannerOpen, setIsLiveScannerOpen] = useState(false);
-  const [isAnalyzingRealTime, setIsAnalyzingRealTime] = useState(false);
-  const [arResult, setArResult] = useState<any>(null);
   const [isBarcodeLoading, setIsBarcodeLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -333,39 +331,20 @@ export function ScanScreen({ onScanFood, onImageSelected }: ScanScreenProps) {
           />
         )}
         {isLiveScannerOpen && (
-          <LiveScanner 
-            isAnalyzingRealTime={isAnalyzingRealTime}
-            analysisResult={arResult}
-            onCapture={async (file) => {
-              if (file.name.includes("reset")) {
-                setArResult(null);
-                setIsAnalyzingRealTime(false);
-                return;
-              }
-              if (file.name.includes("confirm")) {
-                setIsLiveScannerOpen(false);
-                const finalResult = arResult;
-                setArResult(null);
-                onScanFood(undefined, undefined, undefined, finalResult);
-                return;
-              }
-
-              // Real-time analysis start
-              setIsAnalyzingRealTime(true);
+          <LiveScanner
+            analyzeFrame={async (file) => {
               try {
-                const result = await handleImageAnalysisInternal(file);
-                setArResult(result);
+                return await handleImageAnalysisInternal(file);
               } catch (e) {
-                toast({ title: "Error", description: "No se pudo analizar el plato.", variant: "destructive" });
-              } finally {
-                setIsAnalyzingRealTime(false);
+                // El loop del scanner maneja el reintento; lanzamos para que cuente como error.
+                throw e;
               }
-            }} 
-            onClose={() => {
+            }}
+            onConfirm={(result) => {
               setIsLiveScannerOpen(false);
-              setArResult(null);
-              setIsAnalyzingRealTime(false);
-            }} 
+              onScanFood(undefined, undefined, undefined, result);
+            }}
+            onClose={() => setIsLiveScannerOpen(false)}
           />
         )}
       </AnimatePresence>

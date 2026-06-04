@@ -215,7 +215,7 @@ async function repairFoodJson(
     vision
       ? "Mira de nuevo la IMAGEN del plato y rehace el JSON completo con estimaciones acordes a lo que ves (cada plato es distinto)."
       : "Devuelve un JSON válido."
-  } (calorías coherentes con 4P+4C+9G+2×fibra). Claves: visibleComponents, dishDescription, portionHypothesis, confidence, foodName, calories, macros, recommendations. Textos en español.\n\nEntrada:\n${invalidJson.slice(0, 12000)}`;
+  } (calorías coherentes con 4P+4C+9G+2×fibra). Claves (SIEMPRE en inglés, nunca en español): visibleComponents, dishDescription, portionHypothesis, confidence, foodName, calories, macros { protein, carbs, fat, fiber, sugar }, recommendations. Solo los valores de texto en español.\n\nEntrada:\n${invalidJson.slice(0, 12000)}`;
 
   const userContent: ChatContentPart[] = vision
     ? [
