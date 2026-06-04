@@ -22,6 +22,7 @@ import { Loader2, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
 import { cn } from "@/lib/utils";
+import { GenerateDishImage } from "@/components/meal/generate-dish-image";
 
 type MealDetailDrawerProps = {
   meal: Meal | null;
@@ -46,6 +47,7 @@ export function MealDetailDrawer({
   const [fiber, setFiber] = useState("");
   const [sugar, setSugar] = useState("");
   const [recommendationsText, setRecommendationsText] = useState("");
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [saveConfirmOpen, setSaveConfirmOpen] = useState(false);
@@ -61,6 +63,7 @@ export function MealDetailDrawer({
     setFiber(String(meal.macros.fiber));
     setSugar(String(meal.macros.sugar));
     setRecommendationsText(meal.recommendations.join("\n"));
+    setImageUrl(meal.imageUrl);
   }, [meal]);
 
   /** Cierre del drawer: limpia "Guardando" si se quedó colgado o se cerró durante un guardado. */
@@ -138,7 +141,7 @@ export function MealDetailDrawer({
           .split("\n")
           .map((s) => s.trim())
           .filter(Boolean),
-        imageUrl: meal.imageUrl,
+        imageUrl,
         aiContext: meal.aiContext,
       });
       toast({
@@ -224,10 +227,10 @@ export function MealDetailDrawer({
             </DrawerHeader>
 
             <div className="flex flex-col gap-8 overflow-y-auto px-6 pb-8">
-              {meal.imageUrl ? (
+              {imageUrl ? (
                 <div className="relative aspect-video w-full overflow-hidden rounded-[2.5rem] border border-border/40 bg-card shadow-inner">
                   <img
-                    src={meal.imageUrl}
+                    src={imageUrl}
                     alt={meal.foodName}
                     className="h-full w-full object-cover"
                   />
@@ -238,6 +241,11 @@ export function MealDetailDrawer({
                   <p className="text-xs font-medium text-muted-foreground/60 italic">Sin imagen adjunta</p>
                 </div>
               )}
+
+              <GenerateDishImage
+                meal={{ foodName: foodName || meal.foodName, aiContext: meal.aiContext }}
+                onUseImage={(url) => setImageUrl(url)}
+              />
 
               <div className="grid gap-6 sm:grid-cols-2">
                 <div className="space-y-2">

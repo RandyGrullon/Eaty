@@ -23,6 +23,7 @@ import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
 import { toDateInputValue, fromDateInputValue } from "@/lib/date-format";
 import { confidenceLabel } from "@/lib/confidence";
+import { GenerateDishImage } from "@/components/meal/generate-dish-image";
 
 interface AnalysisResultsProps {
   result: Omit<Meal, "id" | "createdAt">;
@@ -188,8 +189,15 @@ export function AnalysisResults({
               <div className="absolute inset-0 bg-gradient-to-t from-card/80 via-transparent to-transparent" />
             </div>
           ) : (
-            <div className="flex h-32 w-full items-center justify-center bg-muted/30">
+            <div className="flex flex-col items-center justify-center gap-4 bg-muted/30 px-6 py-8">
               <Camera className="h-10 w-10 text-muted-foreground/20" />
+              <GenerateDishImage
+                meal={{ foodName: editedResult.foodName, aiContext: editedResult.aiContext }}
+                onUseImage={(url) =>
+                  setEditedResult((prev) => ({ ...prev, imageUrl: url }))
+                }
+                className="w-full max-w-xs"
+              />
             </div>
           )}
           <div className="relative p-6 sm:p-8 space-y-6 sm:flex sm:items-center sm:justify-between sm:gap-6 sm:space-y-0">

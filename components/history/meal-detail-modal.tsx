@@ -17,11 +17,13 @@ import { X, Trash2, Calendar, Loader2, Camera, Lightbulb, ChevronRight, Share2, 
 import { useAuth } from "@/hooks/use-auth";
 import { doc, deleteDoc } from "firebase/firestore";
 import { appFirebase } from "@/lib/firebase";
+import { updateMeal } from "@/lib/meals";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
 import { cn } from "@/lib/utils";
 import type { Meal } from "@/types/meal";
 import { toPng } from "html-to-image";
+import { GenerateDishImage } from "@/components/meal/generate-dish-image";
 
 interface MealDetailModalProps {
   meal: Meal;
@@ -33,9 +35,33 @@ export function MealDetailModal({ meal, onClose, onDelete }: MealDetailModalProp
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [imageUrl, setImageUrl] = useState(meal.imageUrl);
   const shareRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
   const { toast } = useToast();
+
+  const handleUseGeneratedImage = async (url: string) => {
+    if (!user) return;
+    try {
+      await updateMeal(user.uid, meal.id, {
+        foodName: meal.foodName,
+        calories: meal.calories,
+        macros: meal.macros,
+        recommendations: meal.recommendations,
+        imageUrl: url,
+        aiContext: meal.aiContext,
+      });
+      setImageUrl(url);
+      toast({ title: "Imagen guardada", description: "Se actualizó la foto de la comida." });
+    } catch (error) {
+      logger.error("Error saving generated image", error);
+      toast({
+        title: "No se pudo guardar",
+        description: "Inténtalo de nuevo.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleShare = async () => {
     if (!shareRef.current) return;
@@ -186,9 +212,9 @@ export function MealDetailModal({ meal, onClose, onDelete }: MealDetailModalProp
         <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-8" ref={shareRef}>
           {/* Hero Section similar a AnalysisResults */}
           <section className="relative overflow-hidden rounded-[2.5rem] border border-border/40 bg-card/40 shadow-xl shadow-black/[0.02]">
-            {meal.imageUrl ? (
+            {imageUrl ? (
               <div className="aspect-video w-full overflow-hidden sm:aspect-[21/9]">
-                <img src={meal.imageUrl} alt={meal.foodName} className="h-full w-full object-cover" />
+                <img src={imageUrl} alt={meal.foodName} className="h-full w-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-card/80 via-transparent to-transparent" />
               </div>
             ) : (
@@ -266,7 +292,7 @@ export function MealDetailModal({ meal, onClose, onDelete }: MealDetailModalProp
               </section>
             </div>
 
-            <div className="lg:col-span-5">
+            <div className="lg:col-span-5 space-y-8">
               <section className="space-y-4">
                 <h3 className="text-lg font-black tracking-tight text-foreground">Otros Detalles</h3>
                 <div className="rounded-[2rem] border border-border/40 bg-card/40 p-6 shadow-sm backdrop-blur-sm space-y-6">
@@ -284,6 +310,13 @@ export function MealDetailModal({ meal, onClose, onDelete }: MealDetailModalProp
                       </div>
                     </div>
                   ))}
+                </div>
+              </section>
+
+              <section className="space-y-4">
+                <h3 className="text-lg font-black tracking-tight text-foreground">Imagen del plato (IA)</h3>
+                <div className="rounded-[2rem] border border-border/40 bg-card/40 p-6 shadow-sm backdrop-blur-sm">
+                  <GenerateDishImage meal={meal} onUseImage={handleUseGeneratedImage} />
                 </div>
               </section>
             </div>
