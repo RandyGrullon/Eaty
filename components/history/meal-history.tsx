@@ -124,6 +124,12 @@ export function MealHistory({ onBack }: MealHistoryProps) {
     }
   }, [user, loadMeals]);
 
+  // Re-aplica los filtros (período, búsqueda, calorías) cada vez que cambian
+  // las comidas cargadas de la DB o cualquier criterio de filtrado.
+  useEffect(() => {
+    applyFilters();
+  }, [applyFilters]);
+
   const formatDate = (date: Date) => {
     const today = new Date();
     const yesterday = new Date(today);
@@ -221,12 +227,18 @@ export function MealHistory({ onBack }: MealHistoryProps) {
       ],
       { type: "application/json;charset=utf-8" }
     );
+    const stamp = new Date().toISOString().slice(0, 10);
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `eaty-historial-${filterPeriod}.json`;
+    a.download = `eaty-historial-${filterPeriod}-${stamp}.json`;
+    // Algunos navegadores (Firefox, Safari móvil) requieren el anchor en el DOM
+    // para disparar la descarga.
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    // Liberamos la URL en el siguiente tick para no cancelar la descarga.
+    setTimeout(() => URL.revokeObjectURL(url), 0);
   };
 
   const header = (
@@ -263,6 +275,17 @@ export function MealHistory({ onBack }: MealHistoryProps) {
       >
         <Download className="h-4 w-4" />
         Exportar JSON
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="flex sm:hidden h-12 w-12 shrink-0 rounded-[1.25rem] border border-border/40 bg-card/40 shadow-sm backdrop-blur-xl hover:bg-card disabled:opacity-40"
+        onClick={exportFilteredJson}
+        disabled={filteredMeals.length === 0}
+        aria-label="Exportar historial"
+      >
+        <Download className="h-5 w-5" />
       </Button>
     </div>
   );
