@@ -29,6 +29,16 @@ const bodySchema = z.object({
     })
   ),
   dailyGoal: z.number().optional(),
+  context: z
+    .object({
+      fitnessGoal: z.enum(["bulking", "shedding", "maintenance"]).optional(),
+      weightKg: z.number().optional(),
+      dailyGoal: z.number().optional(),
+      consumedToday: z.number().optional(),
+      weeklyAvgCalories: z.number().optional(),
+      activeDietName: z.string().max(120).optional(),
+    })
+    .optional(),
   lang: z.string().max(10).optional(),
 });
 
@@ -45,6 +55,7 @@ export async function POST(req: Request) {
         createdAt: new Date(m.createdAt),
       })),
       dailyGoal: body.dailyGoal,
+      context: body.context,
     });
 
     const response = await runGroqChat({

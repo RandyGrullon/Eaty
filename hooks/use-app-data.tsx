@@ -1,0 +1,440 @@
+"use client";
+
+import type React from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import {
+  collection,
+  doc,
+  query,
+  orderBy,
+  limit as limitFn,
+  onSnapshot,
+  updateDoc,
+  deleteField,
+  Timestamp,
+} from "firebase/firestore";
+import { appFirebase } from "@/lib/firebase";
+import { useAuth } from "@/hooks/use-auth";
+import { logger } from "@/lib/logger";
+import { mealFromDoc } from "@/lib/firestore-meal-utils";
+import { normalizeBirthDateFromFirestore } from "@/lib/age-from-birthdate";
+import {
+  deriveTodayStats,
+  deriveWeeklyProgress,
+  deriveCalorieData,
+  type CalorieData,
+  type TodayStats,
+  type WeeklyProgress,
+  type WeekBucket,
+} from "@/lib/app-data-derive";
+import {
+  updateMeal as updateMealDb,
+  deleteMeal as deleteMealDb,
+  saveMeal as saveMealDb,
+  updateWaterGlasses,
+  updateUserProfile,
+  type MealUpdatePayload,
+  type SaveMealOptions,
+  type SaveMealResult,
+} from "@/lib/meals";
+import {
+  dietFromDoc,
+  createDiet as createDietDb,
+  updateDiet as updateDietDb,
+  deleteDiet as deleteDietDb,
+  saveDishTutorial as saveDishTutorialDb,
+  saveDishImage as saveDishImageDb,
+  type NewDiet,
+} from "@/lib/diets";
+import {
+  workoutFromDoc,
+  saveWorkout as saveWorkoutDb,
+  deleteWorkout as deleteWorkoutDb,
+} from "@/lib/workouts";
+import type { Meal, UserProfile } from "@/types/meal";
+import type { Diet, DietDish, DishTutorial } from "@/types/diet";
+import type { GeneratedWorkout, Workout } from "@/types/workout";
+
+const MEALS_WINDOW = 1000;
+
+export type { CalorieData, TodayStats, WeeklyProgress };
+
+type AppDataContextValue = {
+  // Estado crudo (tiempo real)
+  profile: UserProfile | null;
+  meals: Meal[];
+  diets: Diet[];
+  workouts: Workout[];
+  // Flags
+  loading: boolean;
+  profileLoading: boolean;
+  // Derivados
+  recentMeals: Meal[];
+  todayMeals: Meal[];
+  todayStats: TodayStats;
+  calorieData: CalorieData | null;
+  weeklyProgress: WeeklyProgress;
+  activeDiet: Diet | null;
+  // Editor global de comidas
+  editingMeal: Meal | null;
+  openMealEditor: (meal: Meal) => void;
+  closeMealEditor: () => void;
+  // Acciones de comida
+  updateMeal: (mealId: string, data: MealUpdatePayload) => Promise<void>;
+  deleteMeal: (mealId: string) => Promise<void>;
+  saveMeal: (
+    mealData: Omit<Meal, "id" | "createdAt">,
+    options?: SaveMealOptions & { plannedDate?: Date }
+  ) => Promise<SaveMealResult>;
+  setWaterGlasses: (delta: number) => Promise<void>;
+  // Acciones de dieta
+  createDiet: (diet: NewDiet) => Promise<string>;
+  updateDiet: (dietId: string, patch: Partial<NewDiet>) => Promise<void>;
+  deleteDiet: (dietId: string) => Promise<void>;
+  saveDishTutorial: (
+    diet: Diet,
+    dishId: string,
+    tutorial: DishTutorial
+  ) => Promise<void>;
+  saveDishImage: (diet: Diet, dishId: string, url: string) => Promise<void>;
+  activateDiet: (diet: Diet) => Promise<void>;
+  deactivateDiet: () => Promise<void>;
+  // Acciones de rutina
+  saveWorkout: (workout: GeneratedWorkout) => Promise<string>;
+  deleteWorkout: (workoutId: string) => Promise<void>;
+  // Compat
+  refresh: () => Promise<void>;
+};
+
+const AppDataContext = createContext<AppDataContextValue | undefined>(undefined);
+
+const EMPTY_TODAY: TodayStats = {
+  mealsCount: 0,
+  totalCalories: 0,
+  macros: { protein: 0, carbs: 0, fat: 0 },
+  waterGlasses: 0,
+};
+
+const EMPTY_WEEK: WeekBucket = {
+  totalMeals: 0,
+  totalCalories: 0,
+  averageCalories: 0,
+  daysActive: 0,
+};
+
+const EMPTY_WEEKLY: WeeklyProgress = {
+  currentWeek: EMPTY_WEEK,
+  previousWeek: EMPTY_WEEK,
+  progress: { mealsChange: 0, caloriesChange: 0, daysChange: 0 },
+};
+
+function todayKey(): string {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today.toISOString().split("T")[0];
+}
+
+export function AppDataProvider({ children }: { children: React.ReactNode }) {
+  const { user, loading: authLoading } = useAuth();
+  const uid = user?.uid ?? null;
+
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [meals, setMeals] = useState<Meal[]>([]);
+  const [waterGlasses, setWaterGlassesState] = useState(0);
+  const [diets, setDiets] = useState<Diet[]>([]);
+  const [workouts, setWorkouts] = useState<Workout[]>([]);
+
+  const [profileResolved, setProfileResolved] = useState(false);
+  const [mealsResolved, setMealsResolved] = useState(false);
+
+  const [editingMeal, setEditingMeal] = useState<Meal | null>(null);
+
+  // Perfil en tiempo real.
+  useEffect(() => {
+    if (!uid) {
+      setProfile(null);
+      setProfileResolved(!authLoading);
+      return;
+    }
+    setProfileResolved(false);
+    const ref = doc(appFirebase.db, "users", uid, "profile", "main");
+    const unsub = onSnapshot(
+      ref,
+      (snap) => {
+        if (snap.exists()) {
+          const data = snap.data();
+          const { birthDate, createdAt, updatedAt, ...rest } = data;
+          setProfile({
+            ...(rest as Omit<UserProfile, "birthDate" | "createdAt" | "updatedAt">),
+            birthDate: normalizeBirthDateFromFirestore(birthDate),
+            createdAt: createdAt?.toDate?.() ?? new Date(0),
+            updatedAt: updatedAt?.toDate?.() ?? new Date(0),
+          } as UserProfile);
+        } else {
+          setProfile(null);
+        }
+        setProfileResolved(true);
+      },
+      (err) => {
+        logger.error("AppData profile snapshot", err);
+        setProfileResolved(true);
+      }
+    );
+    return unsub;
+  }, [uid, authLoading]);
+
+  // Comidas en tiempo real (ventana acotada).
+  useEffect(() => {
+    if (!uid) {
+      setMeals([]);
+      setMealsResolved(!authLoading);
+      return;
+    }
+    setMealsResolved(false);
+    const q = query(
+      collection(appFirebase.db, "users", uid, "meals"),
+      orderBy("createdAt", "desc"),
+      limitFn(MEALS_WINDOW)
+    );
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        setMeals(snap.docs.map(mealFromDoc));
+        setMealsResolved(true);
+      },
+      (err) => {
+        logger.error("AppData meals snapshot", err);
+        setMealsResolved(true);
+      }
+    );
+    return unsub;
+  }, [uid, authLoading]);
+
+  // Hidratación del día.
+  useEffect(() => {
+    if (!uid) {
+      setWaterGlassesState(0);
+      return;
+    }
+    const ref = doc(appFirebase.db, "users", uid, "dailyStats", todayKey());
+    const unsub = onSnapshot(
+      ref,
+      (snap) => {
+        setWaterGlassesState(snap.exists() ? snap.data().waterGlasses || 0 : 0);
+      },
+      (err) => logger.error("AppData dailyStats snapshot", err)
+    );
+    return unsub;
+  }, [uid]);
+
+  // Dietas en tiempo real.
+  useEffect(() => {
+    if (!uid) {
+      setDiets([]);
+      return;
+    }
+    const q = query(
+      collection(appFirebase.db, "users", uid, "diets"),
+      orderBy("updatedAt", "desc")
+    );
+    const unsub = onSnapshot(
+      q,
+      (snap) => setDiets(snap.docs.map(dietFromDoc)),
+      (err) => logger.error("AppData diets snapshot", err)
+    );
+    return unsub;
+  }, [uid]);
+
+  // Rutinas en tiempo real.
+  useEffect(() => {
+    if (!uid) {
+      setWorkouts([]);
+      return;
+    }
+    const q = query(
+      collection(appFirebase.db, "users", uid, "workouts"),
+      orderBy("createdAt", "desc")
+    );
+    const unsub = onSnapshot(
+      q,
+      (snap) => setWorkouts(snap.docs.map(workoutFromDoc)),
+      (err) => logger.error("AppData workouts snapshot", err)
+    );
+    return unsub;
+  }, [uid]);
+
+  // Derivados.
+  const todayStats = useMemo(
+    () => (uid ? deriveTodayStats(meals, waterGlasses) : EMPTY_TODAY),
+    [uid, meals, waterGlasses]
+  );
+  const weeklyProgress = useMemo(
+    () => (uid ? deriveWeeklyProgress(meals) : EMPTY_WEEKLY),
+    [uid, meals]
+  );
+  const calorieData = useMemo(
+    () => deriveCalorieData(profile, todayStats),
+    [profile, todayStats]
+  );
+  const recentMeals = useMemo(
+    () => meals.filter((m) => !m.isPlanned).slice(0, 5),
+    [meals]
+  );
+  const todayMeals = useMemo(() => {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 1);
+    return meals.filter(
+      (m) => !m.isPlanned && m.createdAt >= start && m.createdAt < end
+    );
+  }, [meals]);
+  const activeDiet = useMemo(
+    () => diets.find((d) => d.id === profile?.activeDietId) ?? null,
+    [diets, profile?.activeDietId]
+  );
+
+  // Acciones.
+  const requireUid = useCallback((): string => {
+    if (!uid) throw new Error("Sesión no iniciada.");
+    return uid;
+  }, [uid]);
+
+  const updateMeal = useCallback(
+    (mealId: string, data: MealUpdatePayload) =>
+      updateMealDb(requireUid(), mealId, data),
+    [requireUid]
+  );
+  const deleteMeal = useCallback(
+    (mealId: string) => deleteMealDb(requireUid(), mealId),
+    [requireUid]
+  );
+  const saveMeal = useCallback(
+    (
+      mealData: Omit<Meal, "id" | "createdAt">,
+      options?: SaveMealOptions & { plannedDate?: Date }
+    ) => saveMealDb(requireUid(), mealData, options),
+    [requireUid]
+  );
+  const setWaterGlasses = useCallback(
+    async (delta: number) => {
+      await updateWaterGlasses(requireUid(), delta);
+    },
+    [requireUid]
+  );
+
+  const createDiet = useCallback(
+    (diet: NewDiet) => createDietDb(requireUid(), diet),
+    [requireUid]
+  );
+  const updateDiet = useCallback(
+    (dietId: string, patch: Partial<NewDiet>) =>
+      updateDietDb(requireUid(), dietId, patch),
+    [requireUid]
+  );
+  const deleteDiet = useCallback(
+    (dietId: string) => deleteDietDb(requireUid(), dietId),
+    [requireUid]
+  );
+  const saveDishTutorial = useCallback(
+    (diet: Diet, dishId: string, tutorial: DishTutorial) =>
+      saveDishTutorialDb(requireUid(), diet, dishId, tutorial),
+    [requireUid]
+  );
+  const saveDishImage = useCallback(
+    (diet: Diet, dishId: string, url: string) =>
+      saveDishImageDb(requireUid(), diet, dishId, url),
+    [requireUid]
+  );
+  const activateDiet = useCallback(
+    async (diet: Diet) => {
+      await updateUserProfile(requireUid(), {
+        activeDietId: diet.id,
+        customGoals: {
+          calories: diet.targetCalories,
+          protein: diet.targetMacros.protein,
+          carbs: diet.targetMacros.carbs,
+          fat: diet.targetMacros.fat,
+        },
+      });
+    },
+    [requireUid]
+  );
+  const deactivateDiet = useCallback(async () => {
+    const ref = doc(appFirebase.db, "users", requireUid(), "profile", "main");
+    await updateDoc(ref, {
+      activeDietId: deleteField(),
+      customGoals: deleteField(),
+      updatedAt: Timestamp.now(),
+    });
+  }, [requireUid]);
+
+  const saveWorkout = useCallback(
+    (workout: GeneratedWorkout) => saveWorkoutDb(requireUid(), workout),
+    [requireUid]
+  );
+  const deleteWorkout = useCallback(
+    (workoutId: string) => deleteWorkoutDb(requireUid(), workoutId),
+    [requireUid]
+  );
+
+  const openMealEditor = useCallback((meal: Meal) => setEditingMeal(meal), []);
+  const closeMealEditor = useCallback(() => setEditingMeal(null), []);
+
+  // En tiempo real no se necesita refrescar; se deja por compatibilidad.
+  const refresh = useCallback(async () => {}, []);
+
+  const loading = authLoading || !profileResolved || !mealsResolved;
+  const profileLoading = authLoading || !profileResolved;
+
+  const value: AppDataContextValue = {
+    profile,
+    meals,
+    diets,
+    workouts,
+    loading,
+    profileLoading,
+    recentMeals,
+    todayMeals,
+    todayStats,
+    calorieData,
+    weeklyProgress,
+    activeDiet,
+    editingMeal,
+    openMealEditor,
+    closeMealEditor,
+    updateMeal,
+    deleteMeal,
+    saveMeal,
+    setWaterGlasses,
+    createDiet,
+    updateDiet,
+    deleteDiet,
+    saveDishTutorial,
+    saveDishImage,
+    activateDiet,
+    deactivateDiet,
+    saveWorkout,
+    deleteWorkout,
+    refresh,
+  };
+
+  return (
+    <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>
+  );
+}
+
+export function useAppData(): AppDataContextValue {
+  const ctx = useContext(AppDataContext);
+  if (ctx === undefined) {
+    throw new Error("useAppData must be used within an AppDataProvider");
+  }
+  return ctx;
+}

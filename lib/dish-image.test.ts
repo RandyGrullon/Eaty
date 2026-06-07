@@ -12,6 +12,8 @@ describe("buildDishPrompt", () => {
     const p = buildDishPrompt({
       foodName: "Ensalada",
       aiContext: {
+        dishDescription: "Ensalada fresca en bol",
+        visibleComponents: ["lechuga", "tomate"],
         confidence: "high",
         portionLabel: "1 bol",
         containerType: "bol de cerámica",

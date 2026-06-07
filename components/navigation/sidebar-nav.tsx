@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import type { MainTab } from "@/lib/main-tab"
-import { Home, Camera, History, User, CalendarDays } from "lucide-react"
+import { Home, Camera, History, User, Salad } from "lucide-react"
 
 interface SidebarNavProps {
   activeTab: MainTab
@@ -12,7 +12,7 @@ interface SidebarNavProps {
 export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
   const tabs = [
     { id: "home" as const, icon: Home, label: "Inicio" },
-    { id: "planning" as const, icon: CalendarDays, label: "Planificador" },
+    { id: "diets" as const, icon: Salad, label: "Dietas" },
     { id: "scan" as const, icon: Camera, label: "Escanear" },
     { id: "history" as const, icon: History, label: "Historial" },
     { id: "profile" as const, icon: User, label: "Perfil" },

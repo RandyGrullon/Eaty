@@ -51,6 +51,19 @@ export interface UserProfile {
   allergens?: string[];
   /** Idioma preferido para las respuestas de la IA (ej: 'es', 'en'). */
   language?: string;
+  /** Dieta activa (de `users/{uid}/diets`); ajusta las metas mostradas. */
+  activeDietId?: string;
+  /** Metas que sobreescriben el TDEE cuando hay una dieta activa. */
+  customGoals?: {
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+  };
+  /** Equipamiento disponible para el coach de entrenamiento. */
+  equipment?: string[];
+  /** Días de entrenamiento por semana (para sugerencias del coach). */
+  trainingDaysPerWeek?: number;
   createdAt: Date;
   updatedAt: Date;
 }

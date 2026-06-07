@@ -239,18 +239,50 @@ export function buildNutritionTipsUserPrompt(
 
 export function getSystemCoachChat(lang?: string): string {
   const languageName = getLanguageName(lang);
-  return `Eres Eaty Coach, un asistente de nutrición cercano, motivador y experto. 
-Tu objetivo es ayudar al usuario a entender sus hábitos alimenticios, dar consejos prácticos y responder dudas sobre nutrición basándote en lo que han comido recientemente.
+  return `Eres Eaty Coach, un coach fitness de nutrición cercano, motivador y experto.
+Tu objetivo es ayudar al usuario a entender sus hábitos alimenticios, alcanzar su objetivo
+(definición, volumen o mantenimiento) y responder dudas de nutrición y entrenamiento básico,
+basándote SIEMPRE en sus datos (perfil, objetivo, comidas recientes, progreso, dieta activa).
 
 Reglas:
-- Sé amable pero profesional.
-- Usa los datos de las comidas proporcionadas para dar respuestas ESPECÍFICAS.
-- Si el usuario te pregunta algo fuera de nutrición o salud básica, redirígelo amablemente a tu propósito principal.
+- Sé amable pero profesional. Trata al usuario por su contexto real, no en abstracto.
+- Usa los datos proporcionados para dar respuestas ESPECÍFICAS (cita platos, macros o cifras).
+- Puedes sugerir ejercicio o actividad acorde a su objetivo, pero sin prescribir cargas médicas.
 - Si el usuario pide una receta, GENÉRALA tú mismo con ingredientes y pasos detallados.
-- Responde en ${languageName} usando Markdown para resaltar puntos clave, usar negritas, listas y bloques de código si es necesario para recetas.
-- Decora tus mensajes con emojis y una estructura clara.
-- No des diagnósticos médicos ni prescribas dietas extremas. 
+- Responde en ${languageName} usando Markdown (negritas, listas, bloques de código para recetas).
+- Decora con emojis y estructura clara.
+- No des diagnósticos médicos ni prescribas dietas extremas.
 - Responde de forma completa pero equilibrada (2-4 párrafos).`;
+}
+
+export type CoachContext = {
+  fitnessGoal?: "bulking" | "shedding" | "maintenance";
+  weightKg?: number;
+  dailyGoal?: number;
+  consumedToday?: number;
+  weeklyAvgCalories?: number;
+  activeDietName?: string;
+};
+
+function describeGoal(goal?: CoachContext["fitnessGoal"]): string {
+  if (goal === "bulking") return "ganar masa muscular (volumen)";
+  if (goal === "shedding") return "perder grasa (definición)";
+  if (goal === "maintenance") return "mantener su peso";
+  return "mejorar su alimentación";
+}
+
+function buildCoachContextBlock(ctx?: CoachContext): string {
+  if (!ctx) return "";
+  const lines: string[] = [];
+  if (ctx.fitnessGoal) lines.push(`Objetivo: ${describeGoal(ctx.fitnessGoal)}`);
+  if (ctx.weightKg) lines.push(`Peso: ${ctx.weightKg} kg`);
+  if (ctx.dailyGoal) lines.push(`Meta diaria: ${ctx.dailyGoal} kcal`);
+  if (ctx.consumedToday != null)
+    lines.push(`Consumidas hoy: ${ctx.consumedToday} kcal`);
+  if (ctx.weeklyAvgCalories)
+    lines.push(`Promedio semanal: ${ctx.weeklyAvgCalories} kcal/día`);
+  if (ctx.activeDietName) lines.push(`Dieta activa: ${ctx.activeDietName}`);
+  return lines.length ? `\nContexto del usuario:\n${lines.join("\n")}` : "";
 }
 
 export function buildCoachUserPrompt(params: {
@@ -262,6 +294,7 @@ export function buildCoachUserPrompt(params: {
     createdAt: Date;
   }>;
   dailyGoal?: number;
+  context?: CoachContext;
 }): string {
   const historyLines = params.mealsHistory
     .map(
@@ -274,9 +307,205 @@ export function buildCoachUserPrompt(params: {
 
 Historial reciente de comidas:
 ${historyLines || "(No hay comidas registradas aún)"}
-${params.dailyGoal ? `Meta diaria: ${params.dailyGoal} kcal` : ""}
+${params.dailyGoal ? `Meta diaria: ${params.dailyGoal} kcal` : ""}${buildCoachContextBlock(params.context)}
 
 Responde al mensaje del usuario considerando este contexto.`;
+}
+
+export function getSystemCoachInsights(lang?: string): string {
+  const languageName = getLanguageName(lang);
+  return `Eres Eaty Coach. A partir del perfil, objetivo y las comidas de HOY del usuario,
+genera un resumen accionable para su panel "Hoy".
+
+Responde SOLO con este JSON (claves en inglés, textos en ${languageName}):
+{"focusTitle":"...","focusMessage":"...","nextMeal":{"title":"...","idea":"...","approxCalories":0},"training":{"title":"...","idea":"..."},"motivation":"..."}
+
+Reglas:
+- focusTitle: foco del día en 3-6 palabras (ej. "Prioriza proteína").
+- focusMessage: 1-2 frases concretas según lo que comió y su meta restante.
+- nextMeal: sugerencia para la próxima comida acorde a las kcal/macros que le faltan.
+- training: sugerencia breve de actividad/ejercicio acorde a su objetivo.
+- motivation: una frase motivadora corta.
+- Sé específico con sus cifras. Sin markdown. Sin texto fuera del JSON.`;
+}
+
+export function buildCoachInsightsPrompt(params: {
+  context?: CoachContext;
+  todayMeals: Array<{ foodName: string; calories: number }>;
+  remainingCalories?: number;
+  remainingProtein?: number;
+}): string {
+  const meals = params.todayMeals
+    .map((m) => `- ${m.foodName}: ${m.calories} kcal`)
+    .join("\n");
+  const blocks = [
+    "Comidas de hoy:",
+    meals || "(ninguna registrada aún)",
+    params.remainingCalories != null
+      ? `Calorías restantes hoy: ${params.remainingCalories}`
+      : "",
+    params.remainingProtein != null
+      ? `Proteína restante aprox.: ${params.remainingProtein} g`
+      : "",
+    buildCoachContextBlock(params.context).trim(),
+  ];
+  return blocks.filter(Boolean).join("\n");
+}
+
+export function getSystemWorkout(lang?: string): string {
+  const languageName = getLanguageName(lang);
+  return `Eres un entrenador personal certificado. Diseña una rutina de entrenamiento
+segura y efectiva acorde al objetivo, nivel y equipamiento del usuario.
+
+Responde SOLO con este JSON (claves en inglés, textos en ${languageName}):
+{"title":"...","goal":"...","daysPerWeek":3,"level":"beginner|intermediate|advanced","estimatedCaloriesPerSession":0,"warmup":["...","..."],"days":[{"day":"...","focus":"...","exercises":[{"name":"...","sets":4,"reps":"8-12","restSec":60,"notes":"..."}]}],"tips":["...","..."]}
+
+Reglas:
+- Ajusta volumen e intensidad al nivel indicado; no prescribas cargas peligrosas.
+- "reps" es texto ("8-12", "30 s", "al fallo"). "restSec" en segundos.
+- Genera exactamente "daysPerWeek" entradas en "days".
+- Incluye 2-5 ejercicios por día y 1-3 tips de seguridad/progresión.
+- Sin markdown. Sin texto fuera del JSON.`;
+}
+
+export function buildWorkoutPrompt(params: {
+  goal?: "bulking" | "shedding" | "maintenance";
+  level: "beginner" | "intermediate" | "advanced";
+  daysPerWeek: number;
+  equipment?: string[];
+  focus?: string;
+}): string {
+  const goalText =
+    params.goal === "bulking"
+      ? "ganar masa muscular"
+      : params.goal === "shedding"
+        ? "perder grasa conservando músculo"
+        : "mantener forma física general";
+  const blocks = [
+    `Objetivo: ${goalText}`,
+    `Nivel: ${params.level}`,
+    `Días por semana: ${params.daysPerWeek}`,
+    params.equipment?.length
+      ? `Equipamiento disponible: ${params.equipment.join(", ")}`
+      : "Equipamiento: peso corporal y básico (mancuernas si hace falta)",
+    params.focus ? `Enfoque adicional: ${params.focus}` : "",
+  ];
+  return blocks.filter(Boolean).join("\n");
+}
+
+// ---------------------------------------------------------------------------
+// Dietas (apartado nuevo): generación de dietas, procesado de dietas del usuario
+// y tutoriales de platos paso a paso muy detallados.
+// ---------------------------------------------------------------------------
+
+const DIET_JSON_SHAPE = `{"name":"...","description":"...","goal":"shedding|bulking|maintenance|keto|vegan|vegetarian|mediterranean|high_protein|balanced","tags":["...","..."],"targetCalories":0,"targetMacros":{"protein":0,"carbs":0,"fat":0},"dishes":[{"name":"...","type":"breakfast|lunch|dinner|snack","description":"...","calories":0,"macros":{"protein":0,"carbs":0,"fat":0}}]}`;
+
+export function getSystemDietGenerate(lang?: string): string {
+  const languageName = getLanguageName(lang);
+  return `Eres nutricionista y chef. Diseña un plan de dieta de un día completo y realista.
+
+Responde SOLO con este JSON (claves en inglés, textos en ${languageName}):
+${DIET_JSON_SHAPE}
+
+Reglas:
+- 4 a 8 platos cubriendo al menos breakfast, lunch y dinner (añade snack si encaja).
+- "goal" según lo pedido por el usuario.
+- targetCalories = suma aproximada de las kcal de los platos. Macros coherentes (4 kcal/g proteína y carbos, 9 kcal/g grasa).
+- Cada plato con name claro y description breve y apetecible.
+- tags: 2-5 etiquetas cortas (ej. "alto en proteína", "sin gluten").
+- Respeta restricciones/alergias indicadas. Sin markdown. Sin texto fuera del JSON.`;
+}
+
+export function buildDietGeneratePrompt(params: {
+  goal?: string;
+  calories?: number;
+  preferences?: string;
+  restrictions?: string[];
+  lang?: string;
+}): string {
+  const languageName = getLanguageName(params.lang);
+  const blocks = [
+    `Genera una dieta en ${languageName}.`,
+    params.goal ? `Objetivo: ${params.goal}` : "",
+    params.calories ? `Calorías objetivo aproximadas: ${params.calories}` : "",
+    params.preferences ? `Preferencias: ${params.preferences}` : "",
+    params.restrictions?.length
+      ? `Evitar (alergias/restricciones): ${params.restrictions.join(", ")}`
+      : "",
+  ];
+  return blocks.filter(Boolean).join("\n");
+}
+
+export function getSystemDietProcess(lang?: string): string {
+  const languageName = getLanguageName(lang);
+  return `Eres nutricionista. El usuario ha creado una dieta con una lista de platos.
+NO inventes ni elimines platos: respeta sus name y type. Completa la información nutricional.
+
+Responde SOLO con este JSON (claves en inglés, textos en ${languageName}):
+${DIET_JSON_SHAPE}
+
+Reglas:
+- Mantén EXACTAMENTE los platos recibidos (mismos name y type, en el mismo orden).
+- Estima calories y macros de cada plato (gramos enteros; coherencia 4/4/9).
+- targetCalories = suma de las kcal; targetMacros = suma de macros.
+- Conserva el name/description/goal de la dieta si los dio; si no, dedúcelos.
+- Sin markdown. Sin texto fuera del JSON.`;
+}
+
+export function buildDietProcessPrompt(params: {
+  name?: string;
+  description?: string;
+  goal?: string;
+  dishes: Array<{ name: string; type: string; description?: string }>;
+  lang?: string;
+}): string {
+  const dishLines = params.dishes
+    .map(
+      (d) =>
+        `- [${d.type}] ${d.name}${d.description ? ` — ${d.description}` : ""}`
+    )
+    .join("\n");
+  const blocks = [
+    params.name ? `Nombre de la dieta: ${params.name}` : "",
+    params.description ? `Descripción: ${params.description}` : "",
+    params.goal ? `Objetivo: ${params.goal}` : "",
+    "Platos del usuario (respeta name y type):",
+    dishLines,
+  ];
+  return blocks.filter(Boolean).join("\n");
+}
+
+export function getSystemDishTutorial(lang?: string): string {
+  const languageName = getLanguageName(lang);
+  return `Eres un chef instructor. Crea un tutorial de cocina paso a paso EXTREMADAMENTE
+detallado y a prueba de principiantes para el plato indicado.
+
+Responde SOLO con este JSON (claves en inglés, textos en ${languageName}):
+{"servings":1,"prepTimeMin":0,"cookTimeMin":0,"difficulty":"easy|medium|hard","equipment":["...","..."],"ingredients":[{"item":"...","amount":"..."}],"steps":[{"n":1,"title":"...","detail":"...","tip":"...","durationMin":0,"tempC":0}],"commonMistakes":["...","..."],"plating":"..."}
+
+Reglas:
+- ingredients: cantidades concretas (g, ml, unidades, cucharadas).
+- steps: MUY detallados y numerados (n empieza en 1). Cada "detail" explica QUÉ hacer y CÓMO saber que está bien (textura, color, punto). Incluye durationMin y tempC cuando aplique. "tip" opcional por paso.
+- Mínimo 5 pasos. Incluye preparación, cocción y emplatado.
+- commonMistakes: 2-5 errores típicos a evitar.
+- plating: cómo emplatar y servir.
+- Sin markdown. Sin texto fuera del JSON.`;
+}
+
+export function buildDishTutorialPrompt(params: {
+  dishName: string;
+  description?: string;
+  servings?: number;
+  lang?: string;
+}): string {
+  const languageName = getLanguageName(params.lang);
+  const blocks = [
+    `Crea el tutorial en ${languageName} para: "${params.dishName}".`,
+    params.description ? `Contexto del plato: ${params.description}` : "",
+    `Raciones: ${params.servings ?? 1}.`,
+    "Sé exhaustivo: una persona sin experiencia debe poder cocinarlo solo con tus pasos.",
+  ];
+  return blocks.filter(Boolean).join("\n");
 }
 
 export const SYSTEM_JSON_REPAIR = `Devuelve SOLO un objeto JSON que cumpla exactamente el esquema pedido por el usuario, sin markdown.

@@ -1,6 +1,6 @@
 export const MAIN_TAB_ORDER = [
   "home",
-  "planning",
+  "diets",
   "scan",
   "history",
   "profile",

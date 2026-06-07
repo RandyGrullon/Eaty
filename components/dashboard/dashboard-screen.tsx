@@ -2,26 +2,16 @@
 
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-import { useCalorieTracker } from "@/hooks/use-calorie-tracker";
-import { getRecentActivities, getWeeklyProgress } from "@/lib/meals";
+import { useAppData } from "@/hooks/use-app-data";
 import { TipsCarousel } from "../home/tips-carousel";
 import { CalorieLoader } from "@/components/ui/calorie-loader";
-import {
-  History,
-  LogOut,
-  Flame,
-  Target,
-  Sparkles,
-} from "lucide-react";
-import { useState, useEffect, useMemo, useCallback } from "react";
-import type { Meal } from "@/types/meal";
+import { History, LogOut, Flame, Target, CalendarDays } from "lucide-react";
+import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { logger } from "@/lib/logger";
 import { getGreeting, formatTodayLong } from "@/lib/date-format";
-import { MealDetailDrawer } from "./meal-detail-drawer";
 import { ThemeToggle } from "@/components/app/theme-toggle";
 import { motion } from "framer-motion";
-import { AICoachDrawer } from "./ai-coach-drawer";
 import { CommunityChallenges } from "./community-challenges";
 import { CalorieProgressRing } from "./calorie-progress-ring";
 import { StatTile } from "./stat-tile";
@@ -30,65 +20,26 @@ import { MacrosBreakdown } from "./macros-breakdown";
 import { RecentMeals } from "./recent-meals";
 import { WeeklyRhythm } from "./weekly-rhythm";
 
-type WeeklyProgressData = Awaited<ReturnType<typeof getWeeklyProgress>>;
-
 export function DashboardScreen({
   onViewHistory,
+  onOpenPlanner,
 }: {
   onViewHistory: () => void;
+  onOpenPlanner: () => void;
 }) {
-  const [recentActivities, setRecentActivities] = useState<Meal[]>([]);
-  const [weeklyProgress, setWeeklyProgress] =
-    useState<WeeklyProgressData | null>(null);
-  const [loadingActivities, setLoadingActivities] = useState(false);
-  const [loadingProgress, setLoadingProgress] = useState(false);
-  const [detailMeal, setDetailMeal] = useState<Meal | null>(null);
-  const [isCoachOpen, setIsCoachOpen] = useState(false);
-
   const { user, logout } = useAuth();
   const {
     calorieData,
-    loading: calorieLoading,
-    error: calorieError,
-    refreshData,
-    mutate,
-  } = useCalorieTracker();
+    loading,
+    recentMeals,
+    weeklyProgress,
+    openMealEditor,
+  } = useAppData();
 
   const displayName = useMemo(
     () => user?.displayName || user?.email?.split("@")[0] || "Usuario",
     [user]
   );
-
-  const loadRecentActivities = useCallback(async () => {
-    if (!user) return;
-    setLoadingActivities(true);
-    try {
-      setRecentActivities(await getRecentActivities(user.uid, 5));
-    } catch (error) {
-      logger.error("Error loading recent activities", error);
-    } finally {
-      setLoadingActivities(false);
-    }
-  }, [user]);
-
-  const loadWeeklyProgress = useCallback(async () => {
-    if (!user) return;
-    setLoadingProgress(true);
-    try {
-      setWeeklyProgress(await getWeeklyProgress(user.uid));
-    } catch (error) {
-      logger.error("Error loading weekly progress", error);
-    } finally {
-      setLoadingProgress(false);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (user) {
-      loadRecentActivities();
-      loadWeeklyProgress();
-    }
-  }, [user, loadRecentActivities, loadWeeklyProgress]);
 
   const handleLogout = async () => {
     try {
@@ -101,7 +52,7 @@ export function DashboardScreen({
   const goal = calorieData?.dailyGoal ?? 0;
   const consumed = calorieData?.consumed ?? 0;
   const overGoal = calorieData ? calorieData.remaining < 0 : false;
-  const dataReady = Boolean(calorieData && !calorieLoading && !calorieError);
+  const dataReady = Boolean(calorieData && !loading);
 
   return (
     <motion.div
@@ -151,11 +102,11 @@ export function DashboardScreen({
               <Button
                 variant="outline"
                 size="icon"
-                onClick={() => setIsCoachOpen(true)}
+                onClick={onOpenPlanner}
                 className="h-11 w-11 rounded-xl border-primary/20 bg-primary/5 text-primary shadow-sm backdrop-blur-sm hover:bg-primary/10"
-                aria-label="Abrir Coach de IA"
+                aria-label="Abrir planificador semanal"
               >
-                <Sparkles className="h-5 w-5 fill-current opacity-70" />
+                <CalendarDays className="h-5 w-5" />
               </Button>
               <Button
                 variant="outline"
@@ -186,17 +137,10 @@ export function DashboardScreen({
               className="lg:col-span-5"
             >
               <div className="flex h-full min-h-[300px] flex-col items-center justify-center rounded-3xl border border-border/80 bg-card/90 p-6 shadow-lg shadow-primary/5 backdrop-blur-sm sm:p-8">
-                {calorieLoading ? (
+                {loading ? (
                   <div className="flex flex-col items-center gap-4 py-8">
                     <div className="h-36 w-36 animate-pulse rounded-full bg-muted" />
                     <p className="text-sm text-muted-foreground">Sincronizando tu meta…</p>
-                  </div>
-                ) : calorieError ? (
-                  <div className="text-center px-2">
-                    <p className="text-sm font-medium text-destructive">No pudimos calcular tu meta</p>
-                    <Button variant="outline" size="sm" className="mt-4" onClick={refreshData}>
-                      Reintentar
-                    </Button>
                   </div>
                 ) : calorieData && goal > 0 ? (
                   <CalorieProgressRing consumed={consumed} goal={goal} overGoal={overGoal} />
@@ -222,30 +166,18 @@ export function DashboardScreen({
                 transition={{ delay: 0.2 }}
                 className="col-span-2 sm:col-span-1 rounded-[2rem] border border-border/40 bg-card/60 p-5 shadow-2xl shadow-black/[0.03] backdrop-blur-md"
               >
-                {user && calorieData && (
-                  <HydrationTracker
-                    glasses={calorieData.waterGlasses}
-                    userId={user.uid}
-                    mutate={mutate}
-                  />
-                )}
-                {!calorieData && !calorieLoading && (
+                {calorieData ? (
+                  <HydrationTracker glasses={calorieData.waterGlasses} />
+                ) : (
                   <div className="h-full flex items-center justify-center text-[10px] text-muted-foreground">
                     Cargando hidratación...
                   </div>
                 )}
               </motion.div>
 
-              {calorieLoading ? (
+              {loading ? (
                 <div className="col-span-2">
                   <CalorieLoader message="Calculando tu meta calórica…" />
-                </div>
-              ) : calorieError ? (
-                <div className="col-span-2 rounded-2xl border border-destructive/25 bg-destructive/5 p-5">
-                  <p className="text-sm text-destructive font-medium">Error al cargar la meta</p>
-                  <Button variant="outline" size="sm" className="mt-3" onClick={refreshData}>
-                    Reintentar
-                  </Button>
                 </div>
               ) : calorieData ? (
                 <StatTile
@@ -305,9 +237,9 @@ export function DashboardScreen({
         <div className="grid gap-12 lg:grid-cols-12 lg:gap-16">
           <div className="lg:col-span-7">
             <RecentMeals
-              loading={loadingActivities}
-              meals={recentActivities}
-              onSelect={setDetailMeal}
+              loading={loading}
+              meals={recentMeals}
+              onSelect={openMealEditor}
               onViewHistory={onViewHistory}
             />
             <div className="mt-12">
@@ -316,24 +248,10 @@ export function DashboardScreen({
           </div>
 
           <div className="lg:col-span-5">
-            <WeeklyRhythm loading={loadingProgress} weeklyProgress={weeklyProgress} />
+            <WeeklyRhythm loading={loading} weeklyProgress={weeklyProgress} />
           </div>
         </div>
       </div>
-
-      <MealDetailDrawer
-        meal={detailMeal}
-        open={detailMeal !== null}
-        onOpenChange={(o) => {
-          if (!o) setDetailMeal(null);
-        }}
-        onMealUpdated={() => {
-          void loadRecentActivities();
-          refreshData();
-        }}
-      />
-
-      <AICoachDrawer open={isCoachOpen} onOpenChange={setIsCoachOpen} />
     </motion.div>
   );
 }

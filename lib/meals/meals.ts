@@ -3,6 +3,7 @@ import {
   addDoc,
   doc,
   updateDoc,
+  deleteDoc,
   Timestamp,
 } from "firebase/firestore";
 import { uploadUserMealImage } from "@/lib/meal-image-storage";
@@ -41,6 +42,18 @@ export async function updateMeal(
   } catch (error) {
     logger.error("Error updating meal", error);
     throw new Error("Error al actualizar la comida");
+  }
+}
+
+export async function deleteMeal(
+  userId: string,
+  mealId: string
+): Promise<void> {
+  try {
+    await deleteDoc(doc(getDb(), "users", userId, "meals", mealId));
+  } catch (error) {
+    logger.error("Error deleting meal", error);
+    throw new Error("Error al eliminar la comida");
   }
 }
 

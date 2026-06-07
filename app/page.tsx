@@ -19,8 +19,11 @@ import {
   ProfilePageLazy,
   ScanScreenLazy,
   WeeklyPlannerLazy,
+  DietsScreenLazy,
 } from "@/components/app/lazy-tab-panels";
 import { LazyTabContent } from "@/components/app/lazy-tab-content";
+import { MealEditorDrawer } from "@/components/meal/meal-editor-drawer";
+import { CoachFab } from "@/components/coach/coach-fab";
 import { AuthScreen } from "@/components/auth/auth-screen";
 import { DashboardScreen } from "@/components/dashboard/dashboard-screen";
 import { AnalysisResults } from "@/components/analysis/analysis-results";
@@ -33,7 +36,7 @@ import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { OfflineIndicator } from "@/components/pwa/offline-indicator";
 import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
 import { AuthProvider } from "@/hooks/use-auth";
-import { UserProfileProvider } from "@/hooks/use-user-profile";
+import { AppDataProvider } from "@/hooks/use-app-data";
 import { Loader2 } from "lucide-react";
 
 import { useSearchParams } from "next/navigation";
@@ -55,8 +58,10 @@ function AppContent() {
       setActiveTab("scan");
     } else if (action === "history") {
       setActiveTab("history");
+    } else if (action === "diets") {
+      setActiveTab("diets");
     } else if (action === "planning") {
-      setActiveTab("planning");
+      setPlannerOpen(true);
     }
   }, [searchParams]);
 
@@ -98,6 +103,8 @@ function AppContent() {
   const [refreshKey, setRefreshKey] = useState(0);
   /** Día elegido en el planificador antes de ir a "Escanear" (se usa al "Planear"). */
   const [plannedDateForScan, setPlannedDateForScan] = useState<Date | null>(null);
+  /** El planificador ahora se abre como overlay desde Inicio (ya no es pestaña). */
+  const [plannerOpen, setPlannerOpen] = useState(false);
 
   const mainTabsVisible =
     !loading &&
@@ -178,6 +185,7 @@ function AppContent() {
   /** Desde el planificador: recordamos el día elegido y abrimos "Escanear". */
   const handleAddMealFromPlanner = (date: Date) => {
     setPlannedDateForScan(date);
+    setPlannerOpen(false);
     setActiveTab("scan");
   };
 
@@ -292,6 +300,22 @@ function AppContent() {
     );
   }
 
+  if (plannerOpen) {
+    return (
+      <>
+        <div className="h-[100dvh] overflow-y-auto bg-background">
+          <WeeklyPlannerLazy
+            onAddMeal={handleAddMealFromPlanner}
+            onClose={() => setPlannerOpen(false)}
+          />
+        </div>
+        <CoachFab />
+        <MealEditorDrawer />
+        <OfflineIndicator />
+      </>
+    );
+  }
+
   return (
     <div className="flex h-[100dvh] min-h-0 flex-col overflow-hidden bg-background">
       {!isMobile && (
@@ -314,16 +338,17 @@ function AppContent() {
                 <DashboardScreen
                   key={refreshKey}
                   onViewHistory={handleViewHistory}
+                  onOpenPlanner={() => setPlannerOpen(true)}
                 />
               </LazyTabContent>
             </section>
             <section
-              aria-hidden={activeTab !== "planning"}
-              inert={activeTab !== "planning" ? true : undefined}
+              aria-hidden={activeTab !== "diets"}
+              inert={activeTab !== "diets" ? true : undefined}
               className="flex h-full max-h-full min-h-0 w-full max-w-full shrink-0 grow-0 basis-full snap-start [scroll-snap-stop:always] flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain min-w-0"
             >
-              <LazyTabContent isActive={activeTab === "planning"} className="w-full h-full">
-                <WeeklyPlannerLazy key={refreshKey} onAddMeal={handleAddMealFromPlanner} />
+              <LazyTabContent isActive={activeTab === "diets"} className="w-full h-full">
+                <DietsScreenLazy />
               </LazyTabContent>
             </section>
             <section
@@ -366,12 +391,13 @@ function AppContent() {
                     <DashboardScreen
                       key={refreshKey}
                       onViewHistory={handleViewHistory}
+                      onOpenPlanner={() => setPlannerOpen(true)}
                     />
                   </section>
                 ) : null}
-                {activeTab === "planning" ? (
+                {activeTab === "diets" ? (
                   <section className="w-full h-full">
-                    <WeeklyPlannerLazy key={refreshKey} onAddMeal={handleAddMealFromPlanner} />
+                    <DietsScreenLazy />
                   </section>
                 ) : null}
                 {activeTab === "scan" ? (
@@ -400,6 +426,8 @@ function AppContent() {
       {isMobile && (
         <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
       )}
+      <CoachFab />
+      <MealEditorDrawer />
       <OfflineIndicator />
       {!isInstalled && <InstallPrompt />}
     </div>
@@ -413,7 +441,7 @@ export default function Home() {
 
   return (
     <AuthProvider>
-      <UserProfileProvider>
+      <AppDataProvider>
         <Suspense fallback={
           <div className="flex min-h-screen items-center justify-center bg-background">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -421,7 +449,7 @@ export default function Home() {
         }>
           <AppContent />
         </Suspense>
-      </UserProfileProvider>
+      </AppDataProvider>
     </AuthProvider>
   );
 }

@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -9,7 +8,6 @@ import {
   Clock,
   CalendarDays,
   Calendar as CalendarIcon,
-  UtensilsCrossed,
   Download,
   FileText,
   Loader2,
@@ -17,10 +15,8 @@ import {
   Filter,
   X,
 } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
-import { getUserMeals } from "@/lib/meals";
+import { useAppData } from "@/hooks/use-app-data";
 import type { Meal } from "@/types/meal";
-import { MealDetailModal } from "./meal-detail-modal";
 import { MealTimelineGroup } from "./meal-timeline-group";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -78,12 +74,12 @@ function groupMealsByDate(list: Meal[]): [string, Meal[]][] {
 }
 
 export function MealHistory({ onBack }: MealHistoryProps) {
-  const [meals, setMeals] = useState<Meal[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // Datos en tiempo real desde el store global; el editor es global.
+  const { meals: allMeals, loading, openMealEditor } = useAppData();
+  // El historial muestra comidas ya registradas (las planificadas viven en el
+  // planificador).
+  const meals = allMeals.filter((m) => !m.isPlanned);
 
-  const { user } = useAuth();
   const {
     period: filterPeriod,
     setPeriod: setFilterPeriod,
@@ -93,23 +89,6 @@ export function MealHistory({ onBack }: MealHistoryProps) {
     setCalorieRange,
     filteredMeals,
   } = useMealFilters(meals);
-
-  const loadMeals = useCallback(async () => {
-    if (!user) return;
-    setLoading(true);
-    setError(null);
-    try {
-      setMeals(await getUserMeals(user.uid));
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Error al cargar");
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (user) loadMeals();
-  }, [user, loadMeals]);
 
   const header = (
     <PageHeader
@@ -179,23 +158,6 @@ export function MealHistory({ onBack }: MealHistoryProps) {
         {header}
         <div className="flex justify-center py-20">
           <Loader2 className="h-12 w-12 animate-spin text-primary/40" />
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-background pb-32">
-        {header}
-        <div className="mx-auto max-w-md px-4 py-16 text-center">
-          <div className="mb-6 inline-flex h-20 w-20 items-center justify-center rounded-3xl bg-destructive/10 text-destructive">
-            <UtensilsCrossed className="h-10 w-10" />
-          </div>
-          <p className="text-lg font-bold text-foreground">{error}</p>
-          <Button onClick={loadMeals} variant="default" className="mt-8 rounded-2xl font-black h-12 px-8 shadow-xl shadow-primary/20">
-            Reintentar carga
-          </Button>
         </div>
       </div>
     );
@@ -319,21 +281,13 @@ export function MealHistory({ onBack }: MealHistoryProps) {
                   key={dateString}
                   dateString={dateString}
                   dayMeals={dayMeals}
-                  onSelect={setSelectedMeal}
+                  onSelect={openMealEditor}
                 />
               ))}
             </div>
           </>
         )}
       </div>
-
-      {selectedMeal ? (
-        <MealDetailModal
-          meal={selectedMeal}
-          onClose={() => setSelectedMeal(null)}
-          onDelete={loadMeals}
-        />
-      ) : null}
     </div>
   );
 }

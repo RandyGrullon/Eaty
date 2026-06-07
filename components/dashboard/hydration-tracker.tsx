@@ -1,48 +1,35 @@
 "use client";
 
 import { useState } from "react";
-import type { KeyedMutator } from "swr";
 import { Button } from "@/components/ui/button";
 import { Droplets, Plus, Minus } from "lucide-react";
-import { updateWaterGlasses, awardPoints } from "@/lib/meals";
+import { useAppData } from "@/hooks/use-app-data";
+import { useAuth } from "@/hooks/use-auth";
+import { awardPoints } from "@/lib/meals";
 import { logger } from "@/lib/logger";
-import type { CalorieData } from "@/hooks/use-calorie-tracker";
 
 interface HydrationTrackerProps {
   glasses: number;
-  userId: string;
-  mutate: KeyedMutator<CalorieData>;
 }
 
-export function HydrationTracker({ glasses, userId, mutate }: HydrationTrackerProps) {
+export function HydrationTracker({ glasses }: HydrationTrackerProps) {
+  const { setWaterGlasses } = useAppData();
+  const { user } = useAuth();
   const [updating, setUpdating] = useState(false);
 
   const handleUpdate = async (delta: number) => {
     if (updating) return;
-
-    // Actualización optimista.
-    const newGlasses = Math.max(0, glasses + delta);
-    mutate(
-      (prev) => (prev ? { ...prev, waterGlasses: newGlasses } : prev),
-      false
-    );
-
     setUpdating(true);
     try {
-      await updateWaterGlasses(userId, delta);
-
+      await setWaterGlasses(delta);
       // Otorga puntos por hidratación (10 por vaso, solo si suma).
-      if (delta > 0) {
-        awardPoints(userId, 10).catch((e) =>
+      if (delta > 0 && user) {
+        awardPoints(user.uid, 10).catch((e) =>
           logger.error("Error awarding points for water", e)
         );
       }
-
-      // Revalidar para sincronizar con el servidor.
-      mutate();
     } catch (e) {
       logger.error("Error updating water", e);
-      mutate();
     } finally {
       setUpdating(false);
     }

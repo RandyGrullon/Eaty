@@ -3,12 +3,34 @@ import {
   buildFoodTextRetryUserPrompt,
   buildFoodVisionRetryUserPrompt,
   buildNutritionTipsUserPrompt,
+  buildCoachInsightsPrompt,
+  buildWorkoutPrompt,
+  buildDietGeneratePrompt,
+  buildDietProcessPrompt,
+  buildDishTutorialPrompt,
   getSystemFoodAnalysis,
   getSystemFoodTextRetry,
   getSystemFoodVisionRetry,
   getSystemNutritionTips,
+  getSystemCoachInsights,
+  getSystemWorkout,
+  getSystemDietGenerate,
+  getSystemDietProcess,
+  getSystemDishTutorial,
   SYSTEM_JSON_REPAIR,
+  type CoachContext,
 } from "@/lib/food-analysis-prompts";
+import { coachInsightSchema, type CoachInsight } from "@/lib/coach-schema";
+import {
+  generatedWorkoutSchema,
+  type GeneratedWorkout,
+} from "@/types/workout";
+import {
+  generatedDietSchema,
+  dishTutorialSchema,
+  type GeneratedDiet,
+  type DishTutorial,
+} from "@/types/diet";
 import {
   buildMealFromAnalyzedRaw,
   foodAnalysisRawSchema,
@@ -500,5 +522,189 @@ export async function runNutritionTipsGroq(params: {
     logger.error("Consejos Groq (respaldo fijo)", e);
     return STATIC_TIPS_ERROR;
   }
+}
+
+export async function runCoachInsightsGroq(params: {
+  context?: CoachContext;
+  todayMeals: Array<{ foodName: string; calories: number }>;
+  remainingCalories?: number;
+  remainingProtein?: number;
+  lang?: string;
+}): Promise<CoachInsight> {
+  const userText = buildCoachInsightsPrompt({
+    context: params.context,
+    todayMeals: params.todayMeals,
+    remainingCalories: params.remainingCalories,
+    remainingProtein: params.remainingProtein,
+  });
+
+  const content = await groqChatCompletion({
+    messages: [
+      { role: "system", content: getSystemCoachInsights(params.lang) },
+      { role: "user", content: userText },
+    ],
+    responseFormatJson: true,
+    temperature: 0.5,
+    maxTokens: 700,
+  });
+
+  try {
+    return coachInsightSchema.parse(parseJsonObject<unknown>(content));
+  } catch {
+    const repaired = await groqChatCompletion({
+      messages: [
+        { role: "system", content: SYSTEM_JSON_REPAIR },
+        {
+          role: "user",
+          content: [
+            "Devuelve solo JSON válido con esta forma exacta:",
+            '{"focusTitle":"...","focusMessage":"...","nextMeal":{"title":"...","idea":"...","approxCalories":0},"training":{"title":"...","idea":"..."},"motivation":"..."}',
+            "Entrada defectuosa:",
+            content.slice(0, 3000),
+          ].join("\n"),
+        },
+      ],
+      responseFormatJson: true,
+      temperature: 0.2,
+      maxTokens: 700,
+    });
+    return coachInsightSchema.parse(parseJsonObject<unknown>(repaired));
+  }
+}
+
+export async function runWorkoutGroq(params: {
+  goal?: "bulking" | "shedding" | "maintenance";
+  level: "beginner" | "intermediate" | "advanced";
+  daysPerWeek: number;
+  equipment?: string[];
+  focus?: string;
+  lang?: string;
+}): Promise<GeneratedWorkout> {
+  const userText = buildWorkoutPrompt({
+    goal: params.goal,
+    level: params.level,
+    daysPerWeek: params.daysPerWeek,
+    equipment: params.equipment,
+    focus: params.focus,
+  });
+
+  const content = await groqChatCompletion({
+    messages: [
+      { role: "system", content: getSystemWorkout(params.lang) },
+      { role: "user", content: userText },
+    ],
+    responseFormatJson: true,
+    temperature: 0.5,
+    maxTokens: 2200,
+  });
+
+  try {
+    return generatedWorkoutSchema.parse(parseJsonObject<unknown>(content));
+  } catch {
+    const repaired = await groqChatCompletion({
+      messages: [
+        { role: "system", content: SYSTEM_JSON_REPAIR },
+        {
+          role: "user",
+          content: [
+            "Devuelve solo JSON válido de una rutina con la forma del esquema pedido.",
+            "Entrada defectuosa:",
+            content.slice(0, 4000),
+          ].join("\n"),
+        },
+      ],
+      responseFormatJson: true,
+      temperature: 0.2,
+      maxTokens: 2200,
+    });
+    return generatedWorkoutSchema.parse(parseJsonObject<unknown>(repaired));
+  }
+}
+
+/** Genera JSON validado por un schema Zod, con un reintento de reparación. */
+async function generateValidatedJson<T>(params: {
+  system: string;
+  user: string;
+  schema: { parse: (x: unknown) => T };
+  maxTokens: number;
+  temperature?: number;
+  repairHint: string;
+}): Promise<T> {
+  const content = await groqChatCompletion({
+    messages: [
+      { role: "system", content: params.system },
+      { role: "user", content: params.user },
+    ],
+    responseFormatJson: true,
+    temperature: params.temperature ?? 0.5,
+    maxTokens: params.maxTokens,
+  });
+  try {
+    return params.schema.parse(parseJsonObject<unknown>(content));
+  } catch {
+    const repaired = await groqChatCompletion({
+      messages: [
+        { role: "system", content: SYSTEM_JSON_REPAIR },
+        {
+          role: "user",
+          content: `${params.repairHint}\n\nEntrada defectuosa:\n${content.slice(0, 5000)}`,
+        },
+      ],
+      responseFormatJson: true,
+      temperature: 0.2,
+      maxTokens: params.maxTokens,
+    });
+    return params.schema.parse(parseJsonObject<unknown>(repaired));
+  }
+}
+
+export async function runDietGenerateGroq(params: {
+  goal?: string;
+  calories?: number;
+  preferences?: string;
+  restrictions?: string[];
+  lang?: string;
+}): Promise<GeneratedDiet> {
+  return generateValidatedJson({
+    system: getSystemDietGenerate(params.lang),
+    user: buildDietGeneratePrompt(params),
+    schema: generatedDietSchema,
+    maxTokens: 2600,
+    repairHint:
+      "Devuelve solo JSON válido de una dieta con la forma del esquema pedido.",
+  });
+}
+
+export async function runDietProcessGroq(params: {
+  name?: string;
+  description?: string;
+  goal?: string;
+  dishes: Array<{ name: string; type: string; description?: string }>;
+  lang?: string;
+}): Promise<GeneratedDiet> {
+  return generateValidatedJson({
+    system: getSystemDietProcess(params.lang),
+    user: buildDietProcessPrompt(params),
+    schema: generatedDietSchema,
+    maxTokens: 2600,
+    repairHint:
+      "Devuelve solo JSON válido de la dieta completada, respetando los platos del usuario.",
+  });
+}
+
+export async function runDishTutorialGroq(params: {
+  dishName: string;
+  description?: string;
+  servings?: number;
+  lang?: string;
+}): Promise<DishTutorial> {
+  return generateValidatedJson({
+    system: getSystemDishTutorial(params.lang),
+    user: buildDishTutorialPrompt(params),
+    schema: dishTutorialSchema,
+    maxTokens: 2800,
+    repairHint:
+      "Devuelve solo JSON válido del tutorial con la forma del esquema pedido.",
+  });
 }
 
