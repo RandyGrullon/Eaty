@@ -20,6 +20,14 @@ import { logger } from "@/lib/logger";
 import { cn } from "@/lib/utils";
 import { GenerateDishImage } from "@/components/meal/generate-dish-image";
 
+/** Formatea una fecha al valor de un <input type="datetime-local"> (hora local). */
+function toDatetimeLocalValue(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+    d.getHours()
+  )}:${pad(d.getMinutes())}`;
+}
+
 /**
  * Editor de comidas GLOBAL. Se monta una sola vez (en `app/page.tsx`) y se abre
  * desde cualquier pantalla con `useAppData().openMealEditor(meal)`. Unifica el
@@ -43,6 +51,7 @@ export function MealEditorDrawer() {
   const [sugar, setSugar] = useState("");
   const [recommendationsText, setRecommendationsText] = useState("");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [recordedAt, setRecordedAt] = useState("");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [saveConfirmOpen, setSaveConfirmOpen] = useState(false);
@@ -59,6 +68,7 @@ export function MealEditorDrawer() {
     setSugar(String(meal.macros.sugar));
     setRecommendationsText(meal.recommendations.join("\n"));
     setImageUrl(meal.imageUrl);
+    setRecordedAt(toDatetimeLocalValue(meal.createdAt));
     setSaving(false);
     setDeleting(false);
     setSaveConfirmOpen(false);
@@ -82,6 +92,9 @@ export function MealEditorDrawer() {
     if (!meal) return;
     const cals = Math.round(parseFloat(calories) || 0);
     const round1 = (v: string) => Math.round((parseFloat(v) || 0) * 10) / 10;
+    const parsedDate = recordedAt ? new Date(recordedAt) : null;
+    const validDate =
+      parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate : undefined;
 
     if (saving) return;
     setSaveConfirmOpen(false);
@@ -103,6 +116,7 @@ export function MealEditorDrawer() {
           .filter(Boolean),
         imageUrl,
         aiContext: meal.aiContext,
+        createdAt: validDate,
       });
       toast({
         title: "Cambios guardados",
@@ -280,6 +294,22 @@ export function MealEditorDrawer() {
                     className="h-12 rounded-2xl border-border/40 bg-card/40 px-4 font-black tabular-nums text-primary shadow-sm transition-all focus:bg-card focus:shadow-md"
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label
+                  htmlFor="meal-date"
+                  className="ml-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground"
+                >
+                  Fecha y hora del registro
+                </Label>
+                <Input
+                  id="meal-date"
+                  type="datetime-local"
+                  value={recordedAt}
+                  onChange={(e) => setRecordedAt(e.target.value)}
+                  className="h-12 rounded-2xl border-border/40 bg-card/40 px-4 font-bold shadow-sm transition-all focus:bg-card focus:shadow-md"
+                />
               </div>
 
               <div className="space-y-4">

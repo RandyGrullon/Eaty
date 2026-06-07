@@ -35,7 +35,23 @@ export function buildDishPrompt(meal: DishImageContext): string {
 }
 
 /**
- * URL de imagen generada por Pollinations.ai (gratis, sin API key).
+ * Clave/token de Pollinations (opcional). Desde 2025 Pollinations limita el uso
+ * anónimo (HTTP 402 "queue full"): para generar imágenes con fiabilidad hace falta
+ * una clave. Una *publishable key* (`pk_*`) es segura en el navegador.
+ * Regístrate gratis en https://enter.pollinations.ai y pega la clave en
+ * `NEXT_PUBLIC_POLLINATIONS_TOKEN`.
+ */
+export function getPollinationsToken(): string | undefined {
+  return process.env.NEXT_PUBLIC_POLLINATIONS_TOKEN?.trim() || undefined;
+}
+
+/** `true` si hay clave configurada (las imágenes IA funcionarán con fiabilidad). */
+export function isDishImageConfigured(): boolean {
+  return Boolean(getPollinationsToken());
+}
+
+/**
+ * URL de imagen generada por Pollinations.ai. Incluye la clave si está configurada.
  * `seed` permite regenerar variaciones del mismo plato.
  */
 export function buildDishImageUrl(prompt: string, seed: number): string {
@@ -47,6 +63,12 @@ export function buildDishImageUrl(prompt: string, seed: number): string {
     model: "flux",
     seed: String(seed),
   });
+  const token = getPollinationsToken();
+  if (token) {
+    // Pollinations ha usado ambas convenciones; enviamos las dos por compatibilidad.
+    params.set("token", token);
+    params.set("key", token);
+  }
   return `https://image.pollinations.ai/prompt/${encoded}?${params.toString()}`;
 }
 

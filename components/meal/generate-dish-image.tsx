@@ -4,7 +4,11 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Loader2, RefreshCcw, ImageIcon, Check, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { generateDishImageUrl, type DishImageContext } from "@/lib/dish-image";
+import {
+  generateDishImageUrl,
+  isDishImageConfigured,
+  type DishImageContext,
+} from "@/lib/dish-image";
 
 interface GenerateDishImageProps {
   meal: DishImageContext;
@@ -69,7 +73,11 @@ export function GenerateDishImage({ meal, onUseImage, className }: GenerateDishI
         {error ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground p-4 text-center">
             <AlertCircle className="h-8 w-8 text-destructive" />
-            <p className="text-xs font-medium">No se pudo generar la imagen. Inténtalo de nuevo.</p>
+            <p className="text-xs font-medium">
+              {isDishImageConfigured()
+                ? "No se pudo generar la imagen. Inténtalo de nuevo."
+                : "Generación de imágenes no disponible. Configura una clave de Pollinations (NEXT_PUBLIC_POLLINATIONS_TOKEN)."}
+            </p>
           </div>
         ) : (
           // eslint-disable-next-line @next/next/no-img-element

@@ -22,6 +22,8 @@ export type MealUpdatePayload = {
   recommendations: string[];
   imageUrl: string | null;
   aiContext?: Meal["aiContext"];
+  /** Si se incluye, reescribe la fecha/hora del registro. */
+  createdAt?: Date;
 };
 
 export async function updateMeal(
@@ -38,6 +40,9 @@ export async function updateMeal(
       recommendations: data.recommendations,
       imageUrl: data.imageUrl,
       ...(data.aiContext !== undefined ? { aiContext: data.aiContext } : {}),
+      ...(data.createdAt !== undefined
+        ? { createdAt: Timestamp.fromDate(data.createdAt) }
+        : {}),
     });
   } catch (error) {
     logger.error("Error updating meal", error);
