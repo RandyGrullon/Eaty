@@ -20,6 +20,7 @@ import {
   ScanScreenLazy,
   WeeklyPlannerLazy,
   DietsScreenLazy,
+  SettingsPageLazy,
 } from "@/components/app/lazy-tab-panels";
 import { LazyTabContent } from "@/components/app/lazy-tab-content";
 import { MealEditorDrawer } from "@/components/meal/meal-editor-drawer";
@@ -378,7 +379,16 @@ function AppContent() {
               className="flex h-full max-h-full min-h-0 w-full max-w-full shrink-0 grow-0 basis-full snap-start [scroll-snap-stop:always] flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain min-w-0"
             >
               <LazyTabContent isActive={activeTab === "profile"} className="w-full h-full">
-                <ProfilePageLazy />
+                <ProfilePageLazy onTabChange={handleTabChange} />
+              </LazyTabContent>
+            </section>
+            <section
+              aria-hidden={activeTab !== "settings"}
+              inert={activeTab !== "settings" ? true : undefined}
+              className="flex h-full max-h-full min-h-0 w-full max-w-full shrink-0 grow-0 basis-full snap-start [scroll-snap-stop:always] flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain min-w-0"
+            >
+              <LazyTabContent isActive={activeTab === "settings"} className="w-full h-full">
+                <SettingsPageLazy />
               </LazyTabContent>
             </section>
           </div>
@@ -415,7 +425,12 @@ function AppContent() {
                 ) : null}
                 {activeTab === "profile" ? (
                   <section className="w-full h-full">
-                    <ProfilePageLazy />
+                    <ProfilePageLazy onTabChange={handleTabChange} />
+                  </section>
+                ) : null}
+                {activeTab === "settings" ? (
+                  <section className="w-full h-full">
+                    <SettingsPageLazy />
                   </section>
                 ) : null}
               </div>

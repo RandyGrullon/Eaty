@@ -42,3 +42,12 @@ export const DietsScreenLazy = dynamic(
   { ssr: true }
 );
 
+export const SettingsPageLazy = dynamic(
+  () =>
+    import("@/components/settings/settings-page").then((m) => ({
+      default: m.SettingsPage,
+    })),
+  { ssr: true }
+);
+
+

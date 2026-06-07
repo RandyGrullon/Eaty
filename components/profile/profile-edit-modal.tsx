@@ -41,6 +41,7 @@ type EditData = {
   height: string;
   heightUnit: "cm" | "inches";
   activityLevel: "sedentary" | "light" | "moderate" | "active" | "very_active";
+  fitnessGoal: "bulking" | "shedding" | "maintenance";
   language: string;
 };
 
@@ -52,6 +53,7 @@ const DEFAULT_EDIT_DATA: EditData = {
   height: "",
   heightUnit: "cm",
   activityLevel: "moderate",
+  fitnessGoal: "maintenance",
   language: "es",
 };
 
@@ -115,6 +117,7 @@ export function ProfileEditModal({
         height: heightDisplay.toString(),
         heightUnit,
         activityLevel: userProfile.activityLevel || "moderate",
+        fitnessGoal: userProfile.fitnessGoal || "maintenance",
         language: userProfile.language || "es",
       });
     };
@@ -194,6 +197,7 @@ export function ProfileEditModal({
         weightUnit: editData.weightUnit,
         heightUnit: editData.heightUnit,
         activityLevel: editData.activityLevel,
+        fitnessGoal: editData.fitnessGoal,
         language: editData.language,
       });
 
@@ -381,6 +385,28 @@ export function ProfileEditModal({
                 <SelectItem value="moderate">Moderado</SelectItem>
                 <SelectItem value="active">Activo</SelectItem>
                 <SelectItem value="very_active">Muy Activo</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label>Objetivo</Label>
+            <Select
+              value={editData.fitnessGoal}
+              onValueChange={(value) =>
+                setEditData((prev) => ({
+                  ...prev,
+                  fitnessGoal: value as EditData["fitnessGoal"],
+                }))
+              }
+            >
+              <SelectTrigger className="mt-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="shedding">Perder peso</SelectItem>
+                <SelectItem value="maintenance">Mantener peso</SelectItem>
+                <SelectItem value="bulking">Ganar masa muscular</SelectItem>
               </SelectContent>
             </Select>
           </div>

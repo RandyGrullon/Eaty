@@ -24,9 +24,18 @@ interface ProfileAchievementsProps {
 }
 
 export function ProfileAchievements({ unlockedIds }: ProfileAchievementsProps) {
+  const totalCount = Object.keys(ACHIEVEMENTS_MAP).length;
+  const unlockedCount = unlockedIds?.filter(id => id in ACHIEVEMENTS_MAP).length || 0;
+
   return (
     <section className="space-y-6 pb-20">
-      <h2 className="text-2xl font-black tracking-tight text-foreground">Logros y Medallas</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-black tracking-tight text-foreground">Logros y Medallas</h2>
+        <span className="text-xs font-black uppercase tracking-widest text-primary bg-primary/10 px-3.5 py-1.5 rounded-xl border border-primary/20 animate-pulse">
+          {unlockedCount} de {totalCount} Desbloqueados
+        </span>
+      </div>
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {Object.entries(ACHIEVEMENTS_MAP).map(([id, info]) => {
           const isUnlocked = unlockedIds?.includes(id);

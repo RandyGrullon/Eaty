@@ -7,6 +7,7 @@ import {
   CalendarDays,
   Edit,
   AlertCircle,
+  Settings,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/app/theme-toggle";
 import { getProfileDisplayAge } from "@/lib/age-from-birthdate";
@@ -22,6 +23,7 @@ interface ProfileHeaderProps {
   userProfile: UserProfile | null;
   onEdit: () => void;
   onLogout: () => void;
+  onSettingsClick?: () => void;
 }
 
 export function ProfileHeader({
@@ -29,7 +31,9 @@ export function ProfileHeader({
   userProfile,
   onEdit,
   onLogout,
+  onSettingsClick,
 }: ProfileHeaderProps) {
+
   const displayName =
     user?.displayName || user?.email?.split("@")[0] || "Usuario";
   const initials = displayName
@@ -128,6 +132,17 @@ export function ProfileHeader({
               <Edit className="h-4 w-4" />
               Editar Perfil
             </Button>
+            {onSettingsClick && (
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={onSettingsClick}
+                className="h-12 w-12 rounded-2xl border-border/40 bg-card/40 font-bold shadow-sm backdrop-blur-md transition-all hover:bg-card"
+                aria-label="Configuración"
+              >
+                <Settings className="h-5 w-5 text-muted-foreground hover:text-foreground" />
+              </Button>
+            )}
           </div>
         </div>
 

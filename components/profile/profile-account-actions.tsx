@@ -2,38 +2,10 @@
 
 import { Button } from "@/components/ui/button";
 import {
-  Dumbbell,
-  ExternalLink,
   AlertCircle,
   Download,
   Loader2,
 } from "lucide-react";
-import { getBodyMatterPublicOrigin } from "@/lib/env-public";
-
-/** Promo de la plataforma hermana Body Matter. */
-export function ProfileBodyMatter() {
-  return (
-    <section className="pt-8 border-t border-border/40">
-      <div className="rounded-[2rem] border border-primary/20 bg-gradient-to-br from-primary/5 via-card/50 to-card/50 p-8 shadow-2xl shadow-primary/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
-        <div>
-          <h3 className="text-2xl font-black tracking-tight text-foreground flex items-center gap-2">
-            <Dumbbell className="h-6 w-6 text-primary" />
-            Body Matter
-          </h3>
-          <p className="mt-2 text-sm font-medium text-muted-foreground/80 max-w-sm">
-            Potencia tu entrenamiento con nuestra plataforma hermana. Sincroniza tus macros y entrena de forma inteligente.
-          </p>
-        </div>
-        <Button size="lg" asChild className="rounded-2xl font-black h-14 px-8 shadow-xl shadow-primary/20">
-          <a href={getBodyMatterPublicOrigin()} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
-            Explorar Body Matter
-            <ExternalLink className="h-4 w-4" />
-          </a>
-        </Button>
-      </div>
-    </section>
-  );
-}
 
 interface ProfileDangerZoneProps {
   exporting: boolean;

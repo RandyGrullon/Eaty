@@ -58,6 +58,11 @@ export function AnalysisResults({
 }: AnalysisResultsProps) {
   const { toast } = useToast();
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [recordedAt, setRecordedAt] = useState<string>(() => {
+    const d = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  });
   const [planDialogOpen, setPlanDialogOpen] = useState(false);
   const [plannedDate, setPlannedDate] = useState<Date>(
     defaultPlannedDate ?? new Date()
@@ -454,9 +459,20 @@ export function AnalysisResults({
           <AlertDialogHeader>
             <AlertDialogTitle className="text-xl font-black">¿Registrar comida?</AlertDialogTitle>
             <AlertDialogDescription className="font-medium">
-              Este análisis se guardará en tu historial personal de hoy para el seguimiento de tus metas diarias.
+              Este análisis se guardará en tu historial personal para el seguimiento de tus metas.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="py-4">
+            <Label className="mb-2 block text-sm font-black uppercase tracking-widest text-muted-foreground">
+              Fecha y hora del registro
+            </Label>
+            <Input
+              type="datetime-local"
+              className="h-12 rounded-xl border-border/40 bg-card/40 px-4 font-bold shadow-sm"
+              value={recordedAt}
+              onChange={(e) => setRecordedAt(e.target.value)}
+            />
+          </div>
           <AlertDialogFooter className="mt-4">
             <AlertDialogCancel className="rounded-xl font-bold">Cancelar</AlertDialogCancel>
             <Button
@@ -464,10 +480,13 @@ export function AnalysisResults({
               className="rounded-xl font-black"
               onClick={() => {
                 setSaveDialogOpen(false);
-                void onSave(editedResult);
+                const parsedDate = recordedAt ? new Date(recordedAt) : null;
+                const validDate =
+                  parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate : undefined;
+                void onSave({ ...editedResult, recordedAt: validDate } as any);
               }}
             >
-              Confirmar
+              Registrar
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

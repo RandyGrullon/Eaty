@@ -10,23 +10,38 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MealCalendar } from "./meal-calendar";
-import {
-  PERIOD_OPTIONS,
-  type ProfileStats,
-  type TimePeriod,
-} from "@/hooks/use-profile-stats";
+import { PERIOD_OPTIONS } from "@/hooks/use-profile-stats";
+import type { ProfileStats, TimePeriod } from "@/hooks/use-profile-stats";
+import type { UserProfile } from "@/types/meal";
+
 
 interface ProfileStatsSectionProps {
   stats: ProfileStats;
   selectedPeriod: TimePeriod;
   onPeriodChange: (period: TimePeriod) => void;
+  userProfile?: UserProfile | null;
 }
 
 export function ProfileStatsSection({
   stats,
   selectedPeriod,
   onPeriodChange,
+  userProfile,
 }: ProfileStatsSectionProps) {
+  let periodDays = 7;
+  if (selectedPeriod === "daily") periodDays = 1;
+  else if (selectedPeriod === "weekly") periodDays = 7;
+  else if (selectedPeriod === "monthly") periodDays = 30;
+  else if (selectedPeriod === "quarterly") periodDays = 90;
+  else if (selectedPeriod === "semi-annual") periodDays = 180;
+  else if (selectedPeriod === "annual") periodDays = 365;
+
+  const proteinTarget = ((userProfile?.customGoals?.protein || 70) * periodDays) || 1;
+  const carbsTarget = ((userProfile?.customGoals?.carbs || 220) * periodDays) || 1;
+  const fatTarget = ((userProfile?.customGoals?.fat || 65) * periodDays) || 1;
+  const fiberTarget = (25 * periodDays) || 1;
+  const sugarTarget = (35 * periodDays) || 1;
+
   const statTiles = [
     { label: "Comidas", value: stats.totalMeals, icon: Target, color: "text-chart-1", bg: "bg-chart-1/10" },
     { label: "Kcal Media", value: stats.averageCalories, icon: TrendingUp, color: "text-chart-3", bg: "bg-chart-3/10" },
@@ -35,11 +50,11 @@ export function ProfileStatsSection({
   ];
 
   const macroRows = [
-    { label: "Proteína", value: stats.totalProtein, unit: "g", color: "bg-chart-1" },
-    { label: "Carbos", value: stats.totalCarbs, unit: "g", color: "bg-chart-2" },
-    { label: "Grasas", value: stats.totalFat, unit: "g", color: "bg-chart-4" },
-    { label: "Fibra", value: stats.totalFiber, unit: "g", color: "bg-chart-3" },
-    { label: "Azúcar", value: stats.totalSugar, unit: "g", color: "bg-chart-5" },
+    { label: "Proteína", value: stats.totalProtein, unit: "g", color: "bg-chart-1", percentage: Math.min(100, (stats.totalProtein / proteinTarget) * 100), displayPct: Math.round((stats.totalProtein / proteinTarget) * 100) },
+    { label: "Carbos", value: stats.totalCarbs, unit: "g", color: "bg-chart-2", percentage: Math.min(100, (stats.totalCarbs / carbsTarget) * 100), displayPct: Math.round((stats.totalCarbs / carbsTarget) * 100) },
+    { label: "Grasas", value: stats.totalFat, unit: "g", color: "bg-chart-4", percentage: Math.min(100, (stats.totalFat / fatTarget) * 100), displayPct: Math.round((stats.totalFat / fatTarget) * 100) },
+    { label: "Fibra", value: stats.totalFiber, unit: "g", color: "bg-chart-3", percentage: Math.min(100, (stats.totalFiber / fiberTarget) * 100), displayPct: Math.round((stats.totalFiber / fiberTarget) * 100) },
+    { label: "Azúcar", value: stats.totalSugar, unit: "g", color: "bg-chart-5", percentage: Math.min(100, (stats.totalSugar / sugarTarget) * 100), displayPct: Math.round((stats.totalSugar / sugarTarget) * 100) },
   ];
 
   return (
@@ -92,10 +107,13 @@ export function ProfileStatsSection({
                 <div key={row.label} className="group">
                   <div className="flex justify-between items-end mb-1.5">
                     <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">{row.label}</span>
-                    <span className="text-sm font-black tabular-nums">{Math.round(row.value)}{row.unit}</span>
+                    <span className="text-sm font-black tabular-nums">
+                      {Math.round(row.value)}{row.unit}
+                      <span className="text-[10px] text-muted-foreground ml-1.5 font-normal">({row.displayPct}%)</span>
+                    </span>
                   </div>
                   <div className="h-1.5 w-full rounded-full bg-muted shadow-inner overflow-hidden">
-                    <div className={cn("h-full rounded-full opacity-60", row.color)} style={{ width: "60%" }} />
+                    <div className={cn("h-full rounded-full opacity-70 transition-all duration-500", row.color)} style={{ width: `${row.percentage}%` }} />
                   </div>
                 </div>
               ))}

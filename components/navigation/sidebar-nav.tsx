@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import type { MainTab } from "@/lib/main-tab"
-import { Home, Camera, History, User, Salad } from "lucide-react"
+import { Home, Camera, History, User, Salad, Settings } from "lucide-react"
 
 interface SidebarNavProps {
   activeTab: MainTab
@@ -16,7 +16,9 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
     { id: "scan" as const, icon: Camera, label: "Escanear" },
     { id: "history" as const, icon: History, label: "Historial" },
     { id: "profile" as const, icon: User, label: "Perfil" },
+    { id: "settings" as const, icon: Settings, label: "Configuración" },
   ]
+
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-64 border-r border-border/40 bg-card/30 backdrop-blur-xl p-6 transition-all">

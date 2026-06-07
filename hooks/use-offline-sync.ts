@@ -32,7 +32,10 @@ export function useOfflineSync(onSyncSuccess?: () => void) {
             imageFile = new File([meal.imageBlob], `offline-meal-${meal.id}.jpg`, { type: meal.imageBlob.type });
           }
 
-          await saveMeal(user.uid, meal.mealData, { imageFile });
+          await saveMeal(user.uid, meal.mealData, { 
+            imageFile,
+            plannedDate: (meal.mealData as any).plannedDate ?? (meal.mealData as any).recordedAt ?? new Date(meal.createdAt)
+          });
           await deletePendingMeal(meal.id);
           successCount++;
         } catch (err) {
