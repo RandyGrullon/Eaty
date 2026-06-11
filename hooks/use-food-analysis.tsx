@@ -247,7 +247,7 @@ export function useFoodAnalysis(onSaveSuccess?: () => void) {
     try {
       const { imageStored } = await saveMeal(user.uid, dataToSave, {
         imageFile: imageFileForStorage ?? undefined,
-        plannedDate: editedData?.plannedDate,
+        plannedDate: editedData?.plannedDate ?? (editedData as any)?.recordedAt,
       });
 
       // Actualizar racha después de guardar con éxito (solo si no es planeado o si es para hoy)

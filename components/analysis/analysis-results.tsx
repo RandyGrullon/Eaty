@@ -17,11 +17,13 @@ import { ArrowLeft, Save, Share2, Info, Camera, Sparkles, Lightbulb, Loader2, Ed
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { macroCaloriesRough } from "@/lib/food-analysis-schema";
-import type { FoodAnalysisAiContext } from "@/lib/food-analysis-schema";
 import type { Meal } from "@/types/meal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
+import { toDateInputValue, fromDateInputValue } from "@/lib/date-format";
+import { confidenceLabel } from "@/lib/confidence";
+import { GenerateDishImage } from "@/components/meal/generate-dish-image";
 
 interface AnalysisResultsProps {
   result: Omit<Meal, "id" | "createdAt">;
@@ -33,43 +35,6 @@ interface AnalysisResultsProps {
   isSaving?: boolean;
   /** Día preseleccionado desde el planificador: prerellena el diálogo "Planear". */
   defaultPlannedDate?: Date | null;
-}
-
-/** Fecha -> "YYYY-MM-DD" en hora LOCAL (evita el desfase de un día de toISOString). */
-function toDateInputValue(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
-/** "YYYY-MM-DD" -> Date en hora LOCAL al mediodía (estable frente a husos/DST). */
-function fromDateInputValue(value: string): Date {
-  const [y, m, d] = value.split("-").map(Number);
-  return new Date(y, (m ?? 1) - 1, d ?? 1, 12, 0, 0, 0);
-}
-
-function confidenceLabel(
-  c: FoodAnalysisAiContext["confidence"]
-): { text: string; className: string } {
-  switch (c) {
-    case "high":
-      return {
-        text: "Alta",
-        className: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
-      };
-    case "medium":
-      return {
-        text: "Media",
-        className: "bg-amber-500/15 text-amber-800 dark:text-amber-300",
-      };
-    case "low":
-    default:
-      return {
-        text: "Baja",
-        className: "bg-muted text-muted-foreground",
-      };
-  }
 }
 
 const MACRO_MAIN = [
@@ -93,6 +58,11 @@ export function AnalysisResults({
 }: AnalysisResultsProps) {
   const { toast } = useToast();
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [recordedAt, setRecordedAt] = useState<string>(() => {
+    const d = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  });
   const [planDialogOpen, setPlanDialogOpen] = useState(false);
   const [plannedDate, setPlannedDate] = useState<Date>(
     defaultPlannedDate ?? new Date()
@@ -224,8 +194,15 @@ export function AnalysisResults({
               <div className="absolute inset-0 bg-gradient-to-t from-card/80 via-transparent to-transparent" />
             </div>
           ) : (
-            <div className="flex h-32 w-full items-center justify-center bg-muted/30">
+            <div className="flex flex-col items-center justify-center gap-4 bg-muted/30 px-6 py-8">
               <Camera className="h-10 w-10 text-muted-foreground/20" />
+              <GenerateDishImage
+                meal={{ foodName: editedResult.foodName, aiContext: editedResult.aiContext }}
+                onUseImage={(url) =>
+                  setEditedResult((prev) => ({ ...prev, imageUrl: url }))
+                }
+                className="w-full max-w-xs"
+              />
             </div>
           )}
           <div className="relative p-6 sm:p-8 space-y-6 sm:flex sm:items-center sm:justify-between sm:gap-6 sm:space-y-0">
@@ -482,9 +459,20 @@ export function AnalysisResults({
           <AlertDialogHeader>
             <AlertDialogTitle className="text-xl font-black">¿Registrar comida?</AlertDialogTitle>
             <AlertDialogDescription className="font-medium">
-              Este análisis se guardará en tu historial personal de hoy para el seguimiento de tus metas diarias.
+              Este análisis se guardará en tu historial personal para el seguimiento de tus metas.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="py-4">
+            <Label className="mb-2 block text-sm font-black uppercase tracking-widest text-muted-foreground">
+              Fecha y hora del registro
+            </Label>
+            <Input
+              type="datetime-local"
+              className="h-12 rounded-xl border-border/40 bg-card/40 px-4 font-bold shadow-sm"
+              value={recordedAt}
+              onChange={(e) => setRecordedAt(e.target.value)}
+            />
+          </div>
           <AlertDialogFooter className="mt-4">
             <AlertDialogCancel className="rounded-xl font-bold">Cancelar</AlertDialogCancel>
             <Button
@@ -492,10 +480,13 @@ export function AnalysisResults({
               className="rounded-xl font-black"
               onClick={() => {
                 setSaveDialogOpen(false);
-                void onSave(editedResult);
+                const parsedDate = recordedAt ? new Date(recordedAt) : null;
+                const validDate =
+                  parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate : undefined;
+                void onSave({ ...editedResult, recordedAt: validDate } as any);
               }}
             >
-              Confirmar
+              Registrar
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -1,19 +1,12 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
-import type { LucideIcon } from "lucide-react";
 import {
   Camera,
   Upload,
-  Type,
   ClipboardPaste,
   Loader2,
   ScanLine,
-  Sparkles,
   Lightbulb,
   Barcode,
   QrCode,
@@ -21,72 +14,19 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { pasteImageOrTextFromClipboard } from "@/lib/clipboard-scan";
-import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { prepareImageForGroq } from "@/lib/image-for-llm";
 import { analyzeFood } from "@/lib/groq";
 import { BarcodeScanner } from "./barcode-scanner";
 import { LiveScanner } from "./live-scanner";
+import { ScanModeCard } from "./scan-mode-card";
+import { TextAnalysisCard } from "./text-analysis-card";
 import { getProductByBarcode } from "@/lib/barcode";
+import { barcodeProductToMealData } from "@/lib/barcode-to-meal";
 
 interface ScanScreenProps {
   onScanFood: (imageFile?: File, foodName?: string, description?: string, fullData?: any) => void;
   onImageSelected?: (file: File) => void;
-}
-
-const scanCardClass =
-  "group relative flex flex-col items-start gap-4 overflow-hidden rounded-[2.5rem] border border-border/40 bg-card/40 p-6 text-left shadow-2xl shadow-black/[0.03] backdrop-blur-md transition-all duration-300 hover:shadow-primary/10 hover:bg-card active:scale-[0.98]";
-
-function ScanModeCard({
-  icon: Icon,
-  badge,
-  title,
-  description,
-  iconWrapClassName,
-  onClick,
-  index,
-}: {
-  icon: LucideIcon;
-  badge: string;
-  title: string;
-  description: string;
-  iconWrapClassName: string;
-  onClick: () => void;
-  index: number;
-}) {
-  return (
-    <motion.button
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.1 }}
-      whileHover={{ y: -4 }}
-      type="button"
-      onClick={onClick}
-      className={scanCardClass}
-    >
-      <div className="flex w-full items-start justify-between">
-        <div
-          className={cn(
-            "flex h-14 w-14 items-center justify-center rounded-2xl shadow-inner transition-transform group-hover:scale-110 duration-300",
-            iconWrapClassName
-          )}
-        >
-          <Icon className="h-6 w-6" aria-hidden />
-        </div>
-        <span className="rounded-full border border-border/40 bg-background/50 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground/80">
-          {badge}
-        </span>
-      </div>
-      <div>
-        <p className="text-xl font-black tracking-tight text-foreground">{title}</p>
-        <p className="mt-1.5 text-xs font-medium leading-relaxed text-muted-foreground/80">
-          {description}
-        </p>
-      </div>
-      {/* Decorative gradient corner */}
-      <div className="absolute -bottom-6 -right-6 h-12 w-12 bg-primary/10 blur-xl opacity-0 transition-opacity group-hover:opacity-100" />
-    </motion.button>
-  );
 }
 
 export function ScanScreen({ onScanFood, onImageSelected }: ScanScreenProps) {
@@ -102,20 +42,12 @@ export function ScanScreen({ onScanFood, onImageSelected }: ScanScreenProps) {
   const { toast } = useToast();
 
   const handleImageAnalysisInternal = async (imageFile: File) => {
-    try {
-      const { base64WithoutPrefix, mimeType } = await prepareImageForGroq(imageFile);
-      const idToken = user ? await user.getIdToken() : "";
-      const result = await analyzeFood(
-        {
-          imageBase64: base64WithoutPrefix,
-          imageMimeType: mimeType,
-        },
-        idToken
-      );
-      return result;
-    } catch (e) {
-      throw e;
-    }
+    const { base64WithoutPrefix, mimeType } = await prepareImageForGroq(imageFile);
+    const idToken = user ? await user.getIdToken() : "";
+    return analyzeFood(
+      { imageBase64: base64WithoutPrefix, imageMimeType: mimeType },
+      idToken
+    );
   };
 
   const routeImageFile = (file: File) => {
@@ -173,63 +105,13 @@ export function ScanScreen({ onScanFood, onImageSelected }: ScanScreenProps) {
     try {
       const product = await getProductByBarcode(barcode);
       if (product) {
-        // Preferimos los valores por porción (más realistas que "por 100 g").
-        const useServing = Boolean(product.perServing && product.servingSizeGrams);
-        const calories = useServing ? product.perServing!.calories : product.calories;
-        const macros = useServing
-          ? {
-              protein: product.perServing!.macros.protein,
-              carbs: product.perServing!.macros.carbs,
-              fat: product.perServing!.macros.fat,
-              fiber: product.perServing!.macros.fiber ?? 0,
-              sugar: product.perServing!.macros.sugar ?? 0,
-            }
-          : {
-              protein: product.macros.protein,
-              carbs: product.macros.carbs,
-              fat: product.macros.fat,
-              fiber: product.macros.fiber ?? 0,
-              sugar: product.macros.sugar ?? 0,
-            };
-
-        const recommendations: string[] = [];
-        if (useServing) {
-          recommendations.push(
-            `Valores calculados para 1 ración (${product.servingSizeGrams} g).`
-          );
-        } else {
-          recommendations.push("Valores nutricionales por 100 g del envase.");
-        }
-        if (product.nutriScore) {
-          recommendations.push(
-            `Nutri-Score del producto: ${product.nutriScore.toUpperCase()}.`
-          );
-        }
-        if (product.novaGroup) {
-          recommendations.push(
-            product.novaGroup >= 4
-              ? "Producto ultra-procesado (NOVA 4): modera su consumo."
-              : product.novaGroup === 3
-                ? "Alimento procesado (NOVA 3): consumo ocasional."
-                : "Alimento poco procesado."
-          );
-        }
-
         toast({
           title: "Producto encontrado",
           description: product.brand
             ? `${product.foodName} — ${product.brand}`
             : product.foodName,
         });
-        onScanFood(undefined, undefined, undefined, {
-          foodName: product.brand
-            ? `${product.foodName} (${product.brand})`
-            : product.foodName,
-          calories,
-          macros,
-          imageUrl: product.imageUrl ?? null,
-          recommendations,
-        });
+        onScanFood(undefined, undefined, undefined, barcodeProductToMealData(product));
       } else {
         toast({
           title: "Producto no encontrado",
@@ -466,78 +348,13 @@ export function ScanScreen({ onScanFood, onImageSelected }: ScanScreenProps) {
           <div className="h-px flex-1 bg-border/80" aria-hidden />
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-        >
-          <Card className="overflow-hidden border-primary/20 bg-gradient-to-b from-card to-card/80 shadow-lg shadow-primary/5">
-            <CardContent className="space-y-4 p-5 sm:p-6">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-2.5">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <Type className="h-4 w-4" aria-hidden />
-                  </div>
-                  <div>
-                    <Label
-                      htmlFor="scan-food-name"
-                      className="text-base font-semibold text-foreground"
-                    >
-                      Escribe el plato
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
-                      Cuantas más pistas, mejor la estimación.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex min-w-0 flex-col gap-2.5 sm:flex-row sm:items-stretch sm:gap-2">
-                <Input
-                  id="scan-food-name"
-                  placeholder="Ej. ensalada César con pollo a la plancha…"
-                  value={foodName}
-                  onChange={(e) => setFoodName(e.target.value)}
-                  className="h-12 w-full min-w-0 flex-1 rounded-xl border-border/80 bg-background/50 text-base sm:min-w-0 sm:text-sm"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleTextAnalysis();
-                    }
-                  }}
-                />
-                <div className="flex gap-2 sm:shrink-0">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="h-12 w-12 rounded-xl border-primary/25 bg-background"
-                    onClick={handlePasteFromClipboard}
-                    disabled={pasteLoading}
-                    title="Pegar imagen o texto del portapapeles"
-                    aria-label="Pegar del portapapeles"
-                  >
-                    {pasteLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <ClipboardPaste className="h-4 w-4" />
-                    )}
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={handleTextAnalysis}
-                    disabled={!foodName.trim()}
-                    className="h-12 min-w-[6.5rem] rounded-xl px-5"
-                    aria-label="Analizar por texto"
-                  >
-                    <Sparkles className="mr-1.5 h-4 w-4" />
-                    Analizar
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+        <TextAnalysisCard
+          foodName={foodName}
+          onFoodNameChange={setFoodName}
+          onAnalyze={handleTextAnalysis}
+          onPaste={handlePasteFromClipboard}
+          pasteLoading={pasteLoading}
+        />
 
         <motion.ul 
           initial={{ opacity: 0 }}

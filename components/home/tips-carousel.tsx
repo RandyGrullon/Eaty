@@ -49,24 +49,7 @@ import {
   STATIC_TIPS_NO_MEALS,
 } from "@/lib/nutrition-tip-defaults";
 import { buildRecipeSearchLinks } from "@/lib/nutrition-tip-recipes";
-
-function formatTipForShare(tip: PersonalizedNutritionTip): string {
-  const lines = [
-    `🔧 Qué cambiar: ${tip.whatToChange}`,
-    `📍 Dónde aplicarlo: ${tip.whereApply}`,
-    ...(tip.whyItHelps ? [`💡 Por qué ayuda: ${tip.whyItHelps}`] : []),
-    "",
-    `📖 Receta: ${tip.recipe.title}`,
-    "Ingredientes:",
-    ...tip.recipe.ingredients.map(ing => `- ${ing}`),
-    "",
-    "Pasos:",
-    ...tip.recipe.steps.map((s, i) => `${i + 1}. ${s}`),
-    "",
-    "Consejo de Eaty",
-  ];
-  return lines.join("\n");
-}
+import { shareNutritionTip } from "@/lib/tip-share";
 
 interface TipsCarouselProps {
   className?: string;
@@ -223,25 +206,13 @@ export function TipsCarousel({ className, dailyGoal }: TipsCarouselProps) {
 
   const shareTip = useCallback(
     async (tip: PersonalizedNutritionTip) => {
-      const text = formatTipForShare(tip);
       try {
-        if (navigator.share) {
-          await navigator.share({
-            title: "Consejo nutricional — Eaty",
-            text,
-            url: window.location.href,
-          });
-          toast({
-            title: "Consejo compartido",
-            description: "El consejo se compartió correctamente",
-          });
-        } else {
-          await navigator.clipboard.writeText(text);
-          toast({
-            title: "Consejo copiado",
-            description: "El texto se copió al portapapeles",
-          });
-        }
+        const action = await shareNutritionTip(tip);
+        toast(
+          action === "shared"
+            ? { title: "Consejo compartido", description: "El consejo se compartió correctamente" }
+            : { title: "Consejo copiado", description: "El texto se copió al portapapeles" }
+        );
       } catch {
         toast({
           title: "Error al compartir",

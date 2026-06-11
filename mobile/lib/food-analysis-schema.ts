@@ -1,0 +1,241 @@
+import { z } from "zod";
+
+export const confidenceLevelSchema = z.enum(["low", "medium", "high"]);
+
+export const portionRelativeSchema = z.enum(["small", "medium", "large"]);
+
+export const portionHypothesisSchema = z.union([
+  z.object({
+    relativeSize: portionRelativeSchema,
+    notes: z.string().optional(),
+  }),
+  z
+    .string()
+    .min(1)
+    .max(500)
+    .transform((notes) => ({
+      relativeSize: "medium" as z.infer<typeof portionRelativeSchema>,
+      notes,
+    })),
+]);
+
+export const foodMacrosSchema = z.object({
+  protein: z.number().nonnegative(),
+  carbs: z.number().nonnegative(),
+  fat: z.number().nonnegative(),
+  // fiber y sugar son secundarios y el modelo los omite con frecuencia
+  // (sobre todo en el análisis por texto): por defecto 0 para no fallar.
+  fiber: z.number().nonnegative().default(0),
+  sugar: z.number().nonnegative().default(0),
+});
+
+/** Desglose opcional por componente (mejor explicabilidad). */
+export const componentBreakdownSchema = z.object({
+  name: z.string().min(1).max(80),
+  estimatedGrams: z.number().min(1).max(2000).optional(),
+  calories: z.number().min(0).max(3000).optional(),
+});
+
+/** Respuesta completa esperada del modelo (JSON mode). */
+export const foodAnalysisRawSchema = z.object({
+  // En el análisis por texto (sin imagen) el modelo suele devolver esta lista
+  // vacía: la aceptamos en lugar de fallar. La UI la oculta si está vacía.
+  visibleComponents: z.array(z.string()).max(24).default([]),
+  dishDescription: z.string().min(1).max(500),
+  // Los campos opcionales/decorativos usan .catch(undefined): si el modelo
+  // los devuelve fuera de rango (p. ej. estimatedWeightGrams=0 en análisis por
+  // texto) se descartan en lugar de invalidar TODA la respuesta.
+  cuisineOrStyle: z.string().max(120).optional().catch(undefined),
+  cookingClues: z
+    .union([z.string(), z.array(z.string())])
+    .transform((val) => (Array.isArray(val) ? val.join(", ") : val))
+    .optional()
+    .catch(undefined),
+  ambiguityNotes: z.string().max(400).optional().catch(undefined),
+  /** Recipiente detectado: "plato llano 26 cm", "bol 16 cm", etc. */
+  containerType: z.string().max(120).optional().catch(undefined),
+  /** Objetos de referencia detectados para calibración de escala. */
+  referenceObjects: z.array(z.string()).max(6).optional().catch(undefined),
+  /** Peso total estimado del plato en gramos. */
+  estimatedWeightGrams: z.number().min(1).max(3000).optional().catch(undefined),
+  /** Desglose opcional por componente (1-8 items). */
+  componentBreakdown: z
+    .array(componentBreakdownSchema)
+    .max(8)
+    .optional()
+    .catch(undefined),
+  portionHypothesis: portionHypothesisSchema,
+  confidence: confidenceLevelSchema,
+  foodName: z.string().min(1).max(200),
+  calories: z.number().min(1).max(3500),
+  macros: foodMacrosSchema,
+  recommendations: z.array(z.string()).max(5).default([]),
+});
+
+export type FoodAnalysisRaw = z.infer<typeof foodAnalysisRawSchema>;
+
+/** Resumen de lo que la IA "vio" o interpretó (foto o texto), para mostrar en la UI. */
+export type FoodAnalysisAiContext = {
+  dishDescription: string;
+  visibleComponents: string[];
+  confidence: "low" | "medium" | "high";
+  portionLabel: string;
+  cuisineOrStyle?: string;
+  cookingClues?: string;
+  ambiguityNotes?: string;
+  containerType?: string;
+  referenceObjects?: string[];
+  estimatedWeightGrams?: number;
+  componentBreakdown?: Array<{
+    name: string;
+    estimatedGrams?: number;
+    calories?: number;
+  }>;
+};
+
+function portionHypothesisToLabel(
+  p: z.infer<typeof portionHypothesisSchema>
+): string {
+  const rel =
+    p.relativeSize === "small"
+      ? "pequeña"
+      : p.relativeSize === "large"
+        ? "grande"
+        : "mediana / estándar";
+  const n = p.notes?.trim();
+  return n ? `Porción aprox. ${rel} — ${n}` : `Porción aprox. ${rel}`;
+}
+
+export function buildAiContextFromRaw(
+  raw: FoodAnalysisRaw
+): FoodAnalysisAiContext {
+  return {
+    dishDescription: raw.dishDescription.trim(),
+    visibleComponents: [...raw.visibleComponents],
+    confidence: raw.confidence,
+    portionLabel: portionHypothesisToLabel(raw.portionHypothesis),
+    cuisineOrStyle: raw.cuisineOrStyle?.trim() || undefined,
+    cookingClues: raw.cookingClues?.trim() || undefined,
+    ambiguityNotes: raw.ambiguityNotes?.trim() || undefined,
+    containerType: raw.containerType?.trim() || undefined,
+    referenceObjects: raw.referenceObjects?.length ? [...raw.referenceObjects] : undefined,
+    estimatedWeightGrams: raw.estimatedWeightGrams,
+    componentBreakdown: raw.componentBreakdown?.length
+      ? raw.componentBreakdown.map((c) => ({
+          name: c.name.trim(),
+          estimatedGrams: c.estimatedGrams,
+          calories: c.calories,
+        }))
+      : undefined,
+  };
+}
+
+/** Un consejo accionable: qué cambiar, dónde, por qué y la receta generada. */
+export const personalizedNutritionTipSchema = z.object({
+  whatToChange: z.string().min(12).max(260),
+  whereApply: z.string().min(12).max(200),
+  whyItHelps: z.string().min(12).max(220).optional(),
+  recipe: z.object({
+    title: z.string().min(4).max(100),
+    ingredients: z.array(z.string().min(2)).min(2),
+    steps: z.array(z.string().min(10)).min(2),
+  }),
+  miniSteps: z.array(z.string().min(12).max(160)).min(2).max(3),
+});
+
+export type PersonalizedNutritionTip = z.infer<
+  typeof personalizedNutritionTipSchema
+>;
+
+export const nutritionTipsResponseSchema = z.object({
+  tips: z.array(personalizedNutritionTipSchema).min(3).max(5),
+});
+
+export type NutritionTipsResponse = z.infer<
+  typeof nutritionTipsResponseSchema
+>;
+
+export function parseNutritionTipsFromApi(
+  data: unknown
+): PersonalizedNutritionTip[] {
+  const parsed = nutritionTipsResponseSchema.safeParse(data);
+  if (!parsed.success) {
+    throw new Error("Payload de consejos inválido");
+  }
+  return parsed.data.tips;
+}
+
+/** Campos que la app usa al guardar / mostrar una comida analizada. */
+export type FoodAnalysisMealFields = {
+  foodName: string;
+  calories: number;
+  macros: {
+    protein: number;
+    carbs: number;
+    fat: number;
+    fiber: number;
+    sugar: number;
+  };
+  recommendations: string[];
+  /** Presente cuando el análisis completo vino de la IA (con JSON válido). */
+  aiContext?: FoodAnalysisAiContext;
+};
+
+const MACRO_CALORIE_TOLERANCE = 0.3;
+
+export function macroCaloriesRough(macros: FoodAnalysisMealFields["macros"]): number {
+  return (
+    4 * macros.protein +
+    4 * macros.carbs +
+    9 * macros.fat +
+    2 * macros.fiber
+  );
+}
+
+export function isMacroCalorieCoherent(
+  calories: number,
+  macros: FoodAnalysisMealFields["macros"]
+): boolean {
+  if (calories <= 0) return false;
+  const rough = macroCaloriesRough(macros);
+  if (rough <= 0) return false;
+  return (
+    Math.abs(rough - calories) / calories <= MACRO_CALORIE_TOLERANCE
+  );
+}
+
+export function toMealFields(raw: FoodAnalysisRaw): FoodAnalysisMealFields {
+  return {
+    foodName: raw.foodName.trim(),
+    calories: Math.round(raw.calories),
+    macros: {
+      protein: Math.round(raw.macros.protein),
+      carbs: Math.round(raw.macros.carbs),
+      fat: Math.round(raw.macros.fat),
+      fiber: Math.round(raw.macros.fiber),
+      sugar: Math.round(raw.macros.sugar),
+    },
+    recommendations: raw.recommendations.map((s) => s.trim()).filter(Boolean),
+  };
+}
+
+/**
+ * A partir de la respuesta validada de la IA: ajusta kcal a los gramos (fórmula 4/4/9/2) si
+ * el modelo se contradijo; mantiene los gramos (lo que "vino" de la estimación) y no usa
+ * valores fijos de servidor.
+ */
+export function buildMealFromAnalyzedRaw(
+  parsed: FoodAnalysisRaw
+): FoodAnalysisMealFields {
+  const meal = toMealFields(parsed);
+  const rough = macroCaloriesRough(meal.macros);
+  let calories = meal.calories;
+  if (rough > 0 && !isMacroCalorieCoherent(calories, meal.macros)) {
+    calories = Math.max(1, Math.min(3500, Math.round(rough)));
+  }
+  return {
+    ...meal,
+    calories,
+    aiContext: buildAiContextFromRaw(parsed),
+  };
+}

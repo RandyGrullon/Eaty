@@ -1,10 +1,12 @@
 export const MAIN_TAB_ORDER = [
   "home",
-  "planning",
+  "diets",
   "scan",
   "history",
   "profile",
+  "settings",
 ] as const;
+
 
 export type MainTab = (typeof MAIN_TAB_ORDER)[number];
 

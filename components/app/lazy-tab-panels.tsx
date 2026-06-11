@@ -34,3 +34,20 @@ export const WeeklyPlannerLazy = dynamic(
   { ssr: true }
 );
 
+export const DietsScreenLazy = dynamic(
+  () =>
+    import("@/components/diets/diets-screen").then((m) => ({
+      default: m.DietsScreen,
+    })),
+  { ssr: true }
+);
+
+export const SettingsPageLazy = dynamic(
+  () =>
+    import("@/components/settings/settings-page").then((m) => ({
+      default: m.SettingsPage,
+    })),
+  { ssr: true }
+);
+
+
