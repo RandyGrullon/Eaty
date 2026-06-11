@@ -6,6 +6,7 @@ import {
   isFirebaseServiceAccountJsonConfigured,
 } from "@/lib/firebase-admin";
 import { logger } from "@/lib/logger";
+import { isPremiumUser } from "@/lib/subscription-server";
 import { getCookieValueFromRequest } from "@/lib/parse-cookie-header";
 import { EATY_SERVER_SESSION_COOKIE } from "@/lib/server-auth-session-constants";
 
@@ -101,14 +102,22 @@ function usageDayKeyUtc(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function dailyAnalyzeLimit(): number {
-  const n = parseInt(process.env.DAILY_ANALYZE_LIMIT ?? "120", 10);
-  return Number.isFinite(n) && n > 0 ? n : 120;
+function envLimit(name: string, fallback: number): number {
+  const n = parseInt(process.env[name] ?? "", 10);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
 }
 
-function dailyTipsLimit(): number {
-  const n = parseInt(process.env.DAILY_TIPS_LIMIT ?? "40", 10);
-  return Number.isFinite(n) && n > 0 ? n : 40;
+/** Límites por plan: free acotado (modelo de suscripción), premium amplio. */
+function dailyAnalyzeLimit(isPremium: boolean): number {
+  return isPremium
+    ? envLimit("DAILY_ANALYZE_LIMIT", 120)
+    : envLimit("FREE_DAILY_ANALYZE_LIMIT", 5);
+}
+
+function dailyTipsLimit(isPremium: boolean): number {
+  return isPremium
+    ? envLimit("DAILY_TIPS_LIMIT", 40)
+    : envLimit("FREE_DAILY_TIPS_LIMIT", 5);
 }
 
 /**
@@ -121,8 +130,9 @@ export async function enforceDailyQuota(
 ): Promise<void> {
   const db = getAdminFirestore();
   const ref = db.doc(`users/${uid}/usage/${usageDayKeyUtc()}`);
-  const analyzeLimit = dailyAnalyzeLimit();
-  const tipsLimit = dailyTipsLimit();
+  const isPremium = await isPremiumUser(uid);
+  const analyzeLimit = dailyAnalyzeLimit(isPremium);
+  const tipsLimit = dailyTipsLimit(isPremium);
 
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
@@ -137,7 +147,9 @@ export async function enforceDailyQuota(
       if (analyzeCount >= analyzeLimit) {
         throw new HttpApiError(
           429,
-          `Límite diario de análisis (${analyzeLimit}) alcanzado (UTC). Vuelve mañana o pide subir DAILY_ANALYZE_LIMIT en el servidor.`
+          isPremium
+            ? `Límite diario de análisis (${analyzeLimit}) alcanzado (UTC). Vuelve mañana.`
+            : `Llegaste al límite gratuito de ${analyzeLimit} análisis por día. Pásate a Eaty Premium para análisis ilimitados.`
         );
       }
       tx.set(
@@ -154,7 +166,9 @@ export async function enforceDailyQuota(
       if (tipsCount >= tipsLimit) {
         throw new HttpApiError(
           429,
-          `Límite diario de consejos por IA (${tipsLimit}) alcanzado.`
+          isPremium
+            ? `Límite diario de consejos por IA (${tipsLimit}) alcanzado.`
+            : `Llegaste al límite gratuito de ${tipsLimit} consejos por día. Eaty Premium lo desbloquea.`
         );
       }
       tx.set(

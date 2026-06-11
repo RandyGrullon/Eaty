@@ -2,6 +2,10 @@
 
 App Next.js (App Router) + Firebase + Groq para registro y análisis de comidas.
 
+La **app móvil (iOS/Android)** vive en [`mobile/`](mobile/README.md): Expo +
+React Native, mismo Firebase y mismo backend (estas API routes), con
+suscripciones vía RevenueCat.
+
 El módulo de **entrenos (gym)** está en la PWA **Body Matter**, repo aparte: [github.com/RandyGrullon/bodymeter](https://github.com/RandyGrullon/bodymeter) (mismo Firebase).
 
 ## Desarrollo

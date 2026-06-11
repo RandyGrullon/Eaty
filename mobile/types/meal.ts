@@ -1,0 +1,69 @@
+import type { FoodAnalysisAiContext } from "@/lib/food-analysis-schema";
+
+export interface Meal {
+  id: string;
+  imageUrl: string | null;
+  foodName: string;
+  calories: number;
+  macros: {
+    protein: number;
+    carbs: number;
+    fat: number;
+    fiber: number;
+    sugar: number;
+  };
+  recommendations: string[];
+  /** Qué vio/interpretó el modelo (descripción, confianza, porción, etc.). */
+  aiContext?: FoodAnalysisAiContext;
+  /** Humor o estado de ánimo tras la comida. */
+  mood?: "energetic" | "heavy" | "neutral" | "satisfied";
+  /** Si la comida es un plan futuro. */
+  isPlanned?: boolean;
+  createdAt: Date;
+}
+
+export interface User {
+  uid: string;
+  email: string;
+  displayName?: string;
+}
+
+export interface UserProfile {
+  uid: string;
+  /** ISO local date YYYY-MM-DD; si existe, la edad mostrada se deriva de aquí. */
+  birthDate?: string;
+  age?: number;
+  gender?: "male" | "female" | "other";
+  weight?: number | string; // in kg or encrypted string
+  height?: number | string; // in cm or encrypted string
+  /** Unidad preferida en la UI; el peso en Firestore sigue en kg. */
+  weightUnit?: "kg" | "lbs";
+  /** Unidad preferida en la UI; la altura en Firestore sigue en cm. */
+  heightUnit?: "cm" | "inches";
+  activityLevel?: "sedentary" | "light" | "moderate" | "active" | "very_active";
+  fitnessGoal?: "bulking" | "shedding" | "maintenance";
+  currentStreak?: number;
+  lastActiveDate?: Date;
+  achievements?: string[];
+  points?: number;
+  level?: number;
+  /** Alérgenos o ingredientes a evitar configurados por el usuario. */
+  allergens?: string[];
+  /** Idioma preferido para las respuestas de la IA (ej: 'es', 'en'). */
+  language?: string;
+  /** Dieta activa (de `users/{uid}/diets`); ajusta las metas mostradas. */
+  activeDietId?: string;
+  /** Metas que sobreescriben el TDEE cuando hay una dieta activa. */
+  customGoals?: {
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+  };
+  /** Equipamiento disponible para el coach de entrenamiento. */
+  equipment?: string[];
+  /** Días de entrenamiento por semana (para sugerencias del coach). */
+  trainingDaysPerWeek?: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
