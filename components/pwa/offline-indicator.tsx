@@ -46,7 +46,7 @@ export function OfflineIndicator() {
   }
 
   return (
-    <div className="fixed top-4 left-4 right-4 z-50">
+    <div className="fixed top-[max(1rem,env(safe-area-inset-top))] left-4 right-4 z-50">
       <Card
         className={`${isOnline ? "bg-success text-success-foreground" : "bg-warning text-warning-foreground"} border-none`}
       >

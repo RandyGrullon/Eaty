@@ -64,7 +64,7 @@ export function InstallPrompt() {
   }
 
   return (
-    <div className="fixed bottom-20 left-4 right-4 z-40">
+    <div className="fixed bottom-[calc(6rem_+_env(safe-area-inset-bottom))] left-4 right-4 z-40 sm:bottom-6">
       <Card className="bg-primary text-primary-foreground border-primary">
         <CardContent className="p-4">
           <div className="flex items-center gap-3">

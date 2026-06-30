@@ -31,8 +31,8 @@ export function ImageDescriptionStep({
   }, [file]);
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <div className="bg-primary p-4 text-primary-foreground">
+    <div className="flex min-h-dvh flex-col bg-background">
+      <div className="bg-primary p-4 pt-[max(1rem,env(safe-area-inset-top))] text-primary-foreground">
         <div className="mx-auto max-w-4xl">
           <h1 className="text-xl font-bold">Agregar descripción</h1>
           <p className="text-sm opacity-90">

@@ -27,7 +27,7 @@ export function AuthScreen() {
   const [isLogin, setIsLogin] = useState(true);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col lg:flex-row">
+    <div className="min-h-dvh bg-background flex flex-col lg:flex-row">
       <aside className="relative lg:w-[42%] min-h-[220px] lg:min-h-screen overflow-hidden border-b lg:border-b-0 lg:border-r border-border">
         <div
           className="absolute inset-0 bg-gradient-to-br from-primary via-primary/90 to-chart-2 opacity-[0.97]"

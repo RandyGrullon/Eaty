@@ -147,7 +147,17 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    /* Evita que iOS reescale el texto al rotar y bloquea el zoom por gesto. */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
   body {
     @apply bg-background text-foreground;
+    /* Evita el doble-tap-zoom y el scroll horizontal accidental en móvil. */
+    touch-action: manipulation;
+    overflow-x: hidden;
   }
 }

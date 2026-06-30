@@ -19,7 +19,7 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
   ]
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 pt-2 bg-gradient-to-t from-background via-background/95 to-transparent sm:hidden">
+    <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-[calc(1rem_+_env(safe-area-inset-bottom))] pt-2 bg-gradient-to-t from-background via-background/95 to-transparent sm:hidden">
       <nav className="mx-auto flex h-16 max-w-md items-center justify-around rounded-[24px] border border-border/40 bg-card/70 px-2 shadow-2xl shadow-black/5 backdrop-blur-xl">
         {tabs.map((tab) => {
           const Icon = tab.icon
@@ -43,7 +43,7 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
               }`}>
                 <Icon className={`h-5 w-5 ${isActive ? "fill-primary/10" : ""}`} />
               </div>
-              <span className={`text-[10px] font-bold tracking-tight transition-all ${
+              <span className={`whitespace-nowrap text-[10px] font-bold tracking-tight transition-all ${
                 isActive ? "opacity-100 scale-100" : "opacity-70 scale-95"
               }`}>
                 {tab.label}

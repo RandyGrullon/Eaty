@@ -304,7 +304,7 @@ function AppContent() {
   if (plannerOpen) {
     return (
       <>
-        <div className="h-[100dvh] overflow-y-auto bg-background">
+        <div className="h-[100dvh] overflow-y-auto bg-background pt-[env(safe-area-inset-top)]">
           <WeeklyPlannerLazy
             onAddMeal={handleAddMealFromPlanner}
             onClose={() => setPlannerOpen(false)}

@@ -65,7 +65,7 @@ export function DashboardScreen({
         <div className="pointer-events-none absolute -top-24 right-0 h-80 w-80 rounded-full bg-primary/25 blur-3xl sm:right-12" aria-hidden />
         <div className="pointer-events-none absolute bottom-0 left-0 h-64 w-64 rounded-full bg-chart-2/20 blur-3xl" aria-hidden />
 
-        <div className="relative z-10 mx-auto max-w-full px-4 pt-8 pb-10 sm:px-8 lg:pt-10 lg:pb-12">
+        <div className="relative z-10 mx-auto max-w-full px-4 pt-[max(2rem,env(safe-area-inset-top))] pb-10 sm:px-8 lg:pt-10 lg:pb-12">
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -87,7 +87,7 @@ export function DashboardScreen({
                   </motion.div>
                 ) : null}
               </div>
-              <h1 className="mt-2 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+              <h1 className="mt-2 text-3xl font-bold tracking-tight text-foreground sm:text-4xl break-words">
                 {getGreeting()},{" "}
                 <span className="bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
                   {displayName}

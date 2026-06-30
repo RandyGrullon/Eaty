@@ -16,7 +16,7 @@ export function MealTimelineGroup({ dateString, dayMeals, onSelect }: MealTimeli
 
   return (
     <div className="relative">
-      <div className="mb-6 flex items-center justify-between sticky top-[4.5rem] z-20 py-2 bg-background/80 backdrop-blur-md -mx-4 px-4 sm:mx-0 sm:px-0 sm:bg-transparent sm:backdrop-blur-none">
+      <div className="mb-6 flex items-center justify-between sticky top-[env(safe-area-inset-top)] z-20 py-2 bg-background/80 backdrop-blur-md -mx-4 px-4 sm:mx-0 sm:px-0 sm:bg-transparent sm:backdrop-blur-none">
         <div className="flex items-center gap-4">
           <div className="hidden sm:flex h-[64px] w-[64px] items-center justify-center rounded-[1.5rem] bg-card border border-border/40 shadow-xl shadow-black/[0.02] shrink-0 z-10">
             <div className="text-center">

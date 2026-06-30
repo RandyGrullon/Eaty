@@ -39,7 +39,7 @@ export function AnalyzingFoodOverlay() {
   }, []);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-6">
+    <div className="flex min-h-dvh items-center justify-center bg-background p-6">
       <div className="w-full max-w-xs text-center">
         <Loader2
           className="mx-auto mb-6 h-12 w-12 animate-spin text-primary"

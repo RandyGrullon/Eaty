@@ -98,7 +98,7 @@ export function DishTutorialDrawer({
             </DrawerTitle>
           </DrawerHeader>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-5 pb-[calc(1.25rem_+_env(safe-area-inset-bottom))]">
             {!dish ? null : !tutorial ? (
               <div className="rounded-2xl border border-dashed border-border/50 bg-muted/20 p-8 text-center">
                 <ChefHat className="mx-auto mb-3 h-10 w-10 text-primary/50" />

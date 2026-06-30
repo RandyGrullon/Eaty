@@ -366,7 +366,7 @@ export function LiveScanner({ analyzeFrame, onConfirm, onClose }: LiveScannerPro
       </AnimatePresence>
 
       {/* Bottom controls */}
-      <div className="absolute bottom-0 inset-x-0 pb-10 px-6 z-10 flex flex-col items-center gap-3 pointer-events-auto">
+      <div className="absolute bottom-0 inset-x-0 pb-[calc(2.5rem_+_env(safe-area-inset-bottom))] px-6 z-10 flex flex-col items-center gap-3 pointer-events-auto">
         <AnimatePresence>
           {isAnalyzing && (
             <motion.div

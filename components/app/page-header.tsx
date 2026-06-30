@@ -41,7 +41,7 @@ export function PageHeader({
         className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-primary/10 blur-3xl opacity-50"
         aria-hidden
       />
-      <div className="relative z-10 mx-auto max-w-4xl px-4 pt-10 pb-8 sm:px-8">
+      <div className="relative z-10 mx-auto max-w-4xl px-4 pt-[max(2.5rem,env(safe-area-inset-top))] pb-8 sm:px-8">
         <div className="flex items-center gap-4">
           {leading}
           <div className="min-w-0 flex-1">

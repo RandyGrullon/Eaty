@@ -399,7 +399,7 @@ export function TipsCarousel({ className, dailyGoal }: TipsCarouselProps) {
                   type="button"
                   onClick={() => api?.scrollTo(index)}
                   className={cn(
-                    "h-2 w-2 rounded-full transition-all duration-300",
+                    "relative h-2 w-2 rounded-full transition-all duration-300 before:absolute before:-inset-3 before:content-['']",
                     current === index + 1
                       ? "scale-125 bg-primary"
                       : "bg-primary/25 hover:bg-primary/40"
@@ -491,7 +491,7 @@ export function TipsCarousel({ className, dailyGoal }: TipsCarouselProps) {
                   </div>
                 </div>
 
-                <div className="space-y-4 pb-12">
+                <div className="space-y-4 pb-[max(3rem,calc(env(safe-area-inset-bottom)_+_1rem))]">
                   <h4 className="text-lg font-black tracking-tight flex items-center gap-2">
                     <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center">
                       <ChefHat className="h-4 w-4 text-primary" />

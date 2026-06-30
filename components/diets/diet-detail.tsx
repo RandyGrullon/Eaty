@@ -137,7 +137,7 @@ export function DietDetailDrawer({
     <>
       <Drawer open={open} onOpenChange={onOpenChange}>
         <DrawerContent className="max-h-[92vh]">
-          <div className="mx-auto flex h-[88vh] w-full max-w-2xl flex-col overflow-hidden">
+          <div className="mx-auto flex h-full w-full max-w-2xl flex-col overflow-hidden">
             <div className="relative h-40 shrink-0 overflow-hidden">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -165,7 +165,7 @@ export function DietDetailDrawer({
               </div>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-5 pb-[calc(1.25rem_+_env(safe-area-inset-bottom))]">
               <p className="text-sm leading-relaxed text-muted-foreground">
                 {diet.description}
               </p>

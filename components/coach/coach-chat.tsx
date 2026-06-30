@@ -146,7 +146,7 @@ export function CoachChat() {
             </div>
             <div
               className={cn(
-                "relative max-w-[85%] rounded-[1.5rem] px-4 py-3 text-sm shadow-sm",
+                "relative max-w-[85%] min-w-0 break-words rounded-[1.5rem] px-4 py-3 text-sm shadow-sm",
                 m.role === "user"
                   ? "rounded-tr-none bg-primary text-primary-foreground"
                   : "prose prose-sm rounded-tl-none border border-border/40 bg-card text-foreground dark:prose-invert prose-strong:text-primary"
@@ -183,7 +183,7 @@ export function CoachChat() {
         )}
       </div>
 
-      <div className="shrink-0 border-t border-border/40 pt-3">
+      <div className="shrink-0 border-t border-border/40 pt-3 pb-[env(safe-area-inset-bottom)]">
         <div className="mb-3 flex flex-wrap gap-2">
           {QUICK_PROMPTS.map((q) => (
             <Button

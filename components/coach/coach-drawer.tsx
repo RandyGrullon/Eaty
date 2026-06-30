@@ -23,7 +23,7 @@ export function CoachDrawer({
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent className="max-h-[90vh]">
-        <div className="mx-auto flex h-[84vh] w-full max-w-lg flex-col overflow-hidden">
+        <div className="mx-auto flex h-[84vh] w-full max-w-lg flex-col overflow-hidden pb-[env(safe-area-inset-bottom)]">
           <DrawerHeader className="flex flex-row items-center justify-between border-b pb-4 shrink-0">
             <div className="flex items-center gap-2">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">

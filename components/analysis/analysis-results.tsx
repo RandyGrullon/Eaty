@@ -158,7 +158,7 @@ export function AnalysisResults({
     <div className="min-h-screen bg-background pb-32">
       {/* Header flotante */}
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/60 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-4xl items-center justify-between px-4">
+        <div className="mx-auto flex h-16 max-w-4xl items-center justify-between px-4 pt-[env(safe-area-inset-top)]">
           <Button variant="ghost" size="icon" onClick={onBack} className="rounded-xl">
             <ArrowLeft className="h-5 w-5" />
           </Button>
@@ -407,7 +407,7 @@ export function AnalysisResults({
       </div>
 
       {/* Botón de Guardar flotante */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 p-4 pb-8 bg-gradient-to-t from-background via-background/95 to-transparent flex justify-center sm:pb-4">
+      <div className="fixed bottom-0 left-0 right-0 z-40 p-4 pb-[calc(2rem_+_env(safe-area-inset-bottom))] bg-gradient-to-t from-background via-background/95 to-transparent flex justify-center sm:pb-4">
         <div className="w-full max-w-4xl flex gap-3">
           {fromPlanner ? (
             // Venimos del planificador: guardado directo en la fecha elegida.
