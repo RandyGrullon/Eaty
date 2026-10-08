@@ -1,257 +1,202 @@
 "use client";
 
+import { useMemo } from "react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useAppData } from "@/hooks/use-app-data";
 import { TipsCarousel } from "../home/tips-carousel";
-import { CalorieLoader } from "@/components/ui/calorie-loader";
-import { History, LogOut, Flame, Target, CalendarDays } from "lucide-react";
-import { useMemo } from "react";
-import { cn } from "@/lib/utils";
-import { logger } from "@/lib/logger";
+import { CalendarDays, Camera, Flame, Info, Salad } from "lucide-react";
 import { getGreeting, formatTodayLong } from "@/lib/date-format";
 import { ThemeToggle } from "@/components/app/theme-toggle";
-import { motion } from "framer-motion";
-import { CommunityChallenges } from "./community-challenges";
+import { EatyMark } from "@/components/app/eaty-logo";
 import { CalorieProgressRing } from "./calorie-progress-ring";
-import { StatTile } from "./stat-tile";
 import { HydrationTracker } from "./hydration-tracker";
 import { MacrosBreakdown } from "./macros-breakdown";
 import { RecentMeals } from "./recent-meals";
 import { WeeklyRhythm } from "./weekly-rhythm";
 
+const fadeUp = (delay = 0) => ({
+  initial: { opacity: 0, y: 12 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.45, delay, ease: [0.22, 1, 0.36, 1] as const },
+});
+
 export function DashboardScreen({
   onViewHistory,
   onOpenPlanner,
+  onScan,
 }: {
   onViewHistory: () => void;
   onOpenPlanner: () => void;
+  onScan?: () => void;
 }) {
-  const { user, logout } = useAuth();
-  const {
-    calorieData,
-    loading,
-    recentMeals,
-    weeklyProgress,
-    openMealEditor,
-  } = useAppData();
+  const { user } = useAuth();
+  const { calorieData, loading, meals, recentMeals, todayMeals, weeklyProgress, activeDiet, openMealEditor } =
+    useAppData();
 
-  const displayName = useMemo(
-    () => user?.displayName || user?.email?.split("@")[0] || "Usuario",
-    [user]
-  );
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-    } catch (error) {
-      logger.error("Error logging out", error);
-    }
-  };
+  const displayName = useMemo(() => {
+    const raw = user?.displayName || user?.email?.split("@")[0] || "";
+    return raw.split(" ")[0];
+  }, [user]);
 
   const goal = calorieData?.dailyGoal ?? 0;
   const consumed = calorieData?.consumed ?? 0;
   const overGoal = calorieData ? calorieData.remaining < 0 : false;
-  const dataReady = Boolean(calorieData && !loading);
+  const hasGoal = Boolean(calorieData && goal > 0);
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="min-h-screen bg-background pb-28 md:pb-10"
-    >
-      <section className="relative overflow-hidden border-b border-border/60">
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/[0.08] via-background to-chart-2/[0.06]" aria-hidden />
-        <div className="pointer-events-none absolute -top-24 right-0 h-80 w-80 rounded-full bg-primary/25 blur-3xl sm:right-12" aria-hidden />
-        <div className="pointer-events-none absolute bottom-0 left-0 h-64 w-64 rounded-full bg-chart-2/20 blur-3xl" aria-hidden />
-
-        <div className="relative z-10 mx-auto max-w-full px-4 pt-8 pb-10 sm:px-8 lg:pt-10 lg:pb-12">
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between"
-          >
+    <div className="min-h-full bg-background pb-32 md:pb-12">
+      <div className="mx-auto max-w-6xl px-4 pt-6 sm:px-6 lg:px-10 lg:pt-10">
+        {/* Cabecera */}
+        <motion.header {...fadeUp()} className="flex items-start justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <EatyMark className="h-10 w-10 md:hidden" />
             <div className="min-w-0">
-              <div className="flex items-center gap-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-                  Resumen diario
-                </p>
-                {calorieData?.streak ? (
-                  <motion.div
-                    initial={{ scale: 0.5, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    className="flex items-center gap-1 rounded-full bg-orange-500/10 px-2 py-0.5 text-[10px] font-black text-orange-600 dark:text-orange-400"
-                  >
-                    <Flame className="h-3 w-3 fill-current" />
-                    {calorieData.streak} DÍAS
-                  </motion.div>
-                ) : null}
-              </div>
-              <h1 className="mt-2 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-                {getGreeting()},{" "}
-                <span className="bg-gradient-to-r from-primary to-chart-2 bg-clip-text text-transparent">
-                  {displayName}
-                </span>
+              <p className="text-sm text-muted-foreground first-letter:uppercase">{formatTodayLong().toLowerCase()}</p>
+              <h1 className="text-2xl font-bold leading-tight sm:text-3xl">
+                {getGreeting()}
+                {displayName ? `, ${displayName}` : ""}
               </h1>
-              <p className="mt-2 capitalize text-muted-foreground text-sm sm:text-base">
-                {formatTodayLong()}
-              </p>
-            </div>
-            <div className="flex shrink-0 gap-2 self-start sm:self-auto">
-              <ThemeToggle />
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={onOpenPlanner}
-                className="h-11 w-11 rounded-xl border-primary/20 bg-primary/5 text-primary shadow-sm backdrop-blur-sm hover:bg-primary/10"
-                aria-label="Abrir planificador semanal"
-              >
-                <CalendarDays className="h-5 w-5" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={onViewHistory}
-                className="h-11 w-11 rounded-xl border-border/80 bg-card/80 shadow-sm backdrop-blur-sm"
-                aria-label="Ver historial"
-              >
-                <History className="h-5 w-5" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handleLogout}
-                className="h-11 w-11 rounded-xl border-border/80 bg-card/80 shadow-sm backdrop-blur-sm"
-                aria-label="Cerrar sesión"
-              >
-                <LogOut className="h-5 w-5" />
-              </Button>
-            </div>
-          </motion.div>
-
-          <div className="mt-10 grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-5">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.1 }}
-              className="lg:col-span-5"
-            >
-              <div className="flex h-full min-h-[300px] flex-col items-center justify-center rounded-3xl border border-border/80 bg-card/90 p-6 shadow-lg shadow-primary/5 backdrop-blur-sm sm:p-8">
-                {loading ? (
-                  <div className="flex flex-col items-center gap-4 py-8">
-                    <div className="h-36 w-36 animate-pulse rounded-full bg-muted" />
-                    <p className="text-sm text-muted-foreground">Sincronizando tu meta…</p>
-                  </div>
-                ) : calorieData && goal > 0 ? (
-                  <CalorieProgressRing consumed={consumed} goal={goal} overGoal={overGoal} />
-                ) : (
-                  <div className="text-center text-muted-foreground text-sm max-w-xs">
-                    Completa tu perfil para ver el anillo de progreso frente a tu meta diaria.
-                  </div>
-                )}
-              </div>
-            </motion.div>
-
-            <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:col-span-7 lg:grid-cols-2">
-              <StatTile
-                icon={Flame}
-                label="Calorías hoy"
-                value={consumed}
-                sub="Registradas en tus comidas"
-                className="col-span-2 sm:col-span-1"
-              />
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="col-span-2 sm:col-span-1 rounded-[2rem] border border-border/40 bg-card/60 p-5 shadow-2xl shadow-black/[0.03] backdrop-blur-md"
-              >
-                {calorieData ? (
-                  <HydrationTracker glasses={calorieData.waterGlasses} />
-                ) : (
-                  <div className="h-full flex items-center justify-center text-[10px] text-muted-foreground">
-                    Cargando hidratación...
-                  </div>
-                )}
-              </motion.div>
-
-              {loading ? (
-                <div className="col-span-2">
-                  <CalorieLoader message="Calculando tu meta calórica…" />
-                </div>
-              ) : calorieData ? (
-                <StatTile
-                  icon={Target}
-                  label="Restantes"
-                  value={calorieData.remaining}
-                  sub={`Meta ${calorieData.dailyGoal} kcal`}
-                  className={cn(
-                    "col-span-2 sm:col-span-2 lg:col-span-2",
-                    overGoal && "border-warning/40 bg-warning/5"
-                  )}
-                />
-              ) : (
-                <div className="col-span-2 rounded-2xl border border-dashed border-border bg-muted/30 p-5 text-center text-sm text-muted-foreground">
-                  Completa el onboarding para ver calorías restantes.
-                </div>
-              )}
-
-              {dataReady && calorieData ? (
-                <MacrosBreakdown
-                  consumed={calorieData.consumedMacros}
-                  goal={calorieData.macros}
-                />
-              ) : null}
             </div>
           </div>
-
-          {dataReady && calorieData ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
-              className="mt-8 flex flex-wrap gap-4 items-center"
+          <div className="flex shrink-0 items-center gap-2">
+            {calorieData?.streak ? (
+              <span className="hidden items-center gap-1.5 rounded-full bg-protein/12 px-3 py-1.5 text-sm font-semibold text-protein sm:flex">
+                <Flame className="h-4 w-4" />
+                {calorieData.streak} días
+              </span>
+            ) : null}
+            <Button
+              variant="outline"
+              onClick={onOpenPlanner}
+              className="h-10 gap-2 rounded-full px-3 sm:px-4"
+              aria-label="Abrir planificador semanal"
             >
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-card/40 border border-border/40 text-[11px] font-bold">
-                <span className="text-muted-foreground uppercase tracking-wider">BMR:</span>
-                <span className="text-foreground">{calorieData.bmr} kcal</span>
+              <CalendarDays className="h-4 w-4" />
+              <span className="hidden sm:inline">Planificar</span>
+            </Button>
+            <div className="md:hidden">
+              <ThemeToggle />
+            </div>
+          </div>
+        </motion.header>
+
+        <div className="mt-6 grid gap-4 lg:grid-cols-12 lg:gap-5">
+          {/* Resumen del día */}
+          <motion.section {...fadeUp(0.05)} className="surface p-5 sm:p-7 lg:col-span-8">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold">Hoy</h2>
+                <p className="text-sm text-muted-foreground">
+                  {todayMeals.length === 0
+                    ? "Sin comidas registradas todavía"
+                    : `${todayMeals.length} ${todayMeals.length === 1 ? "comida registrada" : "comidas registradas"}`}
+                </p>
               </div>
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-card/40 border border-border/40 text-[11px] font-bold">
-                <span className="text-muted-foreground uppercase tracking-wider">TDEE:</span>
-                <span className="text-foreground">{calorieData.tdee} kcal</span>
+              {activeDiet ? (
+                <span className="flex max-w-[55%] items-center gap-1.5 truncate rounded-full bg-accent px-3 py-1 text-xs font-medium text-accent-foreground">
+                  <Salad className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">{activeDiet.name}</span>
+                </span>
+              ) : null}
+            </div>
+
+            {loading ? (
+              <div className="mt-6 flex flex-col items-center gap-8 sm:flex-row">
+                <div className="h-[196px] w-[196px] animate-pulse rounded-full bg-muted" />
+                <div className="w-full flex-1 space-y-5">
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="h-8 animate-pulse rounded-lg bg-muted" />
+                  ))}
+                </div>
               </div>
-              <p className="text-xs font-medium text-muted-foreground italic">
-                {calorieData.explanation}
+            ) : hasGoal && calorieData ? (
+              <div className="mt-6 flex flex-col items-center gap-8 sm:flex-row sm:items-center">
+                <CalorieProgressRing consumed={consumed} goal={goal} overGoal={overGoal} />
+                <div className="w-full flex-1">
+                  <dl className="mb-6 grid grid-cols-3 gap-2 text-center sm:text-left">
+                    {[
+                      { label: "Meta", value: goal },
+                      { label: "Consumido", value: consumed },
+                      { label: "Gasto", value: calorieData.tdee },
+                    ].map((s) => (
+                      <div key={s.label} className="min-w-0 rounded-xl bg-muted/60 px-2.5 py-2">
+                        <dt className="truncate text-xs text-muted-foreground">{s.label}</dt>
+                        <dd className="font-display text-lg font-semibold tabular sm:text-xl">{s.value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                  <MacrosBreakdown consumed={calorieData.consumedMacros} goal={calorieData.macros} />
+                </div>
+              </div>
+            ) : (
+              <div className="mt-6 rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+                Completa tu perfil (peso, altura y actividad) para calcular tu meta diaria.
+              </div>
+            )}
+
+            {calorieData && hasGoal ? (
+              <p className="mt-5 flex items-start gap-2 text-xs text-muted-foreground">
+                <Info className="mt-px h-3.5 w-3.5 shrink-0" />
+                <span>
+                  Metabolismo basal {calorieData.bmr} kcal. {calorieData.explanation}
+                </span>
               </p>
+            ) : null}
+          </motion.section>
+
+          {/* Columna lateral */}
+          <div className="grid gap-4 lg:col-span-4 lg:gap-5">
+            <motion.button
+              {...fadeUp(0.1)}
+              type="button"
+              onClick={onScan}
+              className="group relative overflow-hidden rounded-2xl bg-primary p-5 text-left text-primary-foreground shadow-lg shadow-primary/20"
+            >
+              <div className="absolute -right-6 -top-6 h-28 w-28 rounded-full bg-primary-foreground/10" aria-hidden />
+              <div className="absolute -bottom-10 right-10 h-24 w-24 rounded-full bg-accent/25" aria-hidden />
+              <span className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-primary-foreground/15">
+                <Camera className="h-5 w-5" />
+              </span>
+              <p className="relative mt-4 font-display text-xl font-semibold">Registrar comida</p>
+              <p className="relative mt-1 text-sm opacity-85">
+                Haz una foto, descríbela o escanea el código de barras.
+              </p>
+            </motion.button>
+
+            <motion.div {...fadeUp(0.15)} className="surface p-5">
+              {calorieData ? (
+                <HydrationTracker glasses={calorieData.waterGlasses} />
+              ) : (
+                <div className="h-24 animate-pulse rounded-xl bg-muted" />
+              )}
             </motion.div>
-          ) : null}
-        </div>
-      </section>
+          </div>
 
-      <div className="mx-auto max-w-full px-4 sm:px-8 mt-12 pb-20">
-        <TipsCarousel
-          className="mb-12 border-none shadow-none bg-transparent p-0"
-          dailyGoal={dataReady && calorieData ? calorieData.dailyGoal : undefined}
-        />
-
-        <div className="grid gap-12 lg:grid-cols-12 lg:gap-16">
-          <div className="lg:col-span-7">
+          <motion.div {...fadeUp(0.2)} className="lg:col-span-7">
             <RecentMeals
               loading={loading}
               meals={recentMeals}
               onSelect={openMealEditor}
               onViewHistory={onViewHistory}
+              onScan={onScan}
             />
-            <div className="mt-12">
-              <CommunityChallenges />
-            </div>
-          </div>
+          </motion.div>
+          <motion.div {...fadeUp(0.25)} className="lg:col-span-5">
+            <WeeklyRhythm
+              loading={loading}
+              meals={meals}
+              dailyGoal={hasGoal ? goal : undefined}
+              weeklyProgress={loading ? null : weeklyProgress}
+            />
+          </motion.div>
+        </div>
 
-          <div className="lg:col-span-5">
-            <WeeklyRhythm loading={loading} weeklyProgress={weeklyProgress} />
-          </div>
+        <div className="mt-8">
+          <TipsCarousel dailyGoal={hasGoal ? goal : undefined} />
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }

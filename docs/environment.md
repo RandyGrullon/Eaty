@@ -7,8 +7,11 @@ Copia `.env.example` a `.env` o `.env.local` y rellena **todas** las `NEXT_PUBLI
 - **NEXT_PUBLIC_FIREBASE_***: SDK web; sin valores reales, `lib/firebase.ts` no inicializa.
 - **FIREBASE_SERVICE_ACCOUNT_JSON**: cadena JSON completa de la cuenta de servicio (una sola línea o escapada). Se usa solo en Node para `verifyIdToken` y escritura de cuotas en Firestore con Admin SDK.
 - **GROQ_API_KEY**: clave de Groq en el servidor.
-- **DAILY_ANALYZE_LIMIT** / **DAILY_TIPS_LIMIT**: límites diarios por `uid` (día UTC) para análisis de comida con **éxito** (los fallos o reintentos no cuentan) y generación de consejos. Aplican a usuarios **premium**.
-- **FREE_DAILY_ANALYZE_LIMIT** / **FREE_DAILY_TIPS_LIMIT** (default 5/5): límites del plan **gratuito**. El plan se determina con `users/{uid}/billing/subscription`, sincronizado por el webhook de RevenueCat.
+- **Cuotas diarias de IA** por `uid` (día UTC). Cada tipo tiene su propio contador en `users/{uid}/usage/{día}`. La unidad se **reserva antes** de llamar al LLM y se **devuelve** si la llamada falla. El plan se determina con `users/{uid}/billing/subscription`, sincronizado por el webhook de RevenueCat.
+  - Análisis de comida (`/api/analyze-food`): **FREE_DAILY_ANALYZE_LIMIT** (5) / **DAILY_ANALYZE_LIMIT** (120, premium).
+  - Consejos (`/api/nutrition-tips`): **FREE_DAILY_TIPS_LIMIT** (5) / **DAILY_TIPS_LIMIT** (40).
+  - Coach (`/api/coach`, `/api/coach/insights`, `/api/coach/workout`): **FREE_DAILY_COACH_LIMIT** (15) / **DAILY_COACH_LIMIT** (200).
+  - Dietas (`/api/diets/*`): **FREE_DAILY_DIETS_LIMIT** (5) / **DAILY_DIETS_LIMIT** (40).
 - **REVENUECAT_WEBHOOK_AUTH**: valor secreto del header `Authorization` que configuras en RevenueCat > Integrations > Webhooks apuntando a `/api/revenuecat/webhook`. Ver [mobile/README.md](../mobile/README.md) para el flujo completo de suscripciones.
 - **NEXT_PUBLIC_BODYMATTER_ORIGIN**: URL pública de la PWA **Body Matter** (otro subdominio o `http://localhost:3001` en local). Eaty la usa en Perfil para enlazar al gym.
 - **SERVER_SESSION_COOKIE_DOMAIN** (opcional): p. ej. `.tudominio.com` para que la cookie `eaty_session` la emitan Eaty y Body Matter y sea válida en ambos subdominios (mismo `path` y nombre en ambas apps).

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 import { Button } from "@/components/ui/button";
-import { X, Loader2, AlertCircle, Flashlight, FlashlightOff, RotateCw, Barcode as BarcodeIcon } from "lucide-react";
+import { X, Loader2, AlertCircle, Flashlight, FlashlightOff, RotateCw, Barcode as BarcodeIcon, Check } from "lucide-react";
 import { motion } from "framer-motion";
 import { logger } from "@/lib/logger";
 import { cn } from "@/lib/utils";
@@ -196,139 +196,127 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
   }, [startScanner, stopScanner]);
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col bg-black overflow-hidden">
-      {/* Camera region — fills screen */}
+    <div className="fixed inset-0 z-[100] flex flex-col overflow-hidden bg-black">
+      {/* Región de cámara a pantalla completa */}
       <div className="absolute inset-0">
-        <div id={regionId} className="h-full w-full [&>video]:object-cover [&>video]:h-full [&>video]:w-full" />
+        <div id={regionId} className="h-full w-full [&>video]:h-full [&>video]:w-full [&>video]:object-cover" />
       </div>
 
-      {/* Darken overlay around the box */}
+      {/* Oscurece alrededor del recuadro */}
       {!isInitializing && !error && (
-        <div className="absolute inset-0 pointer-events-none">
-          {/* Outer dim */}
-          <div className="absolute inset-0 bg-black/55" style={{
-            WebkitMaskImage: "radial-gradient(ellipse 50% 28% at 50% 50%, transparent 0%, transparent 60%, black 100%)",
-            maskImage: "radial-gradient(ellipse 50% 28% at 50% 50%, transparent 0%, transparent 60%, black 100%)",
-          }} />
+        <div className="pointer-events-none absolute inset-0">
+          <div
+            className="absolute inset-0 bg-black/55"
+            style={{
+              WebkitMaskImage:
+                "radial-gradient(ellipse 50% 28% at 50% 50%, transparent 0%, transparent 60%, black 100%)",
+              maskImage: "radial-gradient(ellipse 50% 28% at 50% 50%, transparent 0%, transparent 60%, black 100%)",
+            }}
+          />
         </div>
       )}
 
-      {/* Header */}
-      <div className="absolute top-0 inset-x-0 z-10 flex items-center justify-between px-5 pt-12 pb-3 pointer-events-auto">
-        <div className="rounded-full bg-black/55 backdrop-blur-md px-4 py-2 border border-white/10">
-          <p className="text-white text-[11px] font-black flex items-center gap-2 uppercase tracking-[0.2em]">
-            <BarcodeIcon className="h-3 w-3 text-emerald-400" />
-            Escáner de producto
-          </p>
-        </div>
+      {/* Cabecera */}
+      <div className="pointer-events-auto absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-3 px-4 pb-3 pt-[max(1rem,env(safe-area-inset-top))] sm:px-5">
+        <span className="flex min-w-0 items-center gap-2 rounded-full bg-black/60 px-3.5 py-2 text-sm font-medium text-white">
+          <BarcodeIcon className="h-4 w-4 shrink-0 text-primary" />
+          <span className="truncate">Escanear producto</span>
+        </span>
         <Button
-          variant="ghost" size="icon"
+          variant="ghost"
+          size="icon"
           onClick={onClose}
-          className="rounded-full bg-black/55 text-white hover:bg-black/75 border border-white/10 backdrop-blur-md"
+          aria-label="Cerrar escáner"
+          className="shrink-0 rounded-full bg-black/60 text-white hover:bg-black/80 hover:text-white"
         >
           <X className="h-5 w-5" />
         </Button>
       </div>
 
-      {/* Reticle frame */}
+      {/* Recuadro */}
       {!isInitializing && !error && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <motion.div
             className="relative"
             style={{ width: "78vmin", height: "44vmin", maxWidth: 380, maxHeight: 220 }}
-            animate={detected ? { scale: [1, 1.04, 1] } : { scale: 1 }}
+            animate={detected ? { scale: [1, 1.03, 1] } : { scale: 1 }}
             transition={{ duration: 0.35 }}
           >
-            {/* Corners */}
             {[
               "top-0 left-0 border-t-[3px] border-l-[3px] rounded-tl-2xl",
               "top-0 right-0 border-t-[3px] border-r-[3px] rounded-tr-2xl",
               "bottom-0 left-0 border-b-[3px] border-l-[3px] rounded-bl-2xl",
               "bottom-0 right-0 border-b-[3px] border-r-[3px] rounded-br-2xl",
             ].map((cls, i) => (
-              <div
-                key={i}
-                className={cn(
-                  "absolute w-10 h-10 transition-colors",
-                  detected ? "border-emerald-400" : "border-emerald-400",
-                  cls
-                )}
-                style={{ boxShadow: detected ? "0 0 22px rgba(52,211,153,0.85)" : "0 0 14px rgba(52,211,153,0.45)" }}
-              />
+              <div key={i} className={cn("absolute h-10 w-10 border-primary transition-colors", cls)} />
             ))}
 
-            {/* Scanning red beam */}
+            {/* Línea de escaneo */}
             {!detected && (
               <motion.div
-                className="absolute left-2 right-2 h-[2px] rounded-full"
-                style={{
-                  background: "linear-gradient(90deg, transparent, rgba(239, 68, 68, 0.95), transparent)",
-                  boxShadow: "0 0 12px rgba(239, 68, 68, 0.8)",
-                }}
+                className="absolute left-2 right-2 h-0.5 rounded-full bg-primary"
                 animate={{ top: ["10%", "90%", "10%"] }}
                 transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
               />
             )}
 
-            {/* Detected check */}
+            {/* Detectado */}
             {detected && (
               <motion.div
-                initial={{ scale: 0, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
                 className="absolute inset-0 flex items-center justify-center"
               >
-                <div className="bg-emerald-500 rounded-full p-3 shadow-lg shadow-emerald-500/50">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                </div>
+                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                  <Check className="h-7 w-7" strokeWidth={3} />
+                </span>
               </motion.div>
             )}
 
-            <p className="absolute -bottom-9 left-1/2 -translate-x-1/2 text-[10px] font-medium text-white/55 tracking-widest uppercase whitespace-nowrap">
+            <p className="absolute -bottom-9 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs text-white/70">
               {detected ? "Código detectado" : "Centra el código de barras"}
             </p>
           </motion.div>
         </div>
       )}
 
-      {/* Initializing */}
+      {/* Iniciando */}
       {isInitializing && !error && (
-        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black gap-4">
-          <div className="w-12 h-12 rounded-full border-[2.5px] border-emerald-400 border-t-transparent animate-spin" />
-          <p className="text-emerald-400/85 text-sm font-black tracking-widest uppercase">
-            Iniciando cámara...
-          </p>
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 bg-black">
+          <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <p className="text-sm text-white/80">Iniciando cámara…</p>
         </div>
       )}
 
       {/* Error */}
       {error && (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black p-8 text-center">
-          <div className="h-16 w-16 bg-red-500/15 rounded-full flex items-center justify-center mb-5">
-            <AlertCircle className="h-8 w-8 text-red-400" />
-          </div>
-          <p className="font-black text-white text-lg mb-2">
-            {error.kind === "permission" ? "Sin permiso" :
-              error.kind === "no-camera" ? "Cámara no disponible" :
-                error.kind === "in-use" ? "Cámara ocupada" :
-                  error.kind === "unsupported" ? "Navegador incompatible" : "Error de cámara"}
+          <span className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-destructive/20 text-destructive">
+            <AlertCircle className="h-6 w-6" />
+          </span>
+          <p className="mb-2 text-lg font-semibold text-white">
+            {error.kind === "permission"
+              ? "Sin permiso"
+              : error.kind === "no-camera"
+                ? "Cámara no disponible"
+                : error.kind === "in-use"
+                  ? "Cámara ocupada"
+                  : error.kind === "unsupported"
+                    ? "Navegador incompatible"
+                    : "Error de cámara"}
           </p>
-          <p className="text-sm text-white/55 mb-8 max-w-sm">{error.message}</p>
-          <div className="flex gap-3">
+          <p className="mb-8 max-w-sm text-sm text-white/70">{error.message}</p>
+          <div className="flex flex-wrap justify-center gap-3">
             {error.kind !== "unsupported" && error.kind !== "no-camera" && (
-              <Button
-                onClick={retry}
-                className="rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-black"
-              >
-                <RotateCw className="h-4 w-4 mr-2" />
+              <Button onClick={retry} className="h-11 rounded-full">
+                <RotateCw className="h-4 w-4" />
                 Reintentar
               </Button>
             )}
             <Button
               onClick={onClose}
               variant="outline"
-              className="rounded-xl bg-white/10 border-white/20 hover:bg-white/20 text-white"
+              className="h-11 rounded-full border-white/25 bg-white/10 text-white hover:bg-white/20 hover:text-white"
             >
               Cerrar
             </Button>
@@ -336,27 +324,26 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
         </div>
       )}
 
-      {/* Bottom controls */}
+      {/* Controles inferiores */}
       {!isInitializing && !error && (
-        <div className="absolute bottom-0 inset-x-0 z-10 flex flex-col items-center pb-12 pointer-events-auto gap-4">
+        <div className="pointer-events-auto absolute inset-x-0 bottom-0 z-10 flex flex-col items-center gap-4 px-4 pb-[max(2.5rem,env(safe-area-inset-bottom))]">
           {torchAvailable && (
             <Button
               onClick={toggleTorch}
               variant="outline"
               size="icon"
+              aria-label={torchOn ? "Apagar linterna" : "Encender linterna"}
               className={cn(
-                "rounded-full w-14 h-14 border-white/20 backdrop-blur-md transition-colors",
+                "h-14 w-14 rounded-full transition-colors",
                 torchOn
-                  ? "bg-yellow-400/20 text-yellow-300 border-yellow-300/40"
-                  : "bg-black/55 text-white hover:bg-black/75"
+                  ? "border-carbs bg-carbs/25 text-carbs hover:bg-carbs/35 hover:text-carbs"
+                  : "border-white/25 bg-black/60 text-white hover:bg-black/80 hover:text-white"
               )}
             >
               {torchOn ? <FlashlightOff className="h-5 w-5" /> : <Flashlight className="h-5 w-5" />}
             </Button>
           )}
-          <p className="text-[10px] font-medium text-white/40 tracking-wider uppercase">
-            EAN · UPC · Code 128 · QR · DataMatrix
-          </p>
+          <p className="text-xs text-white/60">EAN · UPC · Code 128 · QR · DataMatrix</p>
         </div>
       )}
     </div>

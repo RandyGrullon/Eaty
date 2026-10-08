@@ -7,6 +7,7 @@ import {
   Timestamp,
 } from "firebase/firestore";
 import { logger } from "@/lib/logger";
+import { localDayKey } from "@/lib/date-format";
 import { getDb } from "./db";
 import { getUserProfile } from "./profile";
 import { getUserMeals } from "./meals";
@@ -61,9 +62,7 @@ export async function updateWaterGlasses(
   delta: number
 ): Promise<number> {
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const dateKey = today.toISOString().split("T")[0];
+    const dateKey = localDayKey();
     const statsRef = doc(getDb(), "users", userId, "dailyStats", dateKey);
 
     const statsSnap = await getDoc(statsRef);
@@ -94,7 +93,8 @@ export async function evaluateAchievements(userId: string): Promise<string[]> {
     const profile = await getUserProfile(userId);
     if (!profile) return [];
 
-    const meals = await getUserMeals(userId);
+    // Las comidas planificadas no cuentan como registradas.
+    const meals = (await getUserMeals(userId)).filter((m) => !m.isPlanned);
     const achievements: string[] = profile.achievements || [];
     const newAchievements: string[] = [];
 

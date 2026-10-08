@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { toDateInputValue, fromDateInputValue } from "./date-format";
+import {
+  toDateInputValue,
+  fromDateInputValue,
+  localDayKey,
+  msUntilNextLocalMidnight,
+} from "./date-format";
 
 describe("toDateInputValue", () => {
   it("formatea como YYYY-MM-DD en hora local con padding", () => {
@@ -22,5 +27,24 @@ describe("fromDateInputValue", () => {
     expect(toDateInputValue(fromDateInputValue(toDateInputValue(original)))).toBe(
       "2026-03-15"
     );
+  });
+});
+
+describe("localDayKey", () => {
+  it("usa el día local, no el día UTC", () => {
+    // 00:30 local siempre debe ser el mismo día local, sea cual sea el huso.
+    expect(localDayKey(new Date(2026, 2, 10, 0, 30))).toBe("2026-03-10");
+    expect(localDayKey(new Date(2026, 2, 10, 23, 59))).toBe("2026-03-10");
+  });
+});
+
+describe("msUntilNextLocalMidnight", () => {
+  it("calcula lo que falta hasta las 00:00 locales del día siguiente", () => {
+    const now = new Date(2026, 2, 10, 23, 0, 0, 0);
+    const ms = msUntilNextLocalMidnight(now);
+    const at = new Date(now.getTime() + ms);
+    expect(at.getDate()).toBe(11);
+    expect(at.getHours()).toBe(0);
+    expect(at.getMinutes()).toBe(0);
   });
 });

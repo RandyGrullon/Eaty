@@ -14,11 +14,12 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { useAppData } from "@/hooks/use-app-data";
-import { Loader2, Trash2, Share2, CalendarClock } from "lucide-react";
+import { Loader2, Trash2, Share2, CalendarClock, ImageOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
 import { cn } from "@/lib/utils";
 import { GenerateDishImage } from "@/components/meal/generate-dish-image";
+import { MealThumb } from "@/components/meal/meal-thumb";
 
 /** Formatea una fecha al valor de un <input type="datetime-local"> (hora local). */
 function toDatetimeLocalValue(d: Date): string {
@@ -187,73 +188,53 @@ export function MealEditorDrawer() {
     >
       <DrawerContent
         className={cn(
-          "mx-auto max-w-2xl rounded-t-[3rem] border-t border-border/40 bg-background pb-10 pt-2 shadow-2xl",
+          "mx-auto max-w-2xl rounded-t-2xl border-t border-border bg-background pb-[max(1rem,env(safe-area-inset-bottom))]",
           "data-[vaul-drawer-direction=bottom]:max-h-[88vh]"
         )}
       >
-        <div className="mx-auto mt-2 h-1.5 w-12 rounded-full bg-muted/40" />
-
         {meal ? (
           <>
-            <DrawerHeader className="px-6 pb-6 pt-6 text-left">
-              <div className="flex items-center justify-between">
-                <div>
-                  <DrawerTitle className="text-2xl font-black tracking-tight text-foreground">
-                    Editar comida
-                  </DrawerTitle>
-                  <p className="mt-1 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-primary">
-                    {meal.isPlanned ? (
-                      <>
-                        <CalendarClock className="h-3.5 w-3.5" /> Comida planificada
-                      </>
-                    ) : (
-                      "Gestión de historial"
-                    )}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleShare}
-                    className="h-10 w-10 rounded-xl text-primary hover:bg-primary/10"
-                    aria-label="Compartir comida"
-                  >
-                    <Share2 className="h-5 w-5" />
-                  </Button>
-                  <div className="text-right">
-                    <p className="text-[10px] font-bold uppercase leading-none tracking-widest text-muted-foreground">
-                      {meal.isPlanned ? "Para el" : "Registrado"}
-                    </p>
-                    <p className="mt-1 text-xs font-black text-foreground">
+            <DrawerHeader className="px-5 pb-4 pt-4 text-left sm:px-6">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <DrawerTitle className="text-2xl font-bold">Editar comida</DrawerTitle>
+                  <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
+                    {meal.isPlanned ? <CalendarClock className="h-4 w-4 shrink-0 text-primary" /> : null}
+                    {meal.isPlanned ? "Planificada para el" : "Registrada el"}{" "}
+                    <span className="tabular">
                       {meal.createdAt.toLocaleString("es-ES", {
                         day: "numeric",
                         month: "short",
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
-                    </p>
-                  </div>
+                    </span>
+                  </p>
                 </div>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleShare}
+                  className="h-10 w-10 shrink-0 rounded-full"
+                  aria-label="Compartir comida"
+                >
+                  <Share2 className="h-4 w-4" />
+                </Button>
               </div>
             </DrawerHeader>
 
-            <div className="flex flex-col gap-8 overflow-y-auto px-6 pb-8">
+            <div className="flex flex-col gap-6 overflow-y-auto px-5 pb-6 sm:px-6">
               {imageUrl ? (
-                <div className="relative aspect-video w-full overflow-hidden rounded-[2.5rem] border border-border/40 bg-card shadow-inner">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={imageUrl}
-                    alt={meal.foodName}
-                    className="h-full w-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-                </div>
+                <MealThumb
+                  src={imageUrl}
+                  alt={meal.foodName}
+                  className="aspect-video w-full rounded-2xl border border-border"
+                  iconClassName="h-8 w-8"
+                />
               ) : (
-                <div className="flex h-32 w-full items-center justify-center rounded-[2.5rem] border border-dashed border-border/60 bg-muted/30">
-                  <p className="text-xs font-medium italic text-muted-foreground/60">
-                    Sin imagen adjunta
-                  </p>
+                <div className="flex h-28 w-full flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-muted/40">
+                  <ImageOff className="h-6 w-6 text-muted-foreground/60" />
+                  <p className="text-sm text-muted-foreground">Sin imagen</p>
                 </div>
               )}
 
@@ -262,27 +243,21 @@ export function MealEditorDrawer() {
                 onUseImage={(url) => setImageUrl(url)}
               />
 
-              <div className="grid gap-6 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="meal-name"
-                    className="ml-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground"
-                  >
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="meal-name" className="text-sm font-medium">
                     Nombre del plato
                   </Label>
                   <Input
                     id="meal-name"
                     value={foodName}
                     onChange={(e) => setFoodName(e.target.value)}
-                    className="h-12 rounded-2xl border-border/40 bg-card/40 px-4 font-bold shadow-sm transition-all focus:bg-card focus:shadow-md"
+                    className="h-11 rounded-xl"
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="meal-cal"
-                    className="ml-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground"
-                  >
+                <div className="space-y-1.5">
+                  <Label htmlFor="meal-cal" className="text-sm font-medium">
                     Calorías (kcal)
                   </Label>
                   <Input
@@ -291,40 +266,35 @@ export function MealEditorDrawer() {
                     min={0}
                     value={calories}
                     onChange={(e) => setCalories(e.target.value)}
-                    className="h-12 rounded-2xl border-border/40 bg-card/40 px-4 font-black tabular-nums text-primary shadow-sm transition-all focus:bg-card focus:shadow-md"
+                    className="h-11 rounded-xl font-semibold tabular"
                   />
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label
-                  htmlFor="meal-date"
-                  className="ml-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground"
-                >
-                  Fecha y hora del registro
+              <div className="space-y-1.5">
+                <Label htmlFor="meal-date" className="text-sm font-medium">
+                  Fecha y hora
                 </Label>
                 <Input
                   id="meal-date"
                   type="datetime-local"
                   value={recordedAt}
                   onChange={(e) => setRecordedAt(e.target.value)}
-                  className="h-12 rounded-2xl border-border/40 bg-card/40 px-4 font-bold shadow-sm transition-all focus:bg-card focus:shadow-md"
+                  className="h-11 rounded-xl tabular"
                 />
               </div>
 
-              <div className="space-y-4">
-                <Label className="ml-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                  Macronutrientes (gramos)
-                </Label>
-                <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Macronutrientes (g)</p>
+                <div className="grid grid-cols-3 gap-2">
                   {[
-                    { id: "meal-p", label: "Proteína", val: protein, set: setProtein, color: "focus:ring-chart-1" },
-                    { id: "meal-c", label: "Carbos", val: carbs, set: setCarbs, color: "focus:ring-chart-2" },
-                    { id: "meal-f", label: "Grasa", val: fat, set: setFat, color: "focus:ring-chart-4" },
-                    { id: "meal-fi", label: "Fibra", val: fiber, set: setFiber, color: "focus:ring-chart-3" },
-                    { id: "meal-s", label: "Azúcar", val: sugar, set: setSugar, color: "focus:ring-chart-5" },
+                    { id: "meal-p", label: "Proteína", val: protein, set: setProtein, dot: "bg-protein" },
+                    { id: "meal-c", label: "Carbos", val: carbs, set: setCarbs, dot: "bg-carbs" },
+                    { id: "meal-f", label: "Grasa", val: fat, set: setFat, dot: "bg-fat" },
+                    { id: "meal-fi", label: "Fibra", val: fiber, set: setFiber, dot: "bg-success" },
+                    { id: "meal-s", label: "Azúcar", val: sugar, set: setSugar, dot: "bg-muted-foreground" },
                   ].map((macro) => (
-                    <div key={macro.id} className="group relative">
+                    <div key={macro.id} className="relative">
                       <Input
                         id={macro.id}
                         type="number"
@@ -332,15 +302,13 @@ export function MealEditorDrawer() {
                         value={macro.val}
                         placeholder="0"
                         onChange={(e) => macro.set(e.target.value)}
-                        className={cn(
-                          "h-14 rounded-[1.25rem] border-border/40 bg-card/40 px-4 pt-6 font-black tabular-nums shadow-sm transition-all focus:bg-card focus:shadow-md",
-                          macro.color
-                        )}
+                        className="h-14 rounded-xl px-3 pt-5 font-semibold tabular"
                       />
                       <Label
                         htmlFor={macro.id}
-                        className="pointer-events-none absolute left-4 top-2 text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 transition-colors group-focus-within:text-primary"
+                        className="pointer-events-none absolute left-3 top-2 flex items-center gap-1 text-xs font-normal text-muted-foreground"
                       >
+                        <span className={cn("h-1.5 w-1.5 rounded-full", macro.dot)} />
                         {macro.label}
                       </Label>
                     </div>
@@ -348,72 +316,60 @@ export function MealEditorDrawer() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label
-                  htmlFor="meal-rec"
-                  className="ml-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground"
-                >
-                  Sugerencias (IA)
+              <div className="space-y-1.5">
+                <Label htmlFor="meal-rec" className="text-sm font-medium">
+                  Sugerencias de la IA
                 </Label>
                 <Textarea
                   id="meal-rec"
                   rows={3}
                   value={recommendationsText}
                   onChange={(e) => setRecommendationsText(e.target.value)}
-                  className="resize-none rounded-[1.5rem] border-border/40 bg-card/40 p-4 text-sm font-medium shadow-sm transition-all focus:bg-card focus:shadow-md"
+                  className="resize-none rounded-xl text-sm"
                 />
               </div>
             </div>
 
-            <DrawerFooter className="flex-row items-center gap-3 border-t border-border/40 px-6 pt-6">
+            <DrawerFooter className="flex-row items-center gap-2 border-t border-border px-5 pt-4 sm:px-6">
               <Button
                 type="button"
                 variant="ghost"
-                className="h-14 w-14 shrink-0 rounded-2xl text-destructive transition-colors hover:bg-destructive/10"
+                size="icon"
+                className="h-11 w-11 shrink-0 rounded-full text-destructive hover:bg-destructive/10 hover:text-destructive"
                 disabled={deleting || saving}
                 onClick={() => setDeleteOpen(true)}
+                aria-label="Eliminar comida"
               >
-                {deleting ? (
-                  <Loader2 className="h-6 w-6 animate-spin" />
-                ) : (
-                  <Trash2 className="h-6 w-6" />
-                )}
+                {deleting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Trash2 className="h-5 w-5" />}
               </Button>
               <DrawerClose asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-14 rounded-2xl border-border/40 bg-card/20 px-6 font-bold transition-all hover:bg-card"
-                >
+                <Button type="button" variant="outline" className="h-11 rounded-full px-5">
                   Cerrar
                 </Button>
               </DrawerClose>
               <Button
                 type="button"
-                className="h-14 flex-1 rounded-2xl px-6 font-black shadow-xl shadow-primary/20 transition-all active:scale-95"
+                className="h-11 min-w-0 flex-1 rounded-full px-5"
                 disabled={saving || deleting}
                 onClick={requestSaveConfirm}
               >
-                {saving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
-                {saving ? "Guardando..." : "Guardar cambios"}
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                {saving ? "Guardando…" : "Guardar cambios"}
               </Button>
             </DrawerFooter>
 
             {saveConfirmOpen && (
-              <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 p-6 backdrop-blur-sm">
-                <div className="w-full max-w-sm rounded-3xl border border-border/40 bg-card p-6 shadow-2xl">
-                  <h3 className="text-lg font-black text-foreground">
-                    ¿Guardar los cambios?
-                  </h3>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Se actualizarán nombre, calorías, macros y recomendaciones de esta
-                    entrada.
+              <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/85 p-6">
+                <div className="surface w-full max-w-sm p-6">
+                  <h3 className="text-lg font-semibold">¿Guardar los cambios?</h3>
+                  <p className="mt-1.5 text-sm text-muted-foreground">
+                    Se actualizarán nombre, calorías, macros y sugerencias de esta comida.
                   </p>
-                  <div className="mt-6 flex gap-3">
+                  <div className="mt-6 flex gap-2">
                     <Button
                       type="button"
                       variant="outline"
-                      className="flex-1 rounded-xl font-bold"
+                      className="h-11 flex-1 rounded-full"
                       onClick={() => setSaveConfirmOpen(false)}
                       disabled={saving}
                     >
@@ -421,7 +377,7 @@ export function MealEditorDrawer() {
                     </Button>
                     <Button
                       type="button"
-                      className="flex-1 rounded-xl font-black"
+                      className="h-11 flex-1 rounded-full"
                       onClick={() => void performSave()}
                       disabled={saving}
                     >
@@ -433,19 +389,17 @@ export function MealEditorDrawer() {
             )}
 
             {deleteOpen && (
-              <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 p-6 backdrop-blur-sm">
-                <div className="w-full max-w-sm rounded-3xl border border-border/40 bg-card p-6 shadow-2xl">
-                  <h3 className="text-lg font-black text-foreground">
-                    ¿Eliminar esta comida?
-                  </h3>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Se borrará del historial. Esta acción no se puede deshacer.
+              <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/85 p-6">
+                <div className="surface w-full max-w-sm p-6">
+                  <h3 className="text-lg font-semibold">¿Eliminar esta comida?</h3>
+                  <p className="mt-1.5 text-sm text-muted-foreground">
+                    Se borrará del historial. No se puede deshacer.
                   </p>
-                  <div className="mt-6 flex gap-3">
+                  <div className="mt-6 flex gap-2">
                     <Button
                       type="button"
                       variant="outline"
-                      className="flex-1 rounded-xl font-bold"
+                      className="h-11 flex-1 rounded-full"
                       onClick={() => setDeleteOpen(false)}
                       disabled={deleting}
                     >
@@ -454,7 +408,7 @@ export function MealEditorDrawer() {
                     <Button
                       type="button"
                       variant="destructive"
-                      className="flex-1 rounded-xl font-black"
+                      className="h-11 flex-1 rounded-full"
                       onClick={() => void performDelete()}
                       disabled={deleting}
                     >

@@ -1,4 +1,14 @@
 import {
+  isDemoAi,
+  demoCoachChat,
+  demoCoachInsight,
+  demoDiet,
+  demoDishTutorial,
+  demoFoodAnalysis,
+  demoNutritionTips,
+  demoWorkout,
+} from "@/lib/demo/ai-fixtures";
+import {
   buildFoodAnalysisUserPrompt,
   buildFoodTextRetryUserPrompt,
   buildFoodVisionRetryUserPrompt,
@@ -335,6 +345,11 @@ export async function runGroqChat(params: {
   temperature?: number;
   maxTokens?: number;
 }): Promise<string> {
+  if (isDemoAi()) {
+    const last = [...params.messages].reverse().find((m) => m.role === "user");
+    const text = typeof last?.content === "string" ? last.content : "";
+    return demoCoachChat(text);
+  }
   return groqChatCompletion(params);
 }
 
@@ -362,6 +377,7 @@ export async function runFoodAnalysisGroq(params: {
   allergens?: string[];
   lang?: string;
 }): Promise<FoodAnalysisMealFields> {
+  if (isDemoAi()) return demoFoodAnalysis(params);
   const hasImage = Boolean(params.imageBase64?.trim());
   const userText = buildFoodAnalysisUserPrompt({
     hasImage,
@@ -473,6 +489,7 @@ export async function runNutritionTipsGroq(params: {
   recentSummary?: string;
   lang?: string;
 }): Promise<PersonalizedNutritionTip[]> {
+  if (isDemoAi()) return demoNutritionTips();
   const userText = buildNutritionTipsUserPrompt(
     params.meals,
     params.totalCalories,
@@ -531,6 +548,7 @@ export async function runCoachInsightsGroq(params: {
   remainingProtein?: number;
   lang?: string;
 }): Promise<CoachInsight> {
+  if (isDemoAi()) return demoCoachInsight();
   const userText = buildCoachInsightsPrompt({
     context: params.context,
     todayMeals: params.todayMeals,
@@ -580,6 +598,7 @@ export async function runWorkoutGroq(params: {
   focus?: string;
   lang?: string;
 }): Promise<GeneratedWorkout> {
+  if (isDemoAi()) return demoWorkout();
   const userText = buildWorkoutPrompt({
     goal: params.goal,
     level: params.level,
@@ -665,6 +684,7 @@ export async function runDietGenerateGroq(params: {
   restrictions?: string[];
   lang?: string;
 }): Promise<GeneratedDiet> {
+  if (isDemoAi()) return demoDiet(JSON.stringify(params));
   return generateValidatedJson({
     system: getSystemDietGenerate(params.lang),
     user: buildDietGeneratePrompt(params),
@@ -682,6 +702,7 @@ export async function runDietProcessGroq(params: {
   dishes: Array<{ name: string; type: string; description?: string }>;
   lang?: string;
 }): Promise<GeneratedDiet> {
+  if (isDemoAi()) return demoDiet(JSON.stringify(params));
   return generateValidatedJson({
     system: getSystemDietProcess(params.lang),
     user: buildDietProcessPrompt(params),
@@ -698,6 +719,7 @@ export async function runDishTutorialGroq(params: {
   servings?: number;
   lang?: string;
 }): Promise<DishTutorial> {
+  if (isDemoAi()) return demoDishTutorial(params.dishName);
   return generateValidatedJson({
     system: getSystemDishTutorial(params.lang),
     user: buildDishTutorialPrompt(params),

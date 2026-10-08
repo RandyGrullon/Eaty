@@ -1,60 +1,52 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { MacroPieChart } from "./macro-pie-chart";
+import { cn } from "@/lib/utils";
 
 type Macros = { protein: number; carbs: number; fat: number };
 
 interface MacrosBreakdownProps {
   consumed: Macros;
   goal: Macros;
+  className?: string;
 }
 
-// Clases Tailwind literales (el JIT no soporta nombres construidos dinámicamente).
-const MACRO_META = [
-  { key: "protein" as const, label: "Proteína", valueClass: "text-chart-1", trackClass: "bg-chart-1/30", barClass: "bg-chart-1", wrapClass: "" },
-  { key: "carbs" as const, label: "Carbos", valueClass: "text-chart-2", trackClass: "bg-chart-2/30", barClass: "bg-chart-2", wrapClass: "border-x border-border/40 px-2" },
-  { key: "fat" as const, label: "Grasa", valueClass: "text-chart-4", trackClass: "bg-chart-4/30", barClass: "bg-chart-4", wrapClass: "" },
+// Clases literales: Tailwind no detecta nombres construidos dinámicamente.
+export const MACRO_META = [
+  { key: "protein" as const, label: "Proteína", dot: "bg-protein", bar: "bg-protein", track: "bg-protein/15" },
+  { key: "carbs" as const, label: "Carbohidratos", dot: "bg-carbs", bar: "bg-carbs", track: "bg-carbs/20" },
+  { key: "fat" as const, label: "Grasa", dot: "bg-fat", bar: "bg-fat", track: "bg-fat/15" },
 ];
 
-export function MacrosBreakdown({ consumed, goal }: MacrosBreakdownProps) {
+export function MacrosBreakdown({ consumed, goal, className }: MacrosBreakdownProps) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.3 }}
-      className="col-span-2 grid grid-cols-1 sm:grid-cols-12 gap-6 rounded-[2rem] border border-border/40 bg-card/40 p-6 shadow-inner backdrop-blur-sm"
-    >
-      <div className="sm:col-span-4 h-32">
-        <MacroPieChart macros={consumed} />
-      </div>
-      <div className="sm:col-span-8 grid grid-cols-3 gap-3">
-        {MACRO_META.map(({ key, label, valueClass, trackClass, barClass, wrapClass }) => {
-          const consumedValue = consumed[key];
-          const goalValue = goal[key];
-          const pct = goalValue > 0 ? Math.min(100, (consumedValue / goalValue) * 100) : 0;
-          return (
-            <div key={key} className={`text-center group ${wrapClass}`}>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80 mb-1">
+    <div className={cn("space-y-4", className)}>
+      {MACRO_META.map(({ key, label, dot, bar, track }, i) => {
+        const value = Math.round(consumed[key]);
+        const target = Math.round(goal[key]);
+        const pct = target > 0 ? Math.min(100, (value / target) * 100) : 0;
+        return (
+          <div key={key}>
+            <div className="mb-1.5 flex items-baseline justify-between gap-2 text-sm">
+              <span className="flex items-center gap-2 font-medium">
+                <span className={cn("h-2 w-2 rounded-full", dot)} aria-hidden />
                 {label}
-              </p>
-              <div className="flex flex-col items-center">
-                <p className={`text-2xl font-black tabular-nums ${valueClass} group-hover:scale-110 transition-transform`}>
-                  {consumedValue}g
-                </p>
-                <p className="text-[9px] font-bold text-muted-foreground/60 mt-0.5">Meta {goalValue}g</p>
-                <div className={`mt-1 h-1 w-full max-w-[40px] rounded-full ${trackClass} overflow-hidden`}>
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${pct}%` }}
-                    className={`h-full ${barClass}`}
-                  />
-                </div>
-              </div>
+              </span>
+              <span className="tabular text-muted-foreground">
+                <span className="font-semibold text-foreground">{value}</span> / {target} g
+              </span>
             </div>
-          );
-        })}
-      </div>
-    </motion.div>
+            <div className={cn("h-2 overflow-hidden rounded-full", track)}>
+              <motion.div
+                className={cn("h-full rounded-full", bar)}
+                initial={{ width: 0 }}
+                animate={{ width: `${pct}%` }}
+                transition={{ duration: 0.9, delay: 0.1 + i * 0.08, ease: [0.22, 1, 0.36, 1] }}
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }

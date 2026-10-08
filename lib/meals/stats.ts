@@ -1,6 +1,7 @@
 import { doc, getDoc } from "firebase/firestore";
 import { logger } from "@/lib/logger";
 import { queryMealsInRange } from "@/lib/firestore-meal-utils";
+import { localDayKey } from "@/lib/date-format";
 import { getDb } from "./db";
 
 export async function getTodayStats(userId: string): Promise<{
@@ -23,6 +24,7 @@ export async function getTodayStats(userId: string): Promise<{
     const macros = { protein: 0, carbs: 0, fat: 0 };
 
     meals.forEach((meal) => {
+      if (meal.isPlanned) return;
       mealsCount++;
       totalCalories += meal.calories || 0;
       macros.protein += meal.macros.protein || 0;
@@ -31,7 +33,7 @@ export async function getTodayStats(userId: string): Promise<{
     });
 
     // Obtener hidratación del documento de stats diario.
-    const dateKey = today.toISOString().split("T")[0];
+    const dateKey = localDayKey(today);
     const statsRef = doc(getDb(), "users", userId, "dailyStats", dateKey);
     const statsSnap = await getDoc(statsRef);
     const waterGlasses = statsSnap.exists()

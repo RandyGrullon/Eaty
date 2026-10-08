@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, ChevronRight, Calendar, Utensils } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { getMealsGroupedByDate } from "@/lib/meals";
 import type { Meal } from "@/types/meal";
+import { cn } from "@/lib/utils";
 
 interface MealCalendarProps {
   onDateSelect?: (date: Date, meals: Meal[]) => void;
@@ -20,13 +19,7 @@ export function MealCalendar({ onDateSelect }: MealCalendarProps) {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const { user } = useAuth();
 
-  useEffect(() => {
-    if (user) {
-      loadMealsForMonth();
-    }
-  }, [user, currentDate]);
-
-  const loadMealsForMonth = async () => {
+  const loadMealsForMonth = useCallback(async () => {
     if (!user) return;
 
     setLoading(true);
@@ -53,7 +46,13 @@ export function MealCalendar({ onDateSelect }: MealCalendarProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, currentDate]);
+
+  useEffect(() => {
+    if (user) {
+      void loadMealsForMonth();
+    }
+  }, [user, loadMealsForMonth]);
 
   const navigateMonth = (direction: "prev" | "next") => {
     setCurrentDate((prev) => {
@@ -120,14 +119,14 @@ export function MealCalendar({ onDateSelect }: MealCalendarProps) {
     const hasMeals = getMealCountForDate(date) > 0;
 
     let classes =
-      "h-12 w-12 rounded-lg flex flex-col items-center justify-center text-sm font-medium transition-colors hover:bg-primary/10 cursor-pointer";
+      "flex h-12 w-full min-w-0 flex-col items-center justify-center rounded-xl text-sm font-medium transition-colors";
 
     if (isSelected) {
       classes += " bg-primary text-primary-foreground";
     } else if (isToday) {
-      classes += " bg-primary/20 text-primary border-2 border-primary";
+      classes += " bg-primary/10 text-primary ring-2 ring-inset ring-primary";
     } else if (hasMeals) {
-      classes += " bg-primary/10 text-primary border border-primary/25";
+      classes += " bg-primary/10 text-primary hover:bg-primary/15";
     } else {
       classes += " text-foreground hover:bg-muted";
     }
@@ -152,131 +151,128 @@ export function MealCalendar({ onDateSelect }: MealCalendarProps) {
   ];
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Calendario de Comidas
-          </CardTitle>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigateMonth("prev")}
-              disabled={loading}
+    <section className="surface p-4 sm:p-6">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="flex items-center gap-3 text-lg font-semibold">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <Calendar className="h-4 w-4" />
+          </span>
+          Calendario
+        </h2>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-9 w-9 rounded-full"
+            onClick={() => navigateMonth("prev")}
+            disabled={loading}
+            aria-label="Mes anterior"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="min-w-[8rem] text-center text-sm font-medium tabular">
+            {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+          </span>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-9 w-9 rounded-full"
+            onClick={() => navigateMonth("next")}
+            disabled={loading}
+            aria-label="Mes siguiente"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Cabecera de días */}
+      <div className="mb-1 grid grid-cols-7 gap-1">
+        {["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"].map((day) => (
+          <div key={day} className="flex h-8 items-center justify-center text-xs text-muted-foreground">
+            {day}
+          </div>
+        ))}
+      </div>
+
+      {/* Cuadrícula */}
+      <div className={cn("grid grid-cols-7 gap-1", loading && "opacity-60")}>
+        {days.map((date, index) => {
+          if (!date) {
+            return <div key={index} className="h-12" />;
+          }
+
+          const meals = getMealsForDate(date);
+          const totalCalories = getTotalCaloriesForDate(date);
+          const mealCount = meals.length;
+
+          return (
+            <button
+              type="button"
+              key={index}
+              className={getDateClasses(date)}
+              onClick={() => handleDateClick(date)}
+              aria-label={`${date.getDate()}${mealCount > 0 ? `, ${totalCalories} kcal` : ""}`}
             >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="text-sm font-medium min-w-[120px] text-center">
-              {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigateMonth("next")}
-              disabled={loading}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {/* Calendar Header */}
-        <div className="grid grid-cols-7 gap-1 mb-2">
-          {["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"].map((day) => (
-            <div
-              key={day}
-              className="h-8 flex items-center justify-center text-xs font-medium text-muted-foreground"
-            >
-              {day}
-            </div>
-          ))}
-        </div>
+              <span className="leading-none tabular">{date.getDate()}</span>
+              {mealCount > 0 && (
+                <span className="mt-1 max-w-full truncate px-0.5 text-[11px] leading-none tabular opacity-80">
+                  {totalCalories}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
 
-        {/* Calendar Grid */}
-        <div className="grid grid-cols-7 gap-1">
-          {days.map((date, index) => {
-            if (!date) {
-              return <div key={index} className="h-12" />;
-            }
+      {/* Leyenda */}
+      <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 border-t border-border pt-4 text-xs text-muted-foreground">
+        <span className="flex items-center gap-2">
+          <span className="h-3 w-3 rounded ring-2 ring-inset ring-primary" />
+          Hoy
+        </span>
+        <span className="flex items-center gap-2">
+          <span className="h-3 w-3 rounded bg-primary/15" />
+          Con comidas (kcal)
+        </span>
+        <span className="flex items-center gap-2">
+          <span className="h-3 w-3 rounded bg-primary" />
+          Seleccionado
+        </span>
+      </div>
 
-            const meals = getMealsForDate(date);
-            const totalCalories = getTotalCaloriesForDate(date);
-            const mealCount = meals.length;
-
-            return (
-              <div
-                key={index}
-                className={getDateClasses(date)}
-                onClick={() => handleDateClick(date)}
-              >
-                <span className="text-xs">{date.getDate()}</span>
-                {mealCount > 0 && (
-                  <div className="flex flex-col items-center mt-1">
-                    <Utensils className="h-3 w-3" />
-                    <span className="text-xs font-bold">{totalCalories}</span>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Legend */}
-        <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-primary/20 border-2 border-primary rounded"></div>
-            <span className="text-xs text-muted-foreground">Hoy</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-primary/10 border border-primary/25 rounded"></div>
-            <span className="text-xs text-muted-foreground">Con comidas</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-primary rounded"></div>
-            <span className="text-xs text-muted-foreground">Seleccionado</span>
-          </div>
-        </div>
-
-        {/* Selected Date Details */}
-        {selectedDate && getMealCountForDate(selectedDate) > 0 && (
-          <div className="mt-4 pt-4 border-t">
-            <h4 className="font-medium mb-2">
-              Comidas del{" "}
-              {selectedDate.toLocaleDateString("es-ES", {
-                weekday: "long",
-                day: "numeric",
-                month: "long",
-              })}
-            </h4>
-            <div className="space-y-2">
-              {getMealsForDate(selectedDate).map((meal) => (
-                <div
-                  key={meal.id}
-                  className="flex items-center justify-between p-2 bg-muted/50 rounded-lg"
-                >
-                  <div className="flex-1">
-                    <p className="text-sm font-medium truncate">
-                      {meal.foodName}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {meal.createdAt.toLocaleTimeString("es-ES", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
-                  </div>
-                  <Badge variant="secondary" className="text-xs">
-                    {meal.calories} cal
-                  </Badge>
+      {/* Detalle del día seleccionado */}
+      {selectedDate && getMealCountForDate(selectedDate) > 0 && (
+        <div className="mt-4 border-t border-border pt-4">
+          <h3 className="mb-2 font-semibold first-letter:uppercase">
+            {selectedDate.toLocaleDateString("es-ES", {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+            })}
+          </h3>
+          <ul className="space-y-1.5">
+            {getMealsForDate(selectedDate).map((meal) => (
+              <li key={meal.id} className="flex items-center gap-3 rounded-xl bg-muted/60 px-3 py-2.5">
+                <Utensils className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{meal.foodName}</p>
+                  <p className="text-xs text-muted-foreground tabular">
+                    {meal.createdAt.toLocaleTimeString("es-ES", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+                <span className="shrink-0 font-display text-base font-semibold tabular">
+                  {meal.calories}
+                  <span className="ml-1 text-xs font-normal text-muted-foreground">kcal</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
   );
 }

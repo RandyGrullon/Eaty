@@ -14,6 +14,15 @@ import type { Meal } from "@/types/meal";
 
 type AnalysisState = Omit<Meal, "id" | "createdAt">;
 
+/** Datos extra que la pantalla de resultados añade al guardar (no se persisten tal cual). */
+type SaveExtras = {
+  isPlanned?: boolean;
+  /** Fecha del plan (comida planificada). */
+  plannedDate?: Date;
+  /** Fecha/hora elegida para el registro; se usa como `createdAt`. */
+  recordedAt?: Date;
+};
+
 function revokeImagePreview(
   ref: { current: string | null },
   setUrl: (v: string | null) => void
@@ -88,7 +97,7 @@ export function useFoodAnalysis(onSaveSuccess?: () => void) {
       setImagePreviewUrl(preview);
 
       try {
-        const idToken = await user.getIdToken(true);
+        const idToken = await user.getIdToken();
         const { base64WithoutPrefix, mimeType } =
           await prepareImageForGroq(imageFile);
 
@@ -103,10 +112,10 @@ export function useFoodAnalysis(onSaveSuccess?: () => void) {
           idToken
         );
 
-        const fullBase64 = `data:${mimeType};base64,${base64WithoutPrefix}`;
-
+        // La foto NO va en `imageUrl` (sería un data URL en Firestore): la vista
+        // previa usa `imagePreviewUrl` y al guardar se sube el File a Storage.
         setAnalysisResult({
-          imageUrl: fullBase64,
+          imageUrl: null,
           foodName: result.foodName,
           calories: result.calories,
           macros: result.macros,
@@ -133,7 +142,7 @@ export function useFoodAnalysis(onSaveSuccess?: () => void) {
         setIsAnalyzing(false);
       }
     },
-    [user, toast, userProfile?.allergens]
+    [user, toast, userProfile?.allergens, userProfile?.language]
   );
 
   const retryImageAnalysis = useCallback(async () => {
@@ -161,7 +170,7 @@ export function useFoodAnalysis(onSaveSuccess?: () => void) {
       lastAnalyzedImageFileRef.current = null;
 
       try {
-        const idToken = await user.getIdToken(true);
+        const idToken = await user.getIdToken();
         const result = await analyzeFood(
           { 
             foodName: foodName.trim(),
@@ -194,7 +203,7 @@ export function useFoodAnalysis(onSaveSuccess?: () => void) {
         setIsAnalyzing(false);
       }
     },
-    [user, toast, userProfile?.allergens]
+    [user, toast, userProfile?.allergens, userProfile?.language]
   );
 
   // Si deja de haber resultado, no dejar "Guardando" (p. ej. cierre o fallback)
@@ -205,7 +214,7 @@ export function useFoodAnalysis(onSaveSuccess?: () => void) {
     }
   }, [analysisResult]);
 
-  const saveAnalysis = useCallback(async (editedData?: AnalysisState & { isPlanned?: boolean; plannedDate?: Date }): Promise<void> => {
+  const saveAnalysis = useCallback(async (editedData?: AnalysisState & SaveExtras): Promise<void> => {
     const dataToSave = editedData || analysisResult;
     if (!dataToSave || !user) return;
     if (saveInFlightRef.current) return;
@@ -247,7 +256,8 @@ export function useFoodAnalysis(onSaveSuccess?: () => void) {
     try {
       const { imageStored } = await saveMeal(user.uid, dataToSave, {
         imageFile: imageFileForStorage ?? undefined,
-        plannedDate: editedData?.plannedDate ?? (editedData as any)?.recordedAt,
+        // `createdAt` del documento: fecha del plan o la fecha/hora elegida.
+        plannedDate: editedData?.plannedDate ?? editedData?.recordedAt,
       });
 
       // Actualizar racha después de guardar con éxito (solo si no es planeado o si es para hoy)

@@ -10,8 +10,6 @@ import {
   CarouselPrevious,
   type CarouselApi,
 } from "@/components/ui/carousel";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   Sheet,
   SheetContent,
@@ -23,7 +21,6 @@ import {
 import { Separator } from "@/components/ui/separator";
 import {
   Lightbulb,
-  Loader2,
   Heart,
   Share2,
   Play,
@@ -102,7 +99,7 @@ export function TipsCarousel({ className, dailyGoal }: TipsCarouselProps) {
           ? `Última comida registrada: ${sorted[0].foodName}`
           : undefined;
 
-        const idToken = await user.getIdToken(true);
+        const idToken = await user.getIdToken();
         const generatedTips = await generateNutritionTips(
           todayMeals.map((meal) => ({
             foodName: meal.foodName,
@@ -138,7 +135,7 @@ export function TipsCarousel({ className, dailyGoal }: TipsCarouselProps) {
     } finally {
       setLoading(false);
     }
-  }, [user, dailyGoal, toast]);
+  }, [user, dailyGoal, toast, userProfile?.language]);
 
   useEffect(() => {
     void loadTips();
@@ -226,16 +223,17 @@ export function TipsCarousel({ className, dailyGoal }: TipsCarouselProps) {
 
   if (loading) {
     return (
-      <Card className={className}>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-center gap-2">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span className="text-sm text-muted-foreground">
-              Cargando consejos…
-            </span>
-          </div>
-        </CardContent>
-      </Card>
+      <section className={cn("surface p-5 sm:p-6", className)}>
+        <div className="flex items-center gap-3">
+          <div className="h-9 w-9 animate-pulse rounded-xl bg-muted" />
+          <div className="h-4 w-40 animate-pulse rounded bg-muted" />
+        </div>
+        <div className="mt-4 space-y-2.5">
+          <div className="h-5 w-3/4 animate-pulse rounded bg-muted" />
+          <div className="h-16 animate-pulse rounded-xl bg-muted" />
+        </div>
+        <span className="sr-only">Cargando consejos…</span>
+      </section>
     );
   }
 
@@ -245,188 +243,152 @@ export function TipsCarousel({ className, dailyGoal }: TipsCarouselProps) {
 
   return (
     <>
-      <Card className={className}>
-        <CardContent className="p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Lightbulb className="h-5 w-5 text-primary" />
-              <h3 className="font-semibold text-foreground">
-                Consejos personalizados
-              </h3>
+      <section className={cn("surface p-5 sm:p-6", className)}>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Lightbulb className="h-4 w-4" />
+            </span>
+            <div className="min-w-0">
+              <h2 className="truncate text-lg font-semibold">Consejos para ti</h2>
+              <p className="text-sm text-muted-foreground tabular">
+                {count > 0 ? `${current} de ${count}` : "Según lo que comes hoy"}
+              </p>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsAutoPlaying(!isAutoPlaying)}
-              className="h-8 w-8 p-0 hover:bg-primary/10"
-              title={
-                isAutoPlaying
-                  ? "Pausar auto-reproducción"
-                  : "Iniciar auto-reproducción"
-              }
-            >
-              {isAutoPlaying ? (
-                <Pause className="h-4 w-4 text-primary" />
-              ) : (
-                <Play className="h-4 w-4 text-primary" />
-              )}
-            </Button>
           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsAutoPlaying(!isAutoPlaying)}
+            className="h-9 w-9 shrink-0 rounded-full text-primary"
+            title={isAutoPlaying ? "Pausar auto-reproducción" : "Iniciar auto-reproducción"}
+            aria-label={isAutoPlaying ? "Pausar auto-reproducción" : "Iniciar auto-reproducción"}
+          >
+            {isAutoPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+          </Button>
+        </div>
 
-          <Carousel setApi={setApi} className="w-full">
-            <CarouselContent>
-              {tips.map((tip, index) => (
-                <CarouselItem key={`tip-${index}`}>
-                  <motion.div 
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    className="relative overflow-hidden rounded-[2.5rem] border border-primary/20 bg-gradient-to-br from-primary/10 via-card/90 to-accent/20 p-6 shadow-2xl shadow-black/[0.03] transition-all hover:shadow-primary/5 sm:p-8"
-                  >
-                    {/* Background decorative elements */}
-                    <div className="absolute -right-12 -top-12 h-32 w-32 rounded-full bg-primary/5 blur-3xl" aria-hidden />
-                    <div className="absolute -left-12 -bottom-12 h-32 w-32 rounded-full bg-chart-2/5 blur-3xl" aria-hidden />
+        <Carousel setApi={setApi} className="w-full">
+          <CarouselContent>
+            {tips.map((tip, index) => (
+              <CarouselItem key={`tip-${index}`}>
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                  className="flex h-full flex-col"
+                >
+                  <div className="flex items-start gap-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground">
+                      <Sparkles className="h-4 w-4" />
+                    </span>
+                    <h3 className="min-w-0 flex-1 text-lg font-semibold leading-snug sm:text-xl">
+                      {tip.whatToChange}
+                    </h3>
+                  </div>
 
-                    <div className="relative flex flex-col gap-6 sm:flex-row">
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[1.2rem] bg-primary text-white shadow-xl shadow-primary/20">
-                        <Sparkles className="h-6 w-6" />
-                      </div>
-                      
-                      <div className="min-w-0 flex-1 space-y-6">
-                        <div>
-                          <div className="flex items-center gap-2 mb-2">
-                            <Badge variant="secondary" className="bg-primary/10 text-primary border-none font-black text-[9px] uppercase tracking-widest px-2">
-                              Consejo Eaty
-                            </Badge>
-                          </div>
-                          <h4 className="text-xl font-black tracking-tight text-foreground leading-tight sm:text-2xl">
-                            {tip.whatToChange}
-                          </h4>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                          <div className="group rounded-[1.5rem] border border-border/40 bg-background/40 p-4 backdrop-blur-sm transition-colors hover:bg-background/60">
-                            <div className="flex items-center gap-2 mb-2 text-primary">
-                              <MapPin className="h-4 w-4" aria-hidden />
-                              <span className="text-[10px] font-black uppercase tracking-[0.15em]">Cuándo</span>
-                            </div>
-                            <p className="text-sm font-bold text-muted-foreground group-hover:text-foreground transition-colors">
-                              {tip.whereApply}
-                            </p>
-                          </div>
-
-                          {tip.whyItHelps && (
-                            <div className="group rounded-[1.5rem] border border-border/40 bg-background/40 p-4 backdrop-blur-sm transition-colors hover:bg-background/60">
-                              <div className="flex items-center gap-2 mb-2 text-chart-2">
-                                <Lightbulb className="h-4 w-4" aria-hidden />
-                                <span className="text-[10px] font-black uppercase tracking-[0.15em]">Beneficio</span>
-                              </div>
-                              <p className="text-sm font-bold text-muted-foreground group-hover:text-foreground transition-colors">
-                                {tip.whyItHelps}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="space-y-3">
-                          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Pasos rápidos</p>
-                          <div className="grid gap-2">
-                            {tip.miniSteps.map((step, i) => (
-                              <div key={i} className="flex items-center gap-3 rounded-xl bg-primary/5 p-3 border border-primary/5 group/step">
-                                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-lg bg-primary text-[10px] font-black text-white shadow-lg shadow-primary/10 group-hover/step:scale-110 transition-transform">
-                                  {i + 1}
-                                </div>
-                                <p className="text-xs font-bold text-foreground leading-relaxed">
-                                  {step}
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
+                  <div className="mt-4 grid grid-cols-1 gap-2 lg:grid-cols-2">
+                    <div className="rounded-xl bg-muted/60 px-3 py-2.5">
+                      <p className="flex items-center gap-1.5 text-xs font-medium text-primary">
+                        <MapPin className="h-3.5 w-3.5" aria-hidden />
+                        Cuándo
+                      </p>
+                      <p className="mt-1 text-sm">{tip.whereApply}</p>
                     </div>
-
-                    <div className="mt-8 flex flex-col gap-3 border-t border-border/20 pt-6 sm:flex-row sm:items-center sm:justify-between">
-                      <Button
-                        type="button"
-                        className="w-full gap-2 rounded-2xl bg-primary h-12 font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] transition-transform sm:w-auto"
-                        onClick={() => setHowToTip(tip)}
-                      >
-                        <ChefHat className="h-5 w-5" />
-                        Ver Receta Completa
-                      </Button>
-
-                      <div className="flex items-center justify-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => toggleFavorite(index)}
-                          className={cn(
-                            "h-12 w-12 rounded-2xl border border-border/40 bg-card/40 backdrop-blur-sm transition-all hover:bg-card",
-                            favorites.has(index) && "text-destructive border-destructive/20 bg-destructive/5"
-                          )}
-                          aria-label="Favorito"
-                        >
-                          <Heart className={cn("h-5 w-5 transition-all", favorites.has(index) && "scale-110 fill-current")} />
-                        </Button>
-                        
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => shareTip(tip)}
-                          className="h-12 w-12 rounded-2xl border border-border/40 bg-card/40 backdrop-blur-sm transition-all hover:bg-card"
-                          aria-label="Compartir"
-                        >
-                          <Share2 className="h-5 w-5" />
-                        </Button>
-
-                        <div className="ml-2 flex h-12 items-center rounded-2xl border border-border/40 bg-card/40 px-4 backdrop-blur-sm">
-                          <span className="text-xs font-black tabular-nums tracking-tighter text-primary">
-                            {current} <span className="text-muted-foreground/40 mx-1">/</span> {count}
-                          </span>
-                        </div>
+                    {tip.whyItHelps && (
+                      <div className="rounded-xl bg-muted/60 px-3 py-2.5">
+                        <p className="flex items-center gap-1.5 text-xs font-medium text-carbs">
+                          <Lightbulb className="h-3.5 w-3.5" aria-hidden />
+                          Beneficio
+                        </p>
+                        <p className="mt-1 text-sm">{tip.whyItHelps}</p>
                       </div>
-                    </div>
-                  </motion.div>
-                </CarouselItem>
-              ))}
-            </CarouselContent>
+                    )}
+                  </div>
 
-            <div className="mt-4 flex justify-center gap-2">
-              {Array.from({ length: count }).map((_, index) => (
-                <button
-                  key={index}
-                  type="button"
-                  onClick={() => api?.scrollTo(index)}
-                  className={cn(
-                    "h-2 w-2 rounded-full transition-all duration-300",
-                    current === index + 1
-                      ? "scale-125 bg-primary"
-                      : "bg-primary/25 hover:bg-primary/40"
+                  {tip.miniSteps.length > 0 && (
+                    <div className="mt-4">
+                      <p className="eyebrow">Pasos rápidos</p>
+                      <ol className="mt-2 space-y-1.5">
+                        {tip.miniSteps.map((step, i) => (
+                          <li key={i} className="flex items-start gap-2.5 text-sm">
+                            <span className="mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-medium tabular text-primary">
+                              {i + 1}
+                            </span>
+                            <span className="min-w-0">{step}</span>
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
                   )}
-                  aria-label={`Ir al consejo ${index + 1}`}
-                />
-              ))}
-            </div>
 
-            {isAutoPlaying && tips.length > 1 && (
-              <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-primary/15">
-                <div
-                  className="h-full rounded-full bg-primary transition-all duration-100 ease-linear"
-                  style={{ width: `${progress}%` }}
-                />
+                  <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-border pt-4">
+                    <Button type="button" className="h-10 flex-1 rounded-full sm:flex-none" onClick={() => setHowToTip(tip)}>
+                      <ChefHat className="h-4 w-4" />
+                      Ver receta
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => toggleFavorite(index)}
+                      className={cn(
+                        "h-10 w-10 shrink-0 rounded-full",
+                        favorites.has(index) && "border-protein/40 text-protein hover:text-protein"
+                      )}
+                      aria-label="Favorito"
+                      aria-pressed={favorites.has(index)}
+                    >
+                      <Heart className={cn("h-4 w-4", favorites.has(index) && "fill-current")} />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => shareTip(tip)}
+                      className="h-10 w-10 shrink-0 rounded-full"
+                      aria-label="Compartir"
+                    >
+                      <Share2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </motion.div>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+
+          {count > 1 && (
+            <div className="mt-4 flex items-center justify-center gap-3">
+              {tips.length > 1 && (
+                <CarouselPrevious className="static h-8 w-8 translate-y-0 rounded-full" />
+              )}
+              <div className="flex gap-1.5">
+                {Array.from({ length: count }).map((_, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => api?.scrollTo(index)}
+                    className={cn(
+                      "h-1.5 rounded-full transition-all duration-300",
+                      current === index + 1 ? "w-5 bg-primary" : "w-1.5 bg-primary/25 hover:bg-primary/40"
+                    )}
+                    aria-label={`Ir al consejo ${index + 1}`}
+                  />
+                ))}
               </div>
-            )}
+              {tips.length > 1 && <CarouselNext className="static h-8 w-8 translate-y-0 rounded-full" />}
+            </div>
+          )}
 
-            {tips.length > 1 && (
-              <>
-                <CarouselPrevious className="left-2 border-primary/20 bg-card/90 hover:bg-card" />
-                <CarouselNext className="right-2 border-primary/20 bg-card/90 hover:bg-card" />
-              </>
-            )}
-          </Carousel>
-        </CardContent>
-      </Card>
+          {isAutoPlaying && tips.length > 1 && (
+            <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full bg-primary/60 transition-all duration-100 ease-linear"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          )}
+        </Carousel>
+      </section>
 
       <Sheet
         open={howToTip !== null}
@@ -434,88 +396,76 @@ export function TipsCarousel({ className, dailyGoal }: TipsCarouselProps) {
           if (!open) setHowToTip(null);
         }}
       >
-        <SheetContent
-          side="bottom"
-          className="max-h-[90vh] overflow-y-auto rounded-t-[2.5rem] sm:max-w-2xl mx-auto border-t-0 shadow-2xl"
-        >
+        <SheetContent side="bottom" className="mx-auto max-h-[90vh] overflow-y-auto rounded-t-2xl sm:max-w-2xl">
           {howToTip ? (
-            <div className="max-w-xl mx-auto py-6">
-              <SheetHeader className="text-left mb-8">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="h-10 w-10 rounded-2xl bg-primary/10 flex items-center justify-center">
-                    <ChefHat className="h-6 w-6 text-primary" />
-                  </div>
-                  <SheetTitle className="text-2xl font-black tracking-tight">
-                    {howToTip.recipe.title}
-                  </SheetTitle>
+            <div className="mx-auto max-w-xl px-1 py-4 sm:py-6">
+              <SheetHeader className="mb-6 p-0 text-left">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <ChefHat className="h-5 w-5" />
+                  </span>
+                  <SheetTitle className="text-2xl font-bold">{howToTip.recipe.title}</SheetTitle>
                 </div>
-                <SheetDescription className="text-base font-semibold text-muted-foreground leading-snug">
+                <SheetDescription className="mt-2 text-base text-muted-foreground">
                   {howToTip.whatToChange}
                 </SheetDescription>
               </SheetHeader>
 
-              <div className="space-y-8">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">📍 Aplicación</p>
-                    <p className="text-sm font-medium text-foreground bg-muted/30 p-4 rounded-3xl border border-border/40 shadow-inner">
-                      {howToTip.whereApply}
+              <div className="space-y-7">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <div className="rounded-xl bg-muted/60 px-3 py-2.5">
+                    <p className="flex items-center gap-1.5 text-xs font-medium text-primary">
+                      <MapPin className="h-3.5 w-3.5" aria-hidden />
+                      Aplicación
                     </p>
+                    <p className="mt-1 text-sm">{howToTip.whereApply}</p>
                   </div>
                   {howToTip.whyItHelps && (
-                    <div className="space-y-3">
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-chart-2">💡 Beneficio</p>
-                      <p className="text-sm font-medium text-muted-foreground bg-chart-2/5 p-4 rounded-3xl border border-chart-2/10 shadow-inner">
-                        {howToTip.whyItHelps}
+                    <div className="rounded-xl bg-muted/60 px-3 py-2.5">
+                      <p className="flex items-center gap-1.5 text-xs font-medium text-carbs">
+                        <Lightbulb className="h-3.5 w-3.5" aria-hidden />
+                        Beneficio
                       </p>
+                      <p className="mt-1 text-sm">{howToTip.whyItHelps}</p>
                     </div>
                   )}
                 </div>
 
-                <div className="space-y-4">
-                  <h4 className="text-lg font-black tracking-tight flex items-center gap-2">
-                    <div className="h-8 w-8 rounded-xl bg-orange-100 dark:bg-orange-950 flex items-center justify-center">
-                      <Utensils className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-                    </div>
-                    Ingredientes Necesarios
+                <section>
+                  <h4 className="mb-3 flex items-center gap-2 text-lg font-semibold">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-carbs/15 text-carbs">
+                      <Utensils className="h-4 w-4" />
+                    </span>
+                    Ingredientes
                   </h4>
-                  <div className="grid grid-cols-1 gap-2.5">
+                  <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
                     {howToTip.recipe.ingredients.map((ing, i) => (
-                      <div key={i} className="flex items-center gap-4 text-sm font-bold text-foreground bg-card p-4 rounded-2xl border border-border/40 shadow-sm transition-all hover:border-primary/30">
-                        <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] text-primary">
-                          {i + 1}
-                        </div>
+                      <li key={i} className="flex items-center gap-3 px-4 py-2.5 text-sm">
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
                         {ing}
-                      </div>
+                      </li>
                     ))}
-                  </div>
-                </div>
+                  </ul>
+                </section>
 
-                <div className="space-y-4 pb-12">
-                  <h4 className="text-lg font-black tracking-tight flex items-center gap-2">
-                    <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center">
-                      <ChefHat className="h-4 w-4 text-primary" />
-                    </div>
-                    Pasos de Preparación
+                <section className="pb-8">
+                  <h4 className="mb-3 flex items-center gap-2 text-lg font-semibold">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                      <ChefHat className="h-4 w-4" />
+                    </span>
+                    Preparación
                   </h4>
-                  <div className="space-y-5">
+                  <ol className="space-y-3">
                     {howToTip.recipe.steps.map((step, i) => (
-                      <div key={i} className="relative flex gap-5 group">
-                        {i < howToTip.recipe.steps.length - 1 && (
-                          <div className="absolute left-5 top-10 bottom-0 w-0.5 bg-gradient-to-b from-primary/30 to-transparent" aria-hidden />
-                        )}
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary text-xs font-black text-white shadow-xl shadow-primary/20 transition-transform group-hover:scale-110">
+                      <li key={i} className="flex gap-3">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold tabular text-primary-foreground">
                           {i + 1}
-                        </div>
-                        <div className="flex-1 pt-1.5">
-                          <p className="text-sm font-semibold leading-relaxed text-foreground">
-                            {step}
-                          </p>
-                        </div>
-                      </div>
+                        </span>
+                        <p className="min-w-0 flex-1 pt-0.5 text-sm leading-relaxed">{step}</p>
+                      </li>
                     ))}
-                  </div>
-                </div>
+                  </ol>
+                </section>
               </div>
             </div>
           ) : null}

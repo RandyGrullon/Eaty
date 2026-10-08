@@ -83,20 +83,22 @@ export function GenerateDietModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto rounded-3xl sm:max-w-md">
+      <DialogContent className="max-h-[90vh] overflow-y-auto rounded-2xl sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-xl font-black">
-            <Sparkles className="h-5 w-5 text-primary" />
+          <DialogTitle className="flex items-center gap-2.5 text-xl font-semibold">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Sparkles className="h-4 w-4" />
+            </span>
             Generar dieta con IA
           </DialogTitle>
           <DialogDescription>
-            La IA creará un plan de un día con platos, macros e imágenes adaptado a ti.
+            Un plan de un día con platos, macros e imágenes, adaptado a ti.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5 py-2">
           <div className="space-y-2">
-            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+            <Label className="text-sm font-medium">
               Objetivo
             </Label>
             <div className="flex flex-wrap gap-2">
@@ -106,10 +108,10 @@ export function GenerateDietModal({
                   type="button"
                   onClick={() => setGoal(g)}
                   className={cn(
-                    "rounded-full border px-3 py-1.5 text-xs font-bold transition-all",
+                    "rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
                     goal === g
                       ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border/40 bg-card/40 text-muted-foreground hover:bg-card"
+                      : "border-border bg-card text-muted-foreground hover:bg-muted"
                   )}
                 >
                   {DIET_GOAL_LABEL[g]}
@@ -120,7 +122,7 @@ export function GenerateDietModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+              <Label className="text-sm font-medium">
                 Calorías/día
               </Label>
               <Input
@@ -128,44 +130,44 @@ export function GenerateDietModal({
                 value={calories}
                 onChange={(e) => setCalories(e.target.value)}
                 placeholder="2000"
-                className="h-11 rounded-xl border-border/40 bg-card/40"
+                className="h-11 rounded-xl tabular"
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+              <Label className="text-sm font-medium">
                 Evitar
               </Label>
               <Input
                 value={restrictions}
                 onChange={(e) => setRestrictions(e.target.value)}
                 placeholder="lactosa, frutos…"
-                className="h-11 rounded-xl border-border/40 bg-card/40"
+                className="h-11 rounded-xl"
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+            <Label className="text-sm font-medium">
               Preferencias (opcional)
             </Label>
             <Input
               value={preferences}
               onChange={(e) => setPreferences(e.target.value)}
               placeholder="comida mexicana, alta en verduras…"
-              className="h-11 rounded-xl border-border/40 bg-card/40"
+              className="h-11 rounded-xl"
             />
           </div>
         </div>
 
         <Button
-          className="w-full rounded-xl font-black shadow-lg shadow-primary/20"
+          className="h-11 w-full rounded-full"
           onClick={generate}
           disabled={loading || !user}
         >
           {loading ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            <Sparkles className="mr-2 h-4 w-4" />
+            <Sparkles className="h-4 w-4" />
           )}
           {loading ? "Creando tu dieta…" : "Generar dieta"}
         </Button>

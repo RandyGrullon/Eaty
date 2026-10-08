@@ -20,18 +20,22 @@ const CACHE_TTL = 1000 * 60 * 60; // 1 hour
  * Para imágenes, no cacheamos (demasiado grandes para claves simples).
  * Para texto, usamos el foodName y description.
  */
-function getCacheKey(params: AnalyzeFoodParams): string | null {
+export function getCacheKey(params: AnalyzeFoodParams): string | null {
   if (params.imageBase64) return null; // No cacheamos imágenes por ahora
-  
-  const parts = [
-    params.foodName?.toLowerCase().trim(),
-    params.description?.toLowerCase().trim(),
-    (params.allergens || []).sort().join(",").toLowerCase()
-  ];
-  
-  if (!parts[0] && !parts[1]) return null;
-  
-  return parts.filter(Boolean).join("|");
+
+  const foodName = params.foodName?.toLowerCase().trim() ?? "";
+  const description = params.description?.toLowerCase().trim() ?? "";
+  if (!foodName && !description) return null;
+
+  // Copia antes de ordenar: `.sort()` muta el array del perfil del usuario.
+  const allergens = [...(params.allergens ?? [])]
+    .map((a) => a.toLowerCase().trim())
+    .sort()
+    .join(",");
+  const lang = params.lang?.toLowerCase().trim() ?? "";
+
+  // Posiciones fijas (sin filtrar vacíos) para evitar colisiones entre campos.
+  return JSON.stringify([foodName, description, allergens, lang]);
 }
 
 /**

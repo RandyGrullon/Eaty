@@ -2,17 +2,20 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Droplets, Plus, Minus } from "lucide-react";
+import { Droplet, Droplets, Plus, Minus } from "lucide-react";
 import { useAppData } from "@/hooks/use-app-data";
 import { useAuth } from "@/hooks/use-auth";
 import { awardPoints } from "@/lib/meals";
 import { logger } from "@/lib/logger";
+import { cn } from "@/lib/utils";
 
 interface HydrationTrackerProps {
   glasses: number;
+  /** Meta diaria de vasos (250 ml). */
+  goal?: number;
 }
 
-export function HydrationTracker({ glasses }: HydrationTrackerProps) {
+export function HydrationTracker({ glasses, goal = 8 }: HydrationTrackerProps) {
   const { setWaterGlasses } = useAppData();
   const { user } = useAuth();
   const [updating, setUpdating] = useState(false);
@@ -36,40 +39,52 @@ export function HydrationTracker({ glasses }: HydrationTrackerProps) {
   };
 
   return (
-    <div className="flex flex-col h-full justify-between">
+    <div className="flex h-full flex-col">
       <div className="flex items-center justify-between">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-chart-2/10 text-chart-2">
-          <Droplets className="h-5 w-5" />
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-water/12 text-water">
+            <Droplets className="h-[18px] w-[18px]" />
+          </span>
+          <div>
+            <p className="text-sm font-semibold">Hidratación</p>
+            <p className="text-xs text-muted-foreground tabular">
+              {(glasses * 0.25).toLocaleString("es", { maximumFractionDigits: 2 })} L de {goal * 0.25} L
+            </p>
+          </div>
         </div>
-        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">
-          Hidratación
-        </span>
-      </div>
-      <div className="flex items-center justify-between mt-4">
-        <div className="flex items-baseline gap-1">
-          <span className="text-3xl font-black tabular-nums">{glasses}</span>
-          <span className="text-[10px] font-bold text-muted-foreground">VASOS</span>
-        </div>
-        <div className="flex gap-2">
+        <div className="flex gap-1.5">
           <Button
             variant="outline"
             size="icon"
-            className="h-8 w-8 rounded-lg"
+            className="h-8 w-8 rounded-full"
             onClick={() => handleUpdate(-1)}
             disabled={updating || glasses <= 0}
+            aria-label="Quitar un vaso"
           >
             <Minus className="h-4 w-4" />
           </Button>
           <Button
-            variant="outline"
             size="icon"
-            className="h-8 w-8 rounded-lg border-chart-2/40 hover:bg-chart-2/5"
+            className="h-8 w-8 rounded-full bg-water text-white hover:bg-water/90"
             onClick={() => handleUpdate(1)}
             disabled={updating}
+            aria-label="Añadir un vaso"
           >
             <Plus className="h-4 w-4" />
           </Button>
         </div>
+      </div>
+      <div className="mt-4 grid grid-cols-8 gap-1.5" aria-label={`${glasses} de ${goal} vasos`}>
+        {Array.from({ length: goal }).map((_, i) => (
+          <Droplet
+            key={i}
+            className={cn(
+              "h-6 w-full transition-colors",
+              i < glasses ? "fill-water text-water" : "text-border"
+            )}
+            aria-hidden
+          />
+        ))}
       </div>
     </div>
   );

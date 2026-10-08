@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  X, Zap, Sparkles, Camera, CheckCircle2, RefreshCcw, RadioTower,
+  X, Zap, Camera, CheckCircle2, RefreshCcw, RadioTower,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -256,53 +256,46 @@ export function LiveScanner({ analyzeFrame, onConfirm, onClose }: LiveScannerPro
 
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="fixed inset-0 z-[100] bg-black overflow-hidden">
-      <video
-        ref={videoRef}
-        className="absolute inset-0 h-full w-full object-cover"
-        playsInline
-        muted
-      />
+    <div className="fixed inset-0 z-[100] overflow-hidden bg-black">
+      <video ref={videoRef} className="absolute inset-0 h-full w-full object-cover" playsInline muted />
       <canvas
         ref={overlayRef}
-        className="absolute inset-0 w-full h-full pointer-events-none"
+        className="pointer-events-none absolute inset-0 h-full w-full"
         style={{ mixBlendMode: "screen" }}
       />
 
-      {/* Top bar */}
-      <div className="absolute top-0 inset-x-0 z-10 flex items-center justify-between px-5 pt-12 pb-3 pointer-events-auto">
-        <div className="flex items-center gap-2">
-          <div className="rounded-full bg-black/55 backdrop-blur-md px-4 py-2 border border-white/10">
-            <p className="text-white text-[11px] font-black flex items-center gap-2 uppercase tracking-[0.2em]">
-              <Zap className="h-3 w-3 text-emerald-400" />
-              Escáner Volumétrico
-            </p>
-          </div>
+      {/* Barra superior */}
+      <div className="pointer-events-auto absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-3 px-4 pb-3 pt-[max(1rem,env(safe-area-inset-top))] sm:px-5">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="flex min-w-0 items-center gap-2 rounded-full bg-black/60 px-3.5 py-2 text-sm font-medium text-white">
+            <Zap className="h-4 w-4 shrink-0 text-primary" />
+            <span className="truncate">Escáner en vivo</span>
+          </span>
           {scanCount > 0 && (
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="rounded-full bg-black/55 backdrop-blur-md px-3 py-2 border border-white/10"
+            <motion.span
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex shrink-0 items-center gap-1.5 rounded-full bg-black/60 px-3 py-2 text-xs font-medium text-white/80 tabular"
             >
-              <p className="text-white/70 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
-                <RadioTower className="h-3 w-3 text-emerald-400" />
-                {scanCount} scan{scanCount > 1 ? "s" : ""}
-              </p>
-            </motion.div>
+              <RadioTower className="h-3.5 w-3.5 text-primary" />
+              {scanCount} {scanCount > 1 ? "lecturas" : "lectura"}
+            </motion.span>
           )}
         </div>
         <Button
-          variant="ghost" size="icon"
+          variant="ghost"
+          size="icon"
           onClick={onClose}
-          className="rounded-full bg-black/55 text-white hover:bg-black/75 border border-white/10 backdrop-blur-md"
+          aria-label="Cerrar escáner"
+          className="shrink-0 rounded-full bg-black/60 text-white hover:bg-black/80 hover:text-white"
         >
           <X className="h-5 w-5" />
         </Button>
       </div>
 
-      {/* Center reticle while no result */}
+      {/* Retícula mientras no hay resultado */}
       {ready && !camError && !result && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <motion.div
             className="relative"
             style={{ width: "72vmin", height: "64vmin" }}
@@ -315,45 +308,41 @@ export function LiveScanner({ analyzeFrame, onConfirm, onClose }: LiveScannerPro
               "bottom-0 left-0 border-b-2 border-l-2 rounded-bl-2xl",
               "bottom-0 right-0 border-b-2 border-r-2 rounded-br-2xl",
             ].map((cls, i) => (
-              <div
-                key={i}
-                className={cn("absolute w-9 h-9 border-emerald-400", cls)}
-                style={{ boxShadow: "0 0 14px rgba(52,211,153,0.5)" }}
-              />
+              <div key={i} className={cn("absolute h-9 w-9 border-primary", cls)} />
             ))}
-            <p className="absolute -bottom-9 left-1/2 -translate-x-1/2 text-[10px] font-medium text-white/55 tracking-widest uppercase whitespace-nowrap">
-              Centra el plato — análisis automático
+            <p className="absolute -bottom-9 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs text-white/70">
+              Centra el plato, se analiza solo
             </p>
           </motion.div>
         </div>
       )}
 
-      {/* Banner error transitorio */}
+      {/* Aviso de error transitorio */}
       <AnimatePresence>
         {bannerError && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
+            initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="absolute top-28 left-1/2 -translate-x-1/2 z-20 pointer-events-none"
+            exit={{ opacity: 0, y: -8 }}
+            className="pointer-events-none absolute left-1/2 top-24 z-20 -translate-x-1/2 px-4"
           >
-            <div className="rounded-full bg-red-500/20 border border-red-400/40 backdrop-blur-md px-4 py-2">
-              <p className="text-red-100 text-[10px] font-bold uppercase tracking-widest">{bannerError}</p>
-            </div>
+            <p className="rounded-full bg-destructive px-4 py-2 text-xs font-medium text-destructive-foreground">
+              {bannerError}
+            </p>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Floating live result card */}
+      {/* Resultado flotante */}
       <AnimatePresence mode="popLayout">
         {result && (
           <motion.div
             key={result.foodName + result.calories}
-            initial={{ opacity: 0, scale: 0.9, y: 30 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.92, y: -10 }}
-            transition={{ type: "spring", stiffness: 280, damping: 24 }}
-            className="absolute inset-x-0 top-28 z-10 flex items-center justify-center pointer-events-none px-5"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            className="pointer-events-none absolute inset-x-0 top-24 z-10 flex items-center justify-center px-4"
           >
             <LiveResultCard
               result={result}
@@ -365,78 +354,70 @@ export function LiveScanner({ analyzeFrame, onConfirm, onClose }: LiveScannerPro
         )}
       </AnimatePresence>
 
-      {/* Bottom controls */}
-      <div className="absolute bottom-0 inset-x-0 pb-10 px-6 z-10 flex flex-col items-center gap-3 pointer-events-auto">
+      {/* Controles inferiores */}
+      <div className="pointer-events-auto absolute inset-x-0 bottom-0 z-10 flex flex-col items-center gap-3 px-4 pb-[max(2rem,env(safe-area-inset-bottom))] sm:px-6">
         <AnimatePresence>
           {isAnalyzing && (
-            <motion.div
+            <motion.p
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 8 }}
-              className="rounded-full bg-black/60 backdrop-blur-md border border-emerald-400/25 px-4 py-1.5"
+              className="flex items-center gap-2 rounded-full bg-black/60 px-4 py-1.5 text-xs font-medium text-white"
             >
-              <p className="text-emerald-300 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-                <span className="relative flex h-1.5 w-1.5">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                </span>
-                {PHASE_TEXTS[phaseIdx]}
-              </p>
-            </motion.div>
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
+              </span>
+              {PHASE_TEXTS[phaseIdx]}
+            </motion.p>
           )}
         </AnimatePresence>
 
         {result ? (
-          <div className="flex gap-3 w-full max-w-sm">
+          <div className="flex w-full max-w-sm gap-3">
             <Button
               variant="outline"
+              size="icon"
               onClick={handleClear}
-              className="rounded-2xl h-14 px-4 font-black border-white/20 bg-white/10 text-white hover:bg-white/20"
+              aria-label="Volver a escanear"
+              className="h-12 w-12 shrink-0 rounded-full border-white/25 bg-black/50 text-white hover:bg-black/70 hover:text-white"
             >
               <RefreshCcw className="h-4 w-4" />
             </Button>
-            <Button
-              onClick={handleConfirm}
-              className={cn(
-                "flex-1 rounded-2xl h-14 font-black text-black shadow-xl transition-all",
-                isStable
-                  ? "bg-emerald-400 hover:bg-emerald-300 shadow-emerald-400/40"
-                  : "bg-emerald-500 hover:bg-emerald-400 shadow-emerald-500/25"
-              )}
-            >
-              <CheckCircle2 className="h-5 w-5 mr-2" />
+            <Button onClick={handleConfirm} className="h-12 flex-1 rounded-full text-base">
+              <CheckCircle2 className="h-5 w-5" />
               {isStable ? "Confirmar (estable)" : "Confirmar resultado"}
             </Button>
           </div>
         ) : (
-          <div className="rounded-full bg-black/55 backdrop-blur-md border border-white/15 px-5 py-2.5">
-            <p className="text-white/70 text-[11px] font-medium tracking-wide">
-              Apunta al plato — la IA analiza en vivo
-            </p>
-          </div>
+          <p className="rounded-full bg-black/60 px-5 py-2.5 text-sm text-white/80">
+            Apunta al plato y la IA lo analiza en vivo
+          </p>
         )}
       </div>
 
-      {/* Initializing */}
+      {/* Iniciando */}
       {!ready && !camError && (
-        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black gap-4">
-          <div className="w-12 h-12 rounded-full border-[2.5px] border-emerald-400 border-t-transparent animate-spin" />
-          <p className="text-emerald-400/80 text-sm font-black tracking-widest uppercase">
-            Activando Cámara...
-          </p>
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 bg-black">
+          <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <p className="text-sm text-white/80">Activando cámara…</p>
         </div>
       )}
 
-      {/* Camera error */}
+      {/* Error de cámara */}
       {camError && (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black p-8 text-center">
-          <div className="h-16 w-16 bg-red-500/15 rounded-full flex items-center justify-center mb-5">
-            <Camera className="h-8 w-8 text-red-400" />
-          </div>
-          <p className="font-black text-white text-lg mb-2">Cámara no disponible</p>
-          <p className="text-sm text-white/55 mb-8">{camError}</p>
-          <Button onClick={onClose} variant="outline" className="rounded-xl bg-white/10 border-white/20 hover:bg-white/20 text-white">
-            Volver atrás
+          <span className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-destructive/20 text-destructive">
+            <Camera className="h-6 w-6" />
+          </span>
+          <p className="mb-2 text-lg font-semibold text-white">Cámara no disponible</p>
+          <p className="mb-8 max-w-sm text-sm text-white/70">{camError}</p>
+          <Button
+            onClick={onClose}
+            variant="outline"
+            className="h-11 rounded-full border-white/25 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+          >
+            Volver
           </Button>
         </div>
       )}

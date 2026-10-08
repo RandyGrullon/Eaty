@@ -8,12 +8,12 @@ export function confidenceLabel(
     case "high":
       return {
         text: "Alta",
-        className: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
+        className: "bg-success/15 text-success",
       };
     case "medium":
       return {
         text: "Media",
-        className: "bg-amber-500/15 text-amber-800 dark:text-amber-300",
+        className: "bg-warning/20 text-warning-foreground dark:text-warning",
       };
     case "low":
     default:

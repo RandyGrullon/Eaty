@@ -3,7 +3,7 @@ import { z } from "zod";
 import { FoodAnalysisExhaustedError, runFoodAnalysisGroq } from "@/lib/groq-server";
 import {
   HttpApiError,
-  enforceDailyQuota,
+  withDailyQuota,
   requireUidFromRequest,
 } from "@/lib/api-auth-usage";
 import { logger } from "@/lib/logger";
@@ -58,17 +58,17 @@ export async function POST(req: Request) {
       );
     }
 
-    const result = await runFoodAnalysisGroq({
-      imageBase64: body.imageBase64?.trim(),
-      imageMimeType: body.imageMimeType?.trim(),
-      foodName: body.foodName?.trim(),
-      description: body.description?.trim(),
-      allergens: body.allergens,
-      lang: body.lang,
-    });
-
-    // Contar cuota solo cuando el análisis se completó con éxito.
-    await enforceDailyQuota(uid, "analyze");
+    // Reserva la cuota ANTES de llamar al LLM; se devuelve si la llamada falla.
+    const result = await withDailyQuota(uid, "analyze", () =>
+      runFoodAnalysisGroq({
+        imageBase64: body.imageBase64?.trim(),
+        imageMimeType: body.imageMimeType?.trim(),
+        foodName: body.foodName?.trim(),
+        description: body.description?.trim(),
+        allergens: body.allergens,
+        lang: body.lang,
+      })
+    );
 
     return NextResponse.json(result);
   } catch (e) {

@@ -12,7 +12,6 @@ import {
   Trash2,
   CheckCircle2,
   Calendar as CalendarIcon,
-  Loader2,
   ArrowLeft,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
@@ -27,6 +26,7 @@ import { es } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
 import { PageHeader } from "@/components/app/page-header";
+import { MealThumb } from "@/components/meal/meal-thumb";
 
 interface WeeklyPlannerProps {
   /** Abre "Escanear" recordando el día seleccionado para planificar esa comida. */
@@ -91,36 +91,48 @@ export function WeeklyPlanner({ onAddMeal, onClose }: WeeklyPlannerProps) {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-32">
+    <div className="min-h-full bg-background pb-32 md:pb-12">
       <PageHeader
         title="Planificador"
         subtitle="Organiza tu semana"
         leading={
           onClose ? (
             <Button
-              variant="ghost"
+              variant="outline"
               size="icon"
               onClick={onClose}
-              className="h-12 w-12 shrink-0 rounded-[1.25rem] border border-border/40 bg-card/40 shadow-sm backdrop-blur-xl hover:bg-card"
+              className="h-10 w-10 shrink-0 rounded-full"
               aria-label="Volver al inicio"
             >
-              <ArrowLeft className="h-6 w-6" />
+              <ArrowLeft className="h-5 w-5" />
             </Button>
           ) : undefined
         }
         actions={
           <>
-            <Button variant="outline" size="icon" className="rounded-xl" onClick={() => setSelectedDate(addDays(selectedDate, -7))}>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-10 w-10 rounded-full"
+              onClick={() => setSelectedDate(addDays(selectedDate, -7))}
+              aria-label="Semana anterior"
+            >
               <ChevronLeft className="h-5 w-5" />
             </Button>
-            <Button variant="outline" size="icon" className="rounded-xl" onClick={() => setSelectedDate(addDays(selectedDate, 7))}>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-10 w-10 rounded-full"
+              onClick={() => setSelectedDate(addDays(selectedDate, 7))}
+              aria-label="Semana siguiente"
+            >
               <ChevronRight className="h-5 w-5" />
             </Button>
           </>
         }
       >
-        <div className="mt-8">
-          <div className="flex justify-between gap-2 overflow-x-auto pb-4 scrollbar-none">
+        <div className="mt-6">
+          <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
             {weekDays.map((day, i) => {
               const active = isSameDay(day, selectedDate);
               const today = isToday(day);
@@ -128,166 +140,162 @@ export function WeeklyPlanner({ onAddMeal, onClose }: WeeklyPlannerProps) {
               return (
                 <button
                   key={day.toISOString()}
+                  type="button"
                   onClick={() => setSelectedDate(day)}
+                  aria-pressed={active}
+                  aria-label={`${format(day, "EEEE d", { locale: es })}${summary.meals > 0 ? `, ${summary.meals} ${summary.meals === 1 ? "comida" : "comidas"}` : ""}`}
                   className={cn(
-                    "relative flex flex-col items-center min-w-[50px] py-3 rounded-2xl border transition-all duration-300",
+                    "flex min-w-0 flex-col items-center rounded-2xl border py-2.5 transition-colors",
                     active
-                      ? "bg-primary border-primary text-primary-foreground shadow-lg scale-105"
-                      : "bg-card/40 border-border/40 text-muted-foreground hover:bg-card"
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : today
+                        ? "border-primary/40 bg-card text-foreground hover:bg-muted"
+                        : "border-border bg-card text-muted-foreground hover:bg-muted"
                   )}
                 >
-                  {summary.meals > 0 && (
-                    <span
-                      className={cn(
-                        "absolute -top-1.5 -right-1.5 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full px-1 text-[10px] font-black shadow",
-                        active ? "bg-primary-foreground text-primary" : "bg-primary text-primary-foreground"
-                      )}
-                    >
-                      {summary.meals}
-                    </span>
-                  )}
-                  <span className="text-[10px] font-black uppercase opacity-60 mb-1">
-                    {format(day, "eee", { locale: es })}
+                  <span className={cn("text-xs capitalize", active ? "opacity-85" : "text-muted-foreground")}>
+                    {format(day, "eeeeee", { locale: es })}
                   </span>
-                  <span className="text-lg font-black">{day.getDate()}</span>
-                  {summary.kcal > 0 ? (
-                    <span className={cn("mt-1 text-[8px] font-bold tabular-nums", active ? "opacity-80" : "text-primary/70")}>
-                      {summary.kcal}
-                    </span>
-                  ) : today && !active ? (
-                    <div className="mt-1 h-1 w-1 rounded-full bg-primary" />
-                  ) : null}
+                  <span className="font-display text-lg font-semibold leading-tight tabular">{day.getDate()}</span>
+                  <span
+                    className={cn(
+                      "mt-0.5 h-4 text-[11px] leading-4 tabular",
+                      active ? "opacity-85" : "text-primary"
+                    )}
+                  >
+                    {summary.kcal > 0 ? summary.kcal : summary.meals > 0 ? summary.meals : ""}
+                  </span>
                 </button>
               );
             })}
           </div>
 
           {weekTotalMeals > 0 && (
-            <div className="mt-2 flex flex-wrap items-center gap-3">
-              <div className="rounded-full bg-card/60 border border-border/40 px-4 py-1.5 text-[11px] font-bold backdrop-blur-sm">
-                <span className="text-muted-foreground uppercase tracking-wider">Semana:</span>{" "}
-                <span className="text-foreground">{weekTotalMeals} comidas</span>
-              </div>
-              <div className="rounded-full bg-card/60 border border-border/40 px-4 py-1.5 text-[11px] font-bold backdrop-blur-sm">
-                <span className="text-muted-foreground uppercase tracking-wider">Total:</span>{" "}
-                <span className="text-primary tabular-nums">{weekTotalKcal} kcal</span>
-              </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+              <span className="rounded-full bg-muted/60 px-3 py-1 text-muted-foreground">
+                Semana: <span className="font-medium text-foreground tabular">{weekTotalMeals} {weekTotalMeals === 1 ? "comida" : "comidas"}</span>
+              </span>
+              <span className="rounded-full bg-muted/60 px-3 py-1 text-muted-foreground">
+                Total: <span className="font-medium text-primary tabular">{weekTotalKcal} kcal</span>
+              </span>
             </div>
           )}
         </div>
       </PageHeader>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-8 mt-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-black tracking-tight flex items-center gap-2">
-            <Utensils className="h-5 w-5 text-primary" />
-            {isToday(selectedDate) ? "Hoy" : format(selectedDate, "eeee d 'de' MMMM", { locale: es })}
-          </h2>
-          <div className="flex items-center gap-2">
-            {selectedDayKcal > 0 && (
-              <Badge variant="secondary" className="bg-chart-2/10 text-chart-2 border-none font-bold tabular-nums">
-                {selectedDayKcal} kcal
-              </Badge>
-            )}
-            <Badge variant="secondary" className="bg-primary/10 text-primary border-none font-bold">
-              {mealsForSelectedDate.length} planeadas
-            </Badge>
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="flex justify-center py-20">
-            <Loader2 className="h-10 w-10 animate-spin text-primary/40" />
-          </div>
-        ) : mealsForSelectedDate.length === 0 ? (
-          <div className="rounded-[2.5rem] border-2 border-dashed border-border/40 bg-muted/20 px-6 py-20 text-center">
-            <div className="h-16 w-16 bg-card rounded-[1.5rem] flex items-center justify-center mx-auto mb-6 shadow-xl border border-border/40">
-              <CalendarIcon className="h-8 w-8 text-muted-foreground/40" />
+      <div className="mx-auto max-w-6xl px-4 pt-4 sm:px-6 lg:px-10">
+        <section className="surface p-5 sm:p-6">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <Utensils className="h-4 w-4" />
+              </span>
+              <h2 className="truncate text-lg font-semibold first-letter:uppercase">
+                {isToday(selectedDate) ? "Hoy" : format(selectedDate, "eeee d 'de' MMMM", { locale: es })}
+              </h2>
             </div>
-            <h3 className="text-xl font-black text-foreground">Sin planes para este día</h3>
-            <p className="mt-2 text-sm font-medium text-muted-foreground max-w-xs mx-auto">
-              Empieza a planificar tu alimentación para mantenerte en el camino hacia tus metas.
-            </p>
-            <Button
-              className="mt-8 rounded-2xl font-black h-12 px-8 shadow-xl shadow-primary/20 gap-2"
-              onClick={() => onAddMeal(selectedDate)}
-            >
-              <Plus className="h-5 w-5" />
-              Añadir comida al plan
-            </Button>
+            <div className="flex items-center gap-2">
+              {selectedDayKcal > 0 && (
+                <Badge variant="secondary" className="rounded-full border-none bg-muted px-2.5 tabular">
+                  {selectedDayKcal} kcal
+                </Badge>
+              )}
+              <Badge variant="secondary" className="rounded-full border-none bg-primary/10 px-2.5 text-primary tabular">
+                {mealsForSelectedDate.length} planeadas
+              </Badge>
+            </div>
           </div>
-        ) : (
-          <div className="grid gap-4">
-            <AnimatePresence mode="popLayout">
-              {mealsForSelectedDate.map((meal) => (
-                <motion.div
-                  key={meal.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  className="group relative flex items-center gap-4 rounded-[2rem] border border-border/40 bg-card p-4 shadow-sm hover:shadow-xl hover:shadow-black/[0.02] transition-all"
-                >
-                  <button
-                    type="button"
-                    onClick={() => openMealEditor(meal)}
-                    className="flex flex-1 items-center gap-4 text-left min-w-0"
-                  >
-                    <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-muted border border-border/40">
-                      {meal.imageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={meal.imageUrl} alt="" className="h-full w-full object-cover" />
-                      ) : (
-                        <div className="h-full w-full flex items-center justify-center">
-                          <Utensils className="h-6 w-6 text-muted-foreground/20" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-lg font-black tracking-tight truncate">{meal.foodName}</h4>
-                      <div className="flex items-center gap-3 mt-1">
-                        <span className="text-xs font-bold text-primary">{meal.calories} kcal</span>
-                        <div className="h-1 w-1 rounded-full bg-border" />
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-60 flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          Planeado
-                        </span>
-                      </div>
-                    </div>
-                  </button>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="rounded-xl h-10 w-10 text-emerald-500 hover:bg-emerald-500/10 hover:text-emerald-600"
-                      onClick={() => handleComplete(meal)}
-                      aria-label="Marcar como comida de hoy"
-                    >
-                      <CheckCircle2 className="h-5 w-5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="rounded-xl h-10 w-10 text-destructive/40 hover:bg-destructive/10 hover:text-destructive"
-                      onClick={() => handleDelete(meal.id)}
-                      aria-label="Eliminar del plan"
-                    >
-                      <Trash2 className="h-5 w-5" />
-                    </Button>
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
 
-            <Button
-              variant="outline"
-              className="w-full mt-4 rounded-2xl h-14 border-dashed border-border/60 hover:bg-muted/50 font-bold gap-2"
-              onClick={() => onAddMeal(selectedDate)}
-            >
-              <Plus className="h-5 w-5" />
-              Añadir otra comida
-            </Button>
-          </div>
-        )}
+          {loading ? (
+            <div className="space-y-3">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <div className="h-14 w-14 animate-pulse rounded-xl bg-muted" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3.5 w-2/3 animate-pulse rounded bg-muted" />
+                    <div className="h-3 w-1/3 animate-pulse rounded bg-muted" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : mealsForSelectedDate.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-border bg-muted/40 p-8 text-center">
+              <CalendarIcon className="mx-auto h-8 w-8 text-muted-foreground/60" />
+              <h3 className="mt-3 font-semibold">Sin planes para este día</h3>
+              <p className="mx-auto mt-1 max-w-xs text-sm text-muted-foreground">
+                Planifica tus comidas para mantenerte en camino a tu meta.
+              </p>
+              <Button className="mt-4 h-11 rounded-full px-6" onClick={() => onAddMeal(selectedDate)}>
+                <Plus className="h-4 w-4" />
+                Añadir comida al plan
+              </Button>
+            </div>
+          ) : (
+            <>
+              <ul className="-mx-2 divide-y divide-border">
+                <AnimatePresence mode="popLayout">
+                  {mealsForSelectedDate.map((meal) => (
+                    <motion.li
+                      key={meal.id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                      className="flex items-center gap-2 px-2 py-2.5"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => openMealEditor(meal)}
+                        className="-my-1 flex min-w-0 flex-1 items-center gap-3 rounded-xl py-1 text-left transition-colors hover:bg-muted/70"
+                      >
+                        <MealThumb src={meal.imageUrl} className="h-14 w-14 shrink-0 rounded-xl" />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate font-medium">{meal.foodName}</p>
+                          <p className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground tabular">
+                            <span className="font-medium text-foreground">{meal.calories} kcal</span>
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              Planeado
+                            </span>
+                          </p>
+                        </div>
+                      </button>
+                      <div className="flex shrink-0 gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-10 w-10 rounded-full text-success hover:bg-success/10 hover:text-success"
+                          onClick={() => handleComplete(meal)}
+                          aria-label="Marcar como comida de hoy"
+                        >
+                          <CheckCircle2 className="h-5 w-5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-10 w-10 rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => handleDelete(meal.id)}
+                          aria-label="Eliminar del plan"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </motion.li>
+                  ))}
+                </AnimatePresence>
+              </ul>
+
+              <Button
+                variant="outline"
+                className="mt-4 h-11 w-full rounded-full border-dashed"
+                onClick={() => onAddMeal(selectedDate)}
+              >
+                <Plus className="h-4 w-4" />
+                Añadir otra comida
+              </Button>
+            </>
+          )}
+        </section>
       </div>
     </div>
   );

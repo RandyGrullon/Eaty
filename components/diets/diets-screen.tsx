@@ -8,7 +8,6 @@ import {
   Sparkles,
   ChefHat,
   Salad,
-  Loader2,
   UtensilsCrossed,
 } from "lucide-react";
 import { useAppData } from "@/hooks/use-app-data";
@@ -42,44 +41,46 @@ export function DietsScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-28 md:pb-10">
+    <div className="min-h-full bg-background pb-32 md:pb-12">
       <PageHeader
         title="Dietas"
         subtitle="Planes, platos y tutoriales"
         badge={
-          <Badge
-            variant="secondary"
-            className="border-none bg-primary/10 px-2 py-0 font-bold text-primary"
-          >
+          <Badge variant="secondary" className="shrink-0 rounded-full border-none bg-primary/10 px-2 py-0 text-primary tabular">
             {diets.length}
           </Badge>
         }
+        actions={
+          <div className="hidden items-center gap-2 sm:flex">
+            <Button variant="outline" className="h-10 rounded-full" onClick={() => setCreateOpen(true)}>
+              <ChefHat className="h-4 w-4" />
+              Crear mi dieta
+            </Button>
+            <Button className="h-10 rounded-full" onClick={() => openGenerate()}>
+              <Sparkles className="h-4 w-4" />
+              Generar con IA
+            </Button>
+          </div>
+        }
       >
-        <div className="mt-6 grid grid-cols-2 gap-3">
-          <Button
-            className="h-14 rounded-2xl font-black shadow-lg shadow-primary/20"
-            onClick={() => openGenerate()}
-          >
-            <Sparkles className="mr-2 h-5 w-5" />
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:hidden">
+          <Button className="h-11 rounded-full" onClick={() => openGenerate()}>
+            <Sparkles className="h-4 w-4" />
             Generar con IA
           </Button>
-          <Button
-            variant="outline"
-            className="h-14 rounded-2xl border-border/40 bg-card/40 font-black"
-            onClick={() => setCreateOpen(true)}
-          >
-            <ChefHat className="mr-2 h-5 w-5" />
+          <Button variant="outline" className="h-11 rounded-full" onClick={() => setCreateOpen(true)}>
+            <ChefHat className="h-4 w-4" />
             Crear mi dieta
           </Button>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="-mx-4 mt-4 flex gap-2 overflow-x-auto px-4 pb-1 scrollbar-none sm:mx-0 sm:flex-wrap sm:px-0">
           {QUICK_GOALS.map((g) => (
             <button
               key={g}
               type="button"
               onClick={() => openGenerate(g)}
-              className="rounded-full border border-border/40 bg-card/40 px-3 py-1.5 text-[11px] font-bold text-muted-foreground transition-all hover:border-primary/40 hover:text-primary"
+              className="shrink-0 rounded-full border border-border bg-card px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
             >
               {DIET_GOAL_LABEL[g]}
             </button>
@@ -87,38 +88,35 @@ export function DietsScreen() {
         </div>
       </PageHeader>
 
-      <div className="mx-auto max-w-4xl px-4 sm:px-8">
+      <div className="mx-auto max-w-6xl px-4 pt-4 sm:px-6 lg:px-10">
         {loading ? (
-          <div className="flex justify-center py-20">
-            <Loader2 className="h-12 w-12 animate-spin text-primary/40" />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="h-56 animate-pulse rounded-2xl bg-muted" />
+            ))}
           </div>
         ) : diets.length === 0 ? (
-          <div className="rounded-[3rem] border-2 border-dashed border-border/40 bg-muted/20 px-6 py-20 text-center">
-            <Salad className="mx-auto mb-6 h-16 w-16 text-muted-foreground/20" />
-            <h3 className="text-xl font-black text-foreground">
-              Tu recetario está vacío
-            </h3>
-            <p className="mx-auto mt-2 max-w-xs text-sm font-medium text-muted-foreground">
-              Genera una dieta con IA o crea la tuya. Cada plato incluirá un
-              tutorial paso a paso muy detallado.
+          <div className="rounded-2xl border border-dashed border-border bg-muted/40 p-8 text-center">
+            <Salad className="mx-auto h-8 w-8 text-muted-foreground/60" />
+            <h3 className="mt-3 font-semibold">Tu recetario está vacío</h3>
+            <p className="mx-auto mt-1 max-w-xs text-sm text-muted-foreground">
+              Genera una dieta con IA o crea la tuya. Cada plato trae su tutorial paso a paso.
             </p>
-            <Button
-              className="mt-8 h-12 rounded-2xl px-8 font-black shadow-xl shadow-primary/20"
-              onClick={() => openGenerate()}
-            >
-              <Sparkles className="mr-2 h-5 w-5" />
+            <Button className="mt-4 h-11 rounded-full px-6" onClick={() => openGenerate()}>
+              <Sparkles className="h-4 w-4" />
               Generar mi primera dieta
             </Button>
           </div>
         ) : (
           <>
             {activeDiet && (
-              <div className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                <UtensilsCrossed className="h-3.5 w-3.5 text-chart-2" />
-                Dieta activa: <span className="text-foreground">{activeDiet.name}</span>
-              </div>
+              <p className="mb-4 flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
+                <UtensilsCrossed className="h-4 w-4 shrink-0 text-primary" />
+                <span className="shrink-0">Dieta activa:</span>
+                <span className="truncate font-medium text-foreground">{activeDiet.name}</span>
+              </p>
             )}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {diets.map((diet) => (
                 <DietCard
                   key={diet.id}

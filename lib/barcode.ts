@@ -36,8 +36,6 @@ export interface BarcodeProduct {
   ingredientsText?: string;
 }
 
-const OFF_USER_AGENT = "Eaty/1.0 (https://eaty.app)";
-
 type OFFNutriments = Record<string, number | string | undefined>;
 
 function readNumber(nut: OFFNutriments, ...keys: string[]): number | undefined {
@@ -123,10 +121,11 @@ export async function getProductByBarcode(barcode: string): Promise<BarcodeProdu
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 8000);
 
+    // Sin cabecera User-Agent: en el navegador es una cabecera prohibida y,
+    // al no ser "simple", forzaría un preflight CORS que Open Food Facts rechaza.
     const res = await fetch(url, {
       headers: {
         Accept: "application/json",
-        "User-Agent": OFF_USER_AGENT,
       },
       signal: controller.signal,
     });

@@ -3,16 +3,17 @@
 import { FirebaseEnvErrorScreen } from "@/components/app/firebase-env-error";
 import { ImageDescriptionStep } from "@/components/app/image-description-step";
 import { AnalyzingFoodOverlay } from "@/components/app/analyzing-food-overlay";
+import { ShellLoading } from "@/components/app/shell-loading";
+import { DemoBanner } from "@/components/app/demo-banner";
+import { SplashIntro } from "@/components/app/splash-intro";
 import { isFirebaseConfigReady } from "@/lib/firebase-config";
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState, useEffect, useCallback, useRef, type ReactNode } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { useUserProfile } from "@/hooks/use-user-profile";
+import { useAppData } from "@/hooks/use-app-data";
 import { useToast } from "@/hooks/use-toast";
 import { useFoodAnalysis } from "@/hooks/use-food-analysis";
 import { usePWA } from "@/hooks/use-pwa";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useMainTabScroll } from "@/hooks/use-main-tab-scroll";
-import { useCalorieTracker } from "@/hooks/use-calorie-tracker";
 import { useOfflineSync } from "@/hooks/use-offline-sync";
 import {
   MealHistoryLazy,
@@ -29,7 +30,7 @@ import { AuthScreen } from "@/components/auth/auth-screen";
 import { DashboardScreen } from "@/components/dashboard/dashboard-screen";
 import { AnalysisResults } from "@/components/analysis/analysis-results";
 import { ImageAnalysisFailure } from "@/components/analysis/image-analysis-failure";
-import type { MainTab } from "@/lib/main-tab";
+import { MAIN_TAB_ORDER, type MainTab } from "@/lib/main-tab";
 import { logger } from "@/lib/logger";
 import { BottomNav } from "@/components/navigation/bottom-nav";
 import { SidebarNav } from "@/components/navigation/sidebar-nav";
@@ -38,52 +39,69 @@ import { OfflineIndicator } from "@/components/pwa/offline-indicator";
 import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
 import { AuthProvider } from "@/hooks/use-auth";
 import { AppDataProvider } from "@/hooks/use-app-data";
-import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { AlertTriangle } from "lucide-react";
+import { useSearchParams, useRouter } from "next/navigation";
 
-import { useSearchParams } from "next/navigation";
+/** Deep links (`?action=`) desde accesos directos de la PWA. */
+const ACTION_TO_TAB: Record<string, MainTab> = {
+  scan: "scan",
+  history: "history",
+  diets: "diets",
+  profile: "profile",
+  settings: "settings",
+};
 
 function AppContent() {
-  const { user, loading, signInAnonymously } = useAuth();
-  const { userProfile, profileLoading, refreshUserProfile } = useUserProfile();
+  const { user, loading } = useAuth();
+  const { profile: userProfile, profileLoading, profileError } = useAppData();
   const searchParams = useSearchParams();
-
-  useEffect(() => {
-    if (!loading && !user) {
-      void signInAnonymously().catch((e) => logger.error("Guest login failed", e));
-    }
-  }, [user, loading, signInAnonymously]);
-
-  useEffect(() => {
-    const action = searchParams.get("action");
-    if (action === "scan") {
-      setActiveTab("scan");
-    } else if (action === "history") {
-      setActiveTab("history");
-    } else if (action === "diets") {
-      setActiveTab("diets");
-    } else if (action === "planning") {
-      setPlannerOpen(true);
-    }
-  }, [searchParams]);
-
+  const router = useRouter();
   const { isInstalled } = usePWA();
   const isMobile = useIsMobile();
   const { toast } = useToast();
-  const { refreshData: refreshCalorieData } = useCalorieTracker();
-  useOfflineSync(refreshCalorieData);
 
+  const [activeTab, setActiveTab] = useState<MainTab>("home");
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imageDescription, setImageDescription] = useState("");
+  /** Día elegido en el planificador antes de ir a "Escanear" (se usa al "Planear"). */
+  const [plannedDateForScan, setPlannedDateForScan] = useState<Date | null>(null);
+  /** El planificador se abre como overlay desde Inicio. */
+  const [plannerOpen, setPlannerOpen] = useState(false);
+  const mainRef = useRef<HTMLElement>(null);
+
+  // Deep links: se aplican una vez y se limpian de la URL para no repetirse al recargar.
   useEffect(() => {
-    const hasSeenGuide = localStorage.getItem("eaty-guide-seen");
-    if (!hasSeenGuide && userProfile && !loading && !profileLoading) {
-      setTimeout(() => {
+    const action = searchParams.get("action");
+    if (!action) return;
+    if (action === "planning") setPlannerOpen(true);
+    else if (ACTION_TO_TAB[action]) setActiveTab(ACTION_TO_TAB[action]);
+    router.replace("/", { scroll: false });
+  }, [searchParams, router]);
+
+  useOfflineSync();
+
+  const onSaveSuccess = useCallback(async () => {
+    setPlannedDateForScan(null);
+    setActiveTab("home");
+    if (!user) return;
+    try {
+      const { evaluateAchievements } = await import("@/lib/meals");
+      const unlocked = await evaluateAchievements(user.uid);
+      if (unlocked.length > 0) {
         toast({
-          title: "¡Bienvenido a Eaty!",
-          description: "Desliza para ver tus estadísticas o pulsa en Escanear para analizar tu comida.",
+          title: "Nuevo logro desbloqueado",
+          description:
+            unlocked.length === 1
+              ? "Tienes una medalla nueva en tu perfil."
+              : `Tienes ${unlocked.length} medallas nuevas en tu perfil.`,
         });
-        localStorage.setItem("eaty-guide-seen", "true");
-      }, 2000);
+      }
+    } catch (e) {
+      logger.error("evaluateAchievements", e);
     }
-  }, [userProfile, loading, profileLoading, toast]);
+  }, [user, toast]);
+
   const {
     isAnalyzing,
     isSaving,
@@ -97,41 +115,15 @@ function AppContent() {
     saveAnalysis,
     clearAnalysis,
     setManualAnalysis,
-  } = useFoodAnalysis(refreshCalorieData);
-  const [activeTab, setActiveTab] = useState<MainTab>("home");
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [imageDescription, setImageDescription] = useState("");
-  const [refreshKey, setRefreshKey] = useState(0);
-  /** Día elegido en el planificador antes de ir a "Escanear" (se usa al "Planear"). */
-  const [plannedDateForScan, setPlannedDateForScan] = useState<Date | null>(null);
-  /** El planificador ahora se abre como overlay desde Inicio (ya no es pestaña). */
-  const [plannerOpen, setPlannerOpen] = useState(false);
+  } = useFoodAnalysis(onSaveSuccess);
 
-  const mainTabsVisible =
-    !loading &&
-    !profileLoading &&
-    user != null &&
-    userProfile != null &&
-    selectedImage === null &&
-    !analysisResult &&
-    !isAnalyzing &&
-    !imageAnalysisError;
+  // Al cambiar de pestaña, vuelve arriba.
+  useEffect(() => {
+    mainRef.current?.scrollTo({ top: 0 });
+  }, [activeTab]);
 
-  const { scrollRef } = useMainTabScroll(
-    mainTabsVisible && isMobile,
-    activeTab,
-    setActiveTab
-  );
-
-  const tabPanelClass =
-    "flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain min-w-0";
-
-  if (loading || profileLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+  if (loading || (user && profileLoading)) {
+    return <ShellLoading />;
   }
 
   if (!user) {
@@ -144,16 +136,26 @@ function AppContent() {
     );
   }
 
+  if (profileError) {
+    return (
+      <div className="flex min-h-[100dvh] items-center justify-center bg-background p-6">
+        <div className="surface max-w-sm p-6 text-center">
+          <AlertTriangle className="mx-auto h-8 w-8 text-warning" />
+          <h1 className="mt-3 text-lg font-semibold">No pudimos cargar tu perfil</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{profileError}</p>
+          <Button className="mt-5 rounded-full" onClick={() => window.location.reload()}>
+            Reintentar
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (!userProfile) {
     return (
       <>
-        <OnboardingWizard
-          onComplete={() => {
-            void refreshUserProfile();
-          }}
-        />
+        <OnboardingWizard onComplete={() => undefined} />
         <OfflineIndicator />
-        {!isInstalled && <InstallPrompt />}
       </>
     );
   }
@@ -179,10 +181,6 @@ function AppContent() {
     }
   };
 
-  const handleViewHistory = () => {
-    setActiveTab("history");
-  };
-
   /** Desde el planificador: recordamos el día elegido y abrimos "Escanear". */
   const handleAddMealFromPlanner = (date: Date) => {
     setPlannedDateForScan(date);
@@ -194,30 +192,6 @@ function AppContent() {
   const handleTabChange = (tab: MainTab) => {
     setPlannedDateForScan(null);
     setActiveTab(tab);
-  };
-
-  const handleSaveAnalysis = async (editedData?: any) => {
-    if (!user) return;
-    await saveAnalysis(editedData);
-    
-    // Evaluar logros
-    const { evaluateAchievements } = await import("@/lib/meals");
-    const newAchievements = await evaluateAchievements(user.uid);
-    if (newAchievements.length > 0) {
-      const { toast } = await import("@/hooks/use-toast");
-      // @ts-ignore
-      newAchievements.forEach(id => {
-        // @ts-ignore
-        toast({
-          title: "🏆 ¡Nuevo Logro!",
-          description: "Has desbloqueado una nueva medalla en tu perfil.",
-        });
-      });
-    }
-
-    setPlannedDateForScan(null);
-    setRefreshKey((prev) => prev + 1);
-    setActiveTab("home");
   };
 
   const handleBackToHome = () => {
@@ -244,60 +218,53 @@ function AppContent() {
     setImageDescription("");
   };
 
+  const overlay = (node: ReactNode) => (
+    <>
+      {node}
+      <OfflineIndicator />
+    </>
+  );
+
   if (selectedImage) {
-    return (
-      <>
-        <ImageDescriptionStep
-          file={selectedImage}
-          description={imageDescription}
-          onDescriptionChange={setImageDescription}
-          onCancel={handleCancelDescription}
-          onSubmit={handleDescriptionSubmit}
-        />
-        <OfflineIndicator />
-      </>
+    return overlay(
+      <ImageDescriptionStep
+        file={selectedImage}
+        description={imageDescription}
+        onDescriptionChange={setImageDescription}
+        onCancel={handleCancelDescription}
+        onSubmit={handleDescriptionSubmit}
+      />
     );
   }
 
   if (analysisResult) {
-    return (
-      <>
-        <AnalysisResults
-          result={analysisResult}
-          imagePreviewUrl={imagePreviewUrl}
-          onBack={handleBackToHome}
-          onSave={handleSaveAnalysis}
-          isSaving={isSaving}
-          defaultPlannedDate={plannedDateForScan}
-        />
-        <OfflineIndicator />
-      </>
+    return overlay(
+      <AnalysisResults
+        result={analysisResult}
+        imagePreviewUrl={imagePreviewUrl}
+        onBack={handleBackToHome}
+        onSave={(edited?: any) => saveAnalysis(edited)}
+        isSaving={isSaving}
+        defaultPlannedDate={plannedDateForScan}
+      />
     );
   }
 
   if (isAnalyzing) {
-    return (
-      <>
-        <AnalyzingFoodOverlay />
-        <OfflineIndicator />
-      </>
-    );
+    return overlay(<AnalyzingFoodOverlay />);
   }
 
   if (imageAnalysisError) {
-    return (
-      <>
-        <ImageAnalysisFailure
-          message={imageAnalysisError}
-          imagePreviewUrl={imagePreviewUrl}
-          onRetry={retryImageAnalysis}
-          onDismiss={() => {
-            dismissImageAnalysisError();
-            setActiveTab("home");
-          }}
-        />
-        <OfflineIndicator />
-      </>
+    return overlay(
+      <ImageAnalysisFailure
+        message={imageAnalysisError}
+        imagePreviewUrl={imagePreviewUrl}
+        onRetry={retryImageAnalysis}
+        onDismiss={() => {
+          dismissImageAnalysisError();
+          setActiveTab("home");
+        }}
+      />
     );
   }
 
@@ -305,142 +272,50 @@ function AppContent() {
     return (
       <>
         <div className="h-[100dvh] overflow-y-auto bg-background">
-          <WeeklyPlannerLazy
-            onAddMeal={handleAddMealFromPlanner}
-            onClose={() => setPlannerOpen(false)}
-          />
+          <WeeklyPlannerLazy onAddMeal={handleAddMealFromPlanner} onClose={() => setPlannerOpen(false)} />
         </div>
-        <CoachFab />
         <MealEditorDrawer />
         <OfflineIndicator />
       </>
     );
   }
 
+  const panels: Record<MainTab, ReactNode> = {
+    home: (
+      <DashboardScreen
+        onViewHistory={() => handleTabChange("history")}
+        onOpenPlanner={() => setPlannerOpen(true)}
+        onScan={() => handleTabChange("scan")}
+      />
+    ),
+    diets: <DietsScreenLazy />,
+    scan: <ScanScreenLazy onScanFood={handleScanFood} onImageSelected={handleImageSelected} />,
+    history: <MealHistoryLazy onBack={() => handleTabChange("home")} />,
+    profile: <ProfilePageLazy onTabChange={handleTabChange} />,
+    settings: <SettingsPageLazy />,
+  };
+
   return (
-    <div className="flex h-[100dvh] min-h-0 flex-col overflow-hidden bg-background">
-      {!isMobile && (
-        <SidebarNav activeTab={activeTab} onTabChange={handleTabChange} />
-      )}
-      <div
-        className={`flex min-h-0 flex-1 flex-col ${!isMobile ? "ml-64" : "w-full"}`}
+    <div className="flex h-[100dvh] min-h-0 overflow-hidden bg-background">
+      {!isMobile && <SidebarNav activeTab={activeTab} onTabChange={handleTabChange} />}
+      <main
+        ref={mainRef}
+        className={`relative min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain ${
+          !isMobile ? "ml-64" : ""
+        }`}
       >
-        {isMobile ? (
-          <div
-            ref={scrollRef}
-            className="flex min-h-0 flex-1 w-full min-w-0 max-w-full snap-x snap-mandatory overflow-x-auto overflow-y-clip overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        <DemoBanner />
+        {MAIN_TAB_ORDER.map((tab) => (
+          <LazyTabContent
+            key={tab}
+            isActive={activeTab === tab}
+            className={activeTab === tab ? "min-h-full" : "hidden"}
           >
-            <section
-              aria-hidden={activeTab !== "home"}
-              inert={activeTab !== "home" ? true : undefined}
-              className="flex h-full max-h-full min-h-0 w-full max-w-full shrink-0 grow-0 basis-full snap-start [scroll-snap-stop:always] flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain min-w-0"
-            >
-              <LazyTabContent isActive={activeTab === "home"} className="w-full h-full">
-                <DashboardScreen
-                  key={refreshKey}
-                  onViewHistory={handleViewHistory}
-                  onOpenPlanner={() => setPlannerOpen(true)}
-                />
-              </LazyTabContent>
-            </section>
-            <section
-              aria-hidden={activeTab !== "diets"}
-              inert={activeTab !== "diets" ? true : undefined}
-              className="flex h-full max-h-full min-h-0 w-full max-w-full shrink-0 grow-0 basis-full snap-start [scroll-snap-stop:always] flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain min-w-0"
-            >
-              <LazyTabContent isActive={activeTab === "diets"} className="w-full h-full">
-                <DietsScreenLazy />
-              </LazyTabContent>
-            </section>
-            <section
-              aria-hidden={activeTab !== "scan"}
-              inert={activeTab !== "scan" ? true : undefined}
-              className="flex h-full max-h-full min-h-0 w-full max-w-full shrink-0 grow-0 basis-full snap-start [scroll-snap-stop:always] flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain min-w-0"
-            >
-              <LazyTabContent isActive={activeTab === "scan"} className="w-full h-full">
-                <ScanScreenLazy
-                  onScanFood={handleScanFood}
-                  onImageSelected={handleImageSelected}
-                />
-              </LazyTabContent>
-            </section>
-            <section
-              aria-hidden={activeTab !== "history"}
-              inert={activeTab !== "history" ? true : undefined}
-              className="flex h-full max-h-full min-h-0 w-full max-w-full shrink-0 grow-0 basis-full snap-start [scroll-snap-stop:always] flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain min-w-0"
-            >
-              <LazyTabContent isActive={activeTab === "history"} className="w-full h-full">
-                <MealHistoryLazy key={refreshKey} onBack={() => setActiveTab("home")} />
-              </LazyTabContent>
-            </section>
-            <section
-              aria-hidden={activeTab !== "profile"}
-              inert={activeTab !== "profile" ? true : undefined}
-              className="flex h-full max-h-full min-h-0 w-full max-w-full shrink-0 grow-0 basis-full snap-start [scroll-snap-stop:always] flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain min-w-0"
-            >
-              <LazyTabContent isActive={activeTab === "profile"} className="w-full h-full">
-                <ProfilePageLazy onTabChange={handleTabChange} />
-              </LazyTabContent>
-            </section>
-            <section
-              aria-hidden={activeTab !== "settings"}
-              inert={activeTab !== "settings" ? true : undefined}
-              className="flex h-full max-h-full min-h-0 w-full max-w-full shrink-0 grow-0 basis-full snap-start [scroll-snap-stop:always] flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain min-w-0"
-            >
-              <LazyTabContent isActive={activeTab === "settings"} className="w-full h-full">
-                <SettingsPageLazy />
-              </LazyTabContent>
-            </section>
-          </div>
-        ) : (
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-            <main className="flex-1 overflow-y-auto overflow-x-hidden p-0 sm:p-0">
-              <div className="w-full h-full">
-                {activeTab === "home" ? (
-                  <section className="w-full h-full">
-                    <DashboardScreen
-                      key={refreshKey}
-                      onViewHistory={handleViewHistory}
-                      onOpenPlanner={() => setPlannerOpen(true)}
-                    />
-                  </section>
-                ) : null}
-                {activeTab === "diets" ? (
-                  <section className="w-full h-full">
-                    <DietsScreenLazy />
-                  </section>
-                ) : null}
-                {activeTab === "scan" ? (
-                  <section className="w-full h-full">
-                    <ScanScreenLazy
-                      onScanFood={handleScanFood}
-                      onImageSelected={handleImageSelected}
-                    />
-                  </section>
-                ) : null}
-                {activeTab === "history" ? (
-                  <section className="w-full h-full">
-                    <MealHistoryLazy key={refreshKey} onBack={() => setActiveTab("home")} />
-                  </section>
-                ) : null}
-                {activeTab === "profile" ? (
-                  <section className="w-full h-full">
-                    <ProfilePageLazy onTabChange={handleTabChange} />
-                  </section>
-                ) : null}
-                {activeTab === "settings" ? (
-                  <section className="w-full h-full">
-                    <SettingsPageLazy />
-                  </section>
-                ) : null}
-              </div>
-            </main>
-          </div>
-        )}
-      </div>
-      {isMobile && (
-        <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
-      )}
+            {panels[tab]}
+          </LazyTabContent>
+        ))}
+      </main>
+      {isMobile && <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />}
       <CoachFab />
       <MealEditorDrawer />
       <OfflineIndicator />
@@ -456,12 +331,9 @@ export default function Home() {
 
   return (
     <AuthProvider>
+      <SplashIntro />
       <AppDataProvider>
-        <Suspense fallback={
-          <div className="flex min-h-screen items-center justify-center bg-background">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        }>
+        <Suspense fallback={<ShellLoading />}>
           <AppContent />
         </Suspense>
       </AppDataProvider>

@@ -1,12 +1,8 @@
 "use client";
 
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Target } from "lucide-react";
-import type {
-  OnboardingData,
-  UpdateOnboardingField,
-} from "../onboarding-types";
+import { TrendingDown, TrendingUp, Scale, type LucideIcon } from "lucide-react";
+import type { OnboardingData, UpdateOnboardingField } from "../onboarding-types";
+import { OptionCard, StepHeader } from "../option-card";
 
 interface StepProps {
   data: OnboardingData;
@@ -17,47 +13,48 @@ const GOALS: {
   value: OnboardingData["fitnessGoal"];
   label: string;
   description: string;
+  icon: LucideIcon;
+  tone: string;
 }[] = [
-  { value: "bulking", label: "Bulking", description: "Ganar masa muscular y peso" },
-  { value: "shedding", label: "Shedding", description: "Perder peso y grasa corporal" },
-  { value: "maintenance", label: "Mantenimiento", description: "Mantener el peso actual" },
+  {
+    value: "shedding",
+    label: "Perder grasa",
+    description: "Déficit moderado manteniendo la proteína alta",
+    icon: TrendingDown,
+    tone: "bg-fat/12 text-fat",
+  },
+  {
+    value: "maintenance",
+    label: "Mantener peso",
+    description: "Comer lo que gastas y mejorar la calidad",
+    icon: Scale,
+    tone: "bg-primary/10 text-primary",
+  },
+  {
+    value: "bulking",
+    label: "Ganar músculo",
+    description: "Superávit ligero para construir masa magra",
+    icon: TrendingUp,
+    tone: "bg-protein/12 text-protein",
+  },
 ];
 
 export function StepFitnessGoal({ data, updateData }: StepProps) {
   return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <Target className="h-12 w-12 text-primary mx-auto mb-4" />
-        <h2 className="text-2xl font-bold text-primary mb-2">
-          Objetivo de Fitness
-        </h2>
-        <p className="text-muted-foreground">¿Cuál es tu objetivo principal?</p>
-      </div>
-
-      <div className="space-y-4">
-        <RadioGroup
-          value={data.fitnessGoal}
-          onValueChange={(value) =>
-            updateData("fitnessGoal", value as OnboardingData["fitnessGoal"])
-          }
-        >
-          <div className="space-y-3">
-            {GOALS.map(({ value, label, description }) => (
-              <div
-                key={value}
-                className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-muted/50"
-              >
-                <RadioGroupItem value={value} id={value} className="mt-1" />
-                <div>
-                  <Label htmlFor={value} className="font-medium">
-                    {label}
-                  </Label>
-                  <p className="text-sm text-muted-foreground">{description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </RadioGroup>
+    <div>
+      <StepHeader title="¿Cuál es tu objetivo?" description="Ajustaremos tu meta diaria y el reparto de macros." />
+      <div role="radiogroup" aria-label="Objetivo" className="grid gap-2.5">
+        {GOALS.map((g) => (
+          <OptionCard
+            key={g.value}
+            icon={g.icon}
+            label={g.label}
+            description={g.description}
+            tone={g.tone}
+            selected={data.fitnessGoal === g.value}
+            onSelect={() => updateData("fitnessGoal", g.value)}
+          />
+        ))}
       </div>
     </div>
   );

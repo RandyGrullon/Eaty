@@ -40,23 +40,17 @@ export function AnalyzingFoodOverlay() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-6">
-      <div className="w-full max-w-xs text-center">
-        <Loader2
-          className="mx-auto mb-6 h-12 w-12 animate-spin text-primary"
-          aria-hidden
-        />
-        <h2 className="mb-2 text-xl font-bold text-primary">
-          {MESSAGES[messageIndex]}
-        </h2>
-        <p className="mb-8 text-sm text-muted-foreground">
-          El análisis de imágenes por IA puede tardar hasta un minuto.
-        </p>
-        <Progress value={progress} className="h-2 w-full" />
-        <p className="mt-2 text-xs text-muted-foreground/60 italic">
-          No cierres la aplicación
+      <div className="surface w-full max-w-sm p-6 text-center sm:p-8" role="status" aria-live="polite">
+        <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+          <Loader2 className="h-6 w-6 animate-spin" aria-hidden />
+        </span>
+        <h2 className="mt-5 text-xl font-semibold">{MESSAGES[messageIndex]}</h2>
+        <p className="mt-1.5 text-sm text-muted-foreground">El análisis por IA puede tardar hasta un minuto.</p>
+        <Progress value={progress} className="mt-6 h-2 w-full" />
+        <p className="mt-2 text-xs text-muted-foreground tabular">
+          {Math.round(progress)}% · No cierres la aplicación
         </p>
       </div>
     </div>
   );
 }
-

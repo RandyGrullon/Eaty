@@ -3,7 +3,7 @@ import { z } from "zod";
 import { runDietGenerateGroq } from "@/lib/groq-server";
 import {
   HttpApiError,
-  enforceDailyQuota,
+  withDailyQuota,
   requireUidFromRequest,
 } from "@/lib/api-auth-usage";
 import { logger } from "@/lib/logger";
@@ -23,15 +23,16 @@ export async function POST(req: Request) {
     const uid = await requireUidFromRequest(req);
     const body = bodySchema.parse(await req.json());
 
-    const diet = await runDietGenerateGroq({
-      goal: body.goal,
-      calories: body.calories,
-      preferences: body.preferences,
-      restrictions: body.restrictions,
-      lang: body.lang,
-    });
-
-    await enforceDailyQuota(uid, "analyze");
+    // Reserva la cuota ANTES de llamar al LLM; se devuelve si la llamada falla.
+    const diet = await withDailyQuota(uid, "diets", () =>
+      runDietGenerateGroq({
+        goal: body.goal,
+        calories: body.calories,
+        preferences: body.preferences,
+        restrictions: body.restrictions,
+        lang: body.lang,
+      })
+    );
 
     return NextResponse.json({ diet });
   } catch (e) {

@@ -32,7 +32,7 @@ const envParse = publicEnvSchema.safeParse({
 if (!envParse.success) {
   const errors = envParse.error.flatten().fieldErrors;
   const missing = Object.keys(errors).join(", ");
-  console.error("❌ Error de configuración (Variables de entorno públicas faltantes):", errors);
+  console.error("Error de configuración (Variables de entorno públicas faltantes):", errors);
   // No lanzamos error aquí para evitar romper el build de Next.js si faltan en CI, 
   // pero los componentes que dependan de ellas fallarán con gracia.
 }

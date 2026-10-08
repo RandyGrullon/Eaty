@@ -11,8 +11,13 @@ import {
   signOut,
   onAuthStateChanged,
   signInAnonymously as firebaseSignInAnonymously,
+  linkWithCredential,
+  linkWithPopup,
+  EmailAuthProvider,
+  sendPasswordResetEmail,
 } from "firebase/auth"
 import { appFirebase, googleProvider } from "@/lib/firebase"
+import { isDemoMode } from "@/lib/demo/mode"
 
 interface AuthContextType {
   user: User | null
@@ -21,6 +26,10 @@ interface AuthContextType {
   signUp: (email: string, password: string) => Promise<void>
   signInWithGoogle: () => Promise<void>
   signInAnonymously: () => Promise<void>
+  /** Convierte la sesión de invitado en cuenta real conservando uid y datos. */
+  linkGuestWithEmail: (email: string, password: string) => Promise<void>
+  linkGuestWithGoogle: () => Promise<void>
+  resetPassword: (email: string) => Promise<void>
   logout: () => Promise<void>
 }
 
@@ -28,6 +37,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
+  // El enlace invitado→cuenta muta el mismo objeto User (isAnonymous, email):
+  // forzamos un render para que la UI lo refleje.
+  const [, setAuthVersion] = useState(0)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -41,7 +53,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   useEffect(() => {
-    if (loading) return
+    // En modo demo no hay Firebase Admin: no se emite cookie de servidor.
+    if (loading || isDemoMode()) return
     if (!user) {
       void fetch("/api/auth/session", {
         method: "DELETE",
@@ -100,6 +113,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const linkGuestWithEmail = async (email: string, password: string) => {
+    const current = appFirebase.auth.currentUser
+    if (!current?.isAnonymous) throw new Error("No hay una sesión de invitado activa")
+    try {
+      await linkWithCredential(current, EmailAuthProvider.credential(email, password))
+      setAuthVersion((v) => v + 1)
+    } catch (error: any) {
+      throw new Error(getAuthErrorMessage(error.code))
+    }
+  }
+
+  const linkGuestWithGoogle = async () => {
+    const current = appFirebase.auth.currentUser
+    if (!current?.isAnonymous) throw new Error("No hay una sesión de invitado activa")
+    try {
+      await linkWithPopup(current, googleProvider)
+      setAuthVersion((v) => v + 1)
+    } catch (error: any) {
+      throw new Error(getAuthErrorMessage(error.code))
+    }
+  }
+
+  const resetPassword = async (email: string) => {
+    try {
+      await sendPasswordResetEmail(appFirebase.auth, email)
+    } catch (error: any) {
+      throw new Error(getAuthErrorMessage(error.code))
+    }
+  }
+
   const logout = async () => {
     const auth = appFirebase.auth
     try {
@@ -120,6 +163,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUp,
     signInWithGoogle,
     signInAnonymously,
+    linkGuestWithEmail,
+    linkGuestWithGoogle,
+    resetPassword,
     logout,
   }
 
@@ -139,7 +185,15 @@ function getAuthErrorMessage(errorCode: string): string {
     case "auth/user-not-found":
       return "No existe una cuenta con este correo electrónico"
     case "auth/wrong-password":
-      return "Contraseña incorrecta"
+    case "auth/invalid-credential":
+      return "Correo o contraseña incorrectos"
+    case "auth/credential-already-in-use":
+    case "auth/provider-already-linked":
+      return "Esa cuenta ya existe. Inicia sesión con ella (los datos del invitado no se fusionan)."
+    case "auth/operation-not-allowed":
+      return "Este método de acceso no está habilitado en Firebase"
+    case "auth/network-request-failed":
+      return "Sin conexión. Revisa tu red e inténtalo de nuevo"
     case "auth/email-already-in-use":
       return "Ya existe una cuenta con este correo electrónico"
     case "auth/weak-password":

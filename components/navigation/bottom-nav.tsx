@@ -1,57 +1,81 @@
-"use client"
+"use client";
 
-import { Button } from "@/components/ui/button"
-import type { MainTab } from "@/lib/main-tab"
-import { Home, Camera, History, User, Salad } from "lucide-react"
+import type { MainTab } from "@/lib/main-tab";
+import { cn } from "@/lib/utils";
+import { Camera } from "lucide-react";
+import { NAV_ITEMS } from "./nav-items";
 
 interface BottomNavProps {
-  activeTab: MainTab
-  onTabChange: (tab: MainTab) => void
+  activeTab: MainTab;
+  onTabChange: (tab: MainTab) => void;
 }
 
+/** Ajustes vive dentro de Perfil en móvil: se marca Perfil como activo. */
+const MOBILE_ITEMS = NAV_ITEMS.filter((t) => t.id !== "settings");
+
 export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
-  const tabs = [
-    { id: "home" as const, icon: Home, label: "Inicio" },
-    { id: "diets" as const, icon: Salad, label: "Dietas" },
-    { id: "scan" as const, icon: Camera, label: "Escanear" },
-    { id: "history" as const, icon: History, label: "Historial" },
-    { id: "profile" as const, icon: User, label: "Perfil" },
-  ]
+  const current = activeTab === "settings" ? "profile" : activeTab;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 pt-2 bg-gradient-to-t from-background via-background/95 to-transparent sm:hidden">
-      <nav className="mx-auto flex h-16 max-w-md items-center justify-around rounded-[24px] border border-border/40 bg-card/70 px-2 shadow-2xl shadow-black/5 backdrop-blur-xl">
-        {tabs.map((tab) => {
-          const Icon = tab.icon
-          const isActive = activeTab === tab.id
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 px-3 pb-[max(env(safe-area-inset-bottom),12px)] pt-6 bg-gradient-to-t from-background via-background/80 to-transparent md:hidden">
+      <nav
+        aria-label="Navegación principal"
+        className="pointer-events-auto mx-auto flex h-[68px] max-w-md items-center justify-between rounded-[28px] border border-border bg-card/90 px-2 shadow-[var(--shadow-soft)] backdrop-blur-xl"
+      >
+        {MOBILE_ITEMS.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = current === tab.id;
+
+          if (tab.id === "scan") {
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => onTabChange("scan")}
+                aria-label="Escanear comida"
+                aria-current={isActive ? "page" : undefined}
+                className="relative -mt-7 flex flex-col items-center gap-1"
+              >
+                <span
+                  className={cn(
+                    "flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/30 ring-4 ring-background transition-transform active:scale-95",
+                    isActive && "scale-105"
+                  )}
+                >
+                  <Camera className="h-6 w-6" />
+                </span>
+                <span className={cn("text-[11px] font-medium", isActive ? "text-primary" : "text-muted-foreground")}>
+                  Escanear
+                </span>
+              </button>
+            );
+          }
 
           return (
             <button
               key={tab.id}
+              type="button"
               onClick={() => onTabChange(tab.id)}
               aria-label={tab.label}
               aria-current={isActive ? "page" : undefined}
-              className={`group relative flex flex-1 flex-col items-center justify-center gap-1 py-1 transition-all duration-300 ${
+              className={cn(
+                "flex flex-1 flex-col items-center justify-center gap-1 rounded-2xl py-2 transition-colors",
                 isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {isActive && (
-                <div className="absolute inset-x-2 -top-1 h-1 rounded-full bg-primary/20 blur-[2px]" />
               )}
-              <div className={`flex h-10 w-10 items-center justify-center rounded-2xl transition-all duration-300 ${
-                isActive ? "bg-primary/10 scale-110 shadow-inner" : "group-hover:bg-accent/50"
-              }`}>
-                <Icon className={`h-5 w-5 ${isActive ? "fill-primary/10" : ""}`} />
-              </div>
-              <span className={`text-[10px] font-bold tracking-tight transition-all ${
-                isActive ? "opacity-100 scale-100" : "opacity-70 scale-95"
-              }`}>
-                {tab.label}
+            >
+              <span
+                className={cn(
+                  "flex h-8 w-12 items-center justify-center rounded-full transition-colors",
+                  isActive && "bg-primary/12"
+                )}
+              >
+                <Icon className="h-[20px] w-[20px]" strokeWidth={isActive ? 2.4 : 2} />
               </span>
+              <span className={cn("text-[11px]", isActive ? "font-semibold" : "font-medium")}>{tab.label}</span>
             </button>
-          )
+          );
         })}
       </nav>
     </div>
-  )
+  );
 }

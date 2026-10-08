@@ -22,6 +22,7 @@ import { LiveScanner } from "./live-scanner";
 import { ScanModeCard } from "./scan-mode-card";
 import { TextAnalysisCard } from "./text-analysis-card";
 import { getProductByBarcode } from "@/lib/barcode";
+import { PageHeader } from "@/components/app/page-header";
 import { barcodeProductToMealData } from "@/lib/barcode-to-meal";
 
 interface ScanScreenProps {
@@ -181,13 +182,13 @@ export function ScanScreen({ onScanFood, onImageSelected }: ScanScreenProps) {
   };
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className="relative w-full min-w-0 max-w-full min-h-0 overflow-x-hidden bg-background"
+      className="relative min-h-full w-full min-w-0 max-w-full overflow-x-hidden bg-background pb-32 md:pb-12"
     >
       <AnimatePresence>
         {isDragging && (
@@ -195,21 +196,21 @@ export function ScanScreen({ onScanFood, onImageSelected }: ScanScreenProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[120] flex items-center justify-center bg-primary/10 backdrop-blur-sm"
+            className="fixed inset-0 z-[120] flex items-center justify-center bg-background/85 p-4"
           >
-            <div className="flex flex-col items-center gap-4 rounded-3xl border-2 border-dashed border-primary bg-background/90 p-12 shadow-2xl">
-              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <Upload className="h-10 w-10 animate-bounce" />
-              </div>
-              <p className="text-xl font-black text-foreground">Suelta para analizar</p>
-              <p className="text-sm text-muted-foreground font-medium">Puedes arrastrar cualquier foto de comida aquí</p>
+            <div className="surface flex w-full max-w-sm flex-col items-center gap-3 border-2 border-dashed border-primary p-10 text-center">
+              <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <Upload className="h-6 w-6" />
+              </span>
+              <p className="text-lg font-semibold">Suelta para analizar</p>
+              <p className="text-sm text-muted-foreground">Arrastra cualquier foto de comida aquí.</p>
             </div>
           </motion.div>
         )}
         {isBarcodeOpen && (
-          <BarcodeScanner 
-            onScan={handleBarcodeScan} 
-            onClose={() => setIsBarcodeOpen(false)} 
+          <BarcodeScanner
+            onScan={handleBarcodeScan}
+            onClose={() => setIsBarcodeOpen(false)}
           />
         )}
         {isLiveScannerOpen && (
@@ -232,152 +233,107 @@ export function ScanScreen({ onScanFood, onImageSelected }: ScanScreenProps) {
       </AnimatePresence>
 
       {isBarcodeLoading && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-background/60 backdrop-blur-md">
-          <div className="flex flex-col items-center gap-4">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <p className="font-black animate-pulse">Buscando producto...</p>
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-background/85 p-4">
+          <div className="surface flex flex-col items-center gap-3 px-8 py-6">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="font-medium">Buscando producto…</p>
           </div>
         </div>
       )}
 
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-primary/[0.12] via-chart-2/[0.06] to-transparent"
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute -right-20 -top-10 h-48 w-48 rounded-full bg-primary/25 blur-3xl"
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute -left-10 top-32 h-32 w-32 rounded-full bg-chart-2/20 blur-2xl"
-        aria-hidden
-      />
+      <PageHeader title="Registrar comida" subtitle="Foto, código de barras o texto: elige cómo." />
 
-      <div className="relative z-10 mx-auto box-border flex w-full min-w-0 max-w-lg flex-col gap-6 px-4 pb-32 pt-6 sm:px-5 sm:pt-8 md:pb-12">
-        <header className="text-center sm:text-left">
-          <motion.p 
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="text-[0.7rem] font-bold uppercase tracking-[0.25em] text-primary"
-          >
-            Escanear
-          </motion.p>
-          <motion.h1 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="mt-1.5 font-sans text-2xl font-bold leading-tight tracking-tight text-foreground sm:text-3xl"
-          >
-            Formas de analizar
-          </motion.h1>
-          <motion.p 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground sm:mx-0 sm:text-base"
-          >
-            Usa la cámara para platos, escanea códigos de barras para productos o escribe el nombre.
-          </motion.p>
-        </header>
+      <div className="mx-auto max-w-6xl px-4 pt-4 sm:px-6 lg:px-10">
+        <div className="grid gap-4 lg:grid-cols-12 lg:gap-5">
+          <section className="min-w-0 lg:col-span-7">
+            <h2 className="sr-only">Modos de análisis</h2>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <ScanModeCard
+                icon={ScanLine}
+                badge="En vivo"
+                title="Escáner en vivo"
+                description="Apunta al plato y la IA lo analiza al momento."
+                iconWrapClassName="bg-primary text-primary-foreground"
+                onClick={() => setIsLiveScannerOpen(true)}
+                index={0}
+              />
+              <ScanModeCard
+                icon={Camera}
+                badge="Foto"
+                title="Cámara"
+                description="Haz una foto con la cámara del sistema."
+                iconWrapClassName="bg-primary/10 text-primary"
+                onClick={handleCameraCapture}
+                index={1}
+              />
+              <ScanModeCard
+                icon={Barcode}
+                badge="UPC/EAN"
+                title="Código de barras"
+                description="Escanea un paquete para ver su nutrición."
+                iconWrapClassName="bg-carbs/15 text-carbs"
+                onClick={() => setIsBarcodeOpen(true)}
+                index={2}
+              />
+              <ScanModeCard
+                icon={QrCode}
+                badge="QR"
+                title="Código QR"
+                description="Analiza productos mediante su código QR."
+                iconWrapClassName="bg-fat/15 text-fat"
+                onClick={() => setIsBarcodeOpen(true)}
+                index={3}
+              />
+              <ScanModeCard
+                icon={Upload}
+                badge="Galería"
+                title="Subir imagen"
+                description="Elige una foto de tu galería o archivos."
+                iconWrapClassName="bg-muted text-foreground"
+                onClick={handleFileUpload}
+                index={4}
+              />
+              <ScanModeCard
+                icon={ClipboardPaste}
+                badge="Imagen o texto"
+                title="Pegar"
+                description="Pega una imagen o un texto copiado."
+                iconWrapClassName="bg-accent text-accent-foreground"
+                onClick={handlePasteFromClipboard}
+                index={5}
+              />
+            </div>
+          </section>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-          <ScanModeCard
-            icon={ScanLine}
-            badge="Premium"
-            title="Escáner AR"
-            description="Escaneo 3D en vivo con realidad aumentada."
-            iconWrapClassName="bg-primary text-primary-foreground shadow-[0_0_20px_rgba(255,255,255,0.3)] animate-pulse"
-            onClick={() => setIsLiveScannerOpen(true)}
-            index={0}
-          />
-          <ScanModeCard
-            icon={Camera}
-            badge="Básico"
-            title="Cámara"
-            description="Captura una foto usando la app de tu sistema."
-            iconWrapClassName="bg-chart-1 text-chart-1-foreground"
-            onClick={handleCameraCapture}
-            index={1}
-          />
-          <ScanModeCard
-            icon={Barcode}
-            badge="UPC/EAN"
-            title="Código de barras"
-            description="Escanea paquetes para datos nutricionales."
-            iconWrapClassName="bg-chart-2 text-chart-2-foreground"
-            onClick={() => setIsBarcodeOpen(true)}
-            index={2}
-          />
-          <ScanModeCard
-            icon={QrCode}
-            badge="Scan"
-            title="Escáner QR"
-            description="Analiza productos mediante códigos QR."
-            iconWrapClassName="bg-chart-3 text-chart-3-foreground"
-            onClick={() => setIsBarcodeOpen(true)}
-            index={3}
-          />
-          <ScanModeCard
-            icon={Upload}
-            badge="Files"
-            title="Subir imagen"
-            description="Analiza fotos de tu galería o archivos."
-            iconWrapClassName="bg-muted text-foreground"
-            onClick={handleFileUpload}
-            index={4}
-          />
-          <ScanModeCard
-            icon={ClipboardPaste}
-            badge="Multi"
-            title="Pegar"
-            description="Pega imágenes o texto desde tu portapapeles."
-            iconWrapClassName="bg-accent text-accent-foreground"
-            onClick={handlePasteFromClipboard}
-            index={5}
-          />
+          <div className="flex min-w-0 flex-col gap-4 lg:col-span-5 lg:gap-5">
+            <TextAnalysisCard
+              foodName={foodName}
+              onFoodNameChange={setFoodName}
+              onAnalyze={handleTextAnalysis}
+              onPaste={handlePasteFromClipboard}
+              pasteLoading={pasteLoading}
+            />
+
+            <motion.section
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              className="rounded-2xl bg-muted/60 p-4"
+            >
+              <h2 className="eyebrow">Consejos</h2>
+              <ul className="mt-2 space-y-2 text-sm text-muted-foreground">
+                <li className="flex items-start gap-2.5">
+                  <ScanLine className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+                  Foto desde arriba, con una mano o un cubierto como escala.
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-carbs" aria-hidden />
+                  Por texto, incluye los acompañamientos.
+                </li>
+              </ul>
+            </motion.section>
+          </div>
         </div>
-
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-          className="flex items-center gap-3 text-xs text-muted-foreground"
-        >
-          <div className="h-px flex-1 bg-border/80" aria-hidden />
-          <span className="shrink-0 font-medium">o solo con texto</span>
-          <div className="h-px flex-1 bg-border/80" aria-hidden />
-        </motion.div>
-
-        <TextAnalysisCard
-          foodName={foodName}
-          onFoodNameChange={setFoodName}
-          onAnalyze={handleTextAnalysis}
-          onPaste={handlePasteFromClipboard}
-          pasteLoading={pasteLoading}
-        />
-
-        <motion.ul 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="flex min-w-0 max-w-full flex-col gap-2.5 break-words rounded-2xl border border-dashed border-border/70 bg-muted/30 px-4 py-3.5 text-xs text-muted-foreground sm:flex-row sm:flex-wrap sm:items-center sm:justify-center sm:gap-x-5 sm:gap-y-1 sm:py-3"
-        >
-          <li className="flex items-center gap-2">
-            <ScanLine
-              className="h-3.5 w-3.5 shrink-0 text-primary"
-              aria-hidden
-            />
-            Foto: plano cenital o con una mano/cubierto para escala.
-          </li>
-          <li className="hidden h-3 w-px bg-border/80 sm:block" aria-hidden />
-          <li className="flex items-center gap-2">
-            <Lightbulb
-              className="h-3.5 w-3.5 shrink-0 text-chart-2"
-              aria-hidden
-            />
-            Texto: incluye acompañamientos si aplica.
-          </li>
-        </motion.ul>
       </div>
 
       <input

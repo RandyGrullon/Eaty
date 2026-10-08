@@ -1,41 +1,43 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  TrendingUp,
-  Target,
-  CalendarDays,
-  Edit,
-  AlertCircle,
-  Settings,
-} from "lucide-react";
+import { Ruler, Scale, CalendarDays, Pencil, AlertCircle, Settings, UserPlus } from "lucide-react";
 import { ThemeToggle } from "@/components/app/theme-toggle";
+import { PageHeader } from "@/components/app/page-header";
 import { getProfileDisplayAge } from "@/lib/age-from-birthdate";
-import {
-  formatHeightDisplay,
-  formatWeightDisplay,
-} from "@/lib/unit-conversion";
+import { parseMeasure } from "@/lib/profile-measure";
 import type { User as FirebaseUser } from "firebase/auth";
 import type { UserProfile } from "@/types/meal";
+import { UpgradeAccountDialog } from "./upgrade-account-dialog";
+
+/** Peso en la unidad preferida del usuario ("78 kg" / "172 lb"). */
+function compactWeight(kg: number, unit?: "kg" | "lbs"): string {
+  if (kg <= 0) return "—";
+  return unit === "lbs" ? `${Math.round(kg * 2.20462)} lb` : `${Math.round(kg * 10) / 10} kg`;
+}
+
+/** Altura en la unidad preferida ("178 cm" / 5'10"). */
+function compactHeight(cm: number, unit?: "cm" | "inches"): string {
+  if (cm <= 0) return "—";
+  if (unit !== "inches") return `${Math.round(cm)} cm`;
+  const inches = Math.round(cm / 2.54);
+  return `${Math.floor(inches / 12)}'${inches % 12}"`;
+}
 
 interface ProfileHeaderProps {
   user: FirebaseUser | null;
   userProfile: UserProfile | null;
   onEdit: () => void;
+  /** Se mantiene por compatibilidad; el banner de invitado ya no cierra sesión. */
   onLogout: () => void;
   onSettingsClick?: () => void;
 }
 
-export function ProfileHeader({
-  user,
-  userProfile,
-  onEdit,
-  onLogout,
-  onSettingsClick,
-}: ProfileHeaderProps) {
+export function ProfileHeader({ user, userProfile, onEdit, onSettingsClick }: ProfileHeaderProps) {
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
 
-  const displayName =
-    user?.displayName || user?.email?.split("@")[0] || "Usuario";
+  const displayName = user?.displayName || user?.email?.split("@")[0] || "Usuario";
   const initials = displayName
     .split(/\s+/)
     .map((w) => w[0])
@@ -48,122 +50,126 @@ export function ProfileHeader({
         { label: "Edad", value: `${getProfileDisplayAge(userProfile) ?? "—"} años`, icon: CalendarDays },
         {
           label: "Peso",
-          value: typeof userProfile.weight === "string" ? "Cifrado 🔒" : formatWeightDisplay(userProfile.weight || 0),
-          icon: Target,
+          value: compactWeight(parseMeasure(userProfile.weight) ?? 0, userProfile.weightUnit),
+          icon: Scale,
         },
         {
           label: "Altura",
-          value: typeof userProfile.height === "string" ? "Cifrado 🔒" : formatHeightDisplay(userProfile.height || 0),
-          icon: TrendingUp,
+          value: compactHeight(parseMeasure(userProfile.height) ?? 0, userProfile.heightUnit),
+          icon: Ruler,
         },
       ]
     : [];
 
-  return (
-    <section className="relative overflow-hidden">
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/[0.08] via-background to-chart-2/[0.06]" aria-hidden />
-      <div className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-primary/10 blur-3xl" aria-hidden />
+  const level = userProfile?.level;
+  const points = userProfile?.points || 0;
+  const levelTarget = level ? level * 1000 : 0;
+  const levelPct = levelTarget > 0 ? Math.min(100, (points / levelTarget) * 100) : 0;
 
-      <div className="relative z-10 mx-auto max-w-4xl px-4 pb-12 pt-12 sm:px-8">
-        {user?.isAnonymous && (
-          <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-[2rem] border border-warning/20 bg-warning/5 p-6 animate-in fade-in slide-in-from-top-4 duration-700">
-            <div className="flex items-start gap-4">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-warning/10 text-warning">
-                <AlertCircle className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="font-black text-foreground">Estás en modo invitado</p>
-                <p className="text-sm font-medium text-muted-foreground leading-snug">
-                  Tus datos se podrían perder si borras el caché o cambias de dispositivo.
-                </p>
-              </div>
-            </div>
-            <Button
-              onClick={onLogout}
-              variant="outline"
-              className="rounded-xl font-bold border-warning/50 text-warning-foreground hover:bg-warning/10"
-            >
-              Crear cuenta real
-            </Button>
-          </div>
-        )}
-        <div className="flex flex-col gap-8 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-6">
-            <div className="relative">
-              <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-[2rem] bg-primary text-2xl font-black text-primary-foreground shadow-2xl shadow-primary/20 transition-transform hover:scale-105">
-                {initials}
-              </div>
-              {userProfile?.level && (
-                <div className="absolute -bottom-2 -right-2 flex h-10 w-10 items-center justify-center rounded-2xl bg-chart-2 font-black text-white shadow-lg">
-                  {userProfile.level}
-                </div>
-              )}
-            </div>
-            <div className="min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-1">
-                Mi Cuenta {userProfile?.points ? `· ${userProfile.points} pts` : ""}
-              </p>
-              <h1 className="truncate text-3xl font-black tracking-tight text-foreground sm:text-4xl">
-                {displayName}
-              </h1>
-              {userProfile?.level && (
-                <div className="mt-2 w-48 space-y-1">
-                  <div className="flex justify-between text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">
-                    <span>Nivel {userProfile.level}</span>
-                    <span>{userProfile.points || 0} / {userProfile.level * 1000}</span>
-                  </div>
-                  <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                    <div
-                      className="h-full bg-chart-2 transition-all duration-500"
-                      style={{ width: `${Math.min(100, ((userProfile.points || 0) / (userProfile.level * 1000)) * 100)}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-3">
+  return (
+    <>
+      <PageHeader
+        title="Perfil"
+        subtitle="Tus datos y tu progreso"
+        className="max-w-4xl"
+        actions={
+          <>
             <ThemeToggle />
-            <Button
-              variant="outline"
-              onClick={onEdit}
-              className="h-12 gap-2 rounded-2xl border-border/40 bg-card/40 px-6 font-bold shadow-sm backdrop-blur-md transition-all hover:bg-card"
-            >
-              <Edit className="h-4 w-4" />
-              Editar Perfil
-            </Button>
             {onSettingsClick && (
               <Button
                 variant="outline"
                 size="icon"
                 onClick={onSettingsClick}
-                className="h-12 w-12 rounded-2xl border-border/40 bg-card/40 font-bold shadow-sm backdrop-blur-md transition-all hover:bg-card"
+                className="h-10 w-10 rounded-full"
                 aria-label="Configuración"
               >
-                <Settings className="h-5 w-5 text-muted-foreground hover:text-foreground" />
+                <Settings className="h-4 w-4" />
               </Button>
             )}
-          </div>
-        </div>
+          </>
+        }
+      />
 
-        {infoCards.length > 0 && (
-          <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-3">
-            {infoCards.map((item) => (
-              <div key={item.label} className="flex items-center gap-4 rounded-[1.5rem] border border-border/40 bg-card/40 p-4 backdrop-blur-sm">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <item.icon className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">
-                    {item.label}
-                  </p>
-                  <p className="text-sm font-black text-foreground">{item.value}</p>
-                </div>
+      <div className="mx-auto max-w-4xl space-y-4 px-4 pt-4 sm:px-6 lg:px-10">
+        {user?.isAnonymous && (
+          <div className="flex flex-col gap-4 rounded-2xl border border-warning/40 bg-warning/10 p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-warning/20 text-warning-foreground">
+                <AlertCircle className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="font-semibold">Estás en modo invitado</p>
+                <p className="text-sm text-muted-foreground">
+                  Tus datos se podrían perder si borras el caché o cambias de dispositivo.
+                </p>
               </div>
-            ))}
+            </div>
+            <Button onClick={() => setUpgradeOpen(true)} className="h-10 shrink-0 gap-2 rounded-full">
+              <UserPlus className="h-4 w-4" />
+              Crear cuenta real
+            </Button>
           </div>
         )}
+
+        <section className="surface p-5 sm:p-6">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-center gap-4">
+              <div className="relative shrink-0">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary font-display text-xl font-bold text-primary-foreground sm:h-20 sm:w-20 sm:text-2xl">
+                  {initials}
+                </div>
+                {level ? (
+                  <span className="absolute -bottom-1.5 -right-1.5 flex h-7 min-w-7 items-center justify-center rounded-full border-2 border-card bg-accent px-1.5 text-xs font-semibold text-accent-foreground tabular">
+                    {level}
+                  </span>
+                ) : null}
+              </div>
+              <div className="min-w-0 flex-1">
+                <h2 className="truncate text-xl font-semibold sm:text-2xl">{displayName}</h2>
+                {user?.email ? (
+                  <p className="truncate text-sm text-muted-foreground">{user.email}</p>
+                ) : null}
+                {level ? (
+                  <div className="mt-2 w-full max-w-56 space-y-1">
+                    <div className="flex justify-between text-xs text-muted-foreground tabular">
+                      <span>Nivel {level}</span>
+                      <span>
+                        {points} / {levelTarget} pts
+                      </span>
+                    </div>
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-primary/15">
+                      <div
+                        className="h-full rounded-full bg-primary transition-all duration-500"
+                        style={{ width: `${levelPct}%` }}
+                      />
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+            <Button variant="outline" onClick={onEdit} className="h-10 shrink-0 gap-2 rounded-full px-4">
+              <Pencil className="h-4 w-4" />
+              Editar perfil
+            </Button>
+          </div>
+
+          {infoCards.length > 0 && (
+            <dl className="mt-5 grid grid-cols-3 gap-2">
+              {infoCards.map((item) => (
+                <div key={item.label} className="min-w-0 rounded-xl bg-muted/60 px-3 py-2.5">
+                  <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <item.icon className="h-3.5 w-3.5 shrink-0" />
+                    {item.label}
+                  </dt>
+                  <dd className="truncate font-display text-base font-semibold tabular sm:text-lg">{item.value}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+        </section>
       </div>
-    </section>
+
+      <UpgradeAccountDialog open={upgradeOpen} onOpenChange={setUpgradeOpen} />
+    </>
   );
 }

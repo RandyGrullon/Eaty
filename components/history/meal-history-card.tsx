@@ -1,17 +1,10 @@
 "use client";
 
-import { Clock, Camera, ChevronRight, Trash2 } from "lucide-react";
+import { Clock, ChevronRight, Pencil } from "lucide-react";
 import { motion } from "framer-motion";
-import { cn } from "@/lib/utils";
 import { formatTime } from "@/lib/date-format";
+import { MealThumb } from "@/components/meal/meal-thumb";
 import type { Meal } from "@/types/meal";
-
-function getCaloriesBadgeColor(calories: number): string {
-  if (calories < 200) return "bg-chart-3/15 text-chart-3 border border-chart-3/25";
-  if (calories < 400) return "bg-chart-4/15 text-chart-4 border border-chart-4/25";
-  if (calories < 600) return "bg-warning/20 text-warning-foreground border border-warning/30";
-  return "bg-destructive/10 text-destructive border border-destructive/25";
-}
 
 interface MealHistoryCardProps {
   meal: Meal;
@@ -22,14 +15,15 @@ export function MealHistoryCard({ meal, onSelect }: MealHistoryCardProps) {
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: -100 }}
+      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
       className="relative"
     >
-      {/* Background for swipe */}
-      <div className="absolute inset-0 flex items-center justify-end rounded-[2rem] bg-destructive px-8 text-white">
-        <Trash2 className="h-6 w-6" />
+      {/* Fondo al deslizar: abre el editor */}
+      <div className="absolute inset-[3px] flex items-center justify-end rounded-2xl bg-primary px-6 text-primary-foreground">
+        <Pencil className="h-5 w-5" />
       </div>
 
       <motion.button
@@ -40,49 +34,37 @@ export function MealHistoryCard({ meal, onSelect }: MealHistoryCardProps) {
         }}
         type="button"
         onClick={() => onSelect(meal)}
-        className="group relative flex w-full items-center gap-4 rounded-[2rem] border border-border/40 bg-card p-3 pr-6 text-left transition-all hover:shadow-2xl hover:shadow-black/[0.03] sm:p-4 sm:pr-8"
+        className="surface group relative flex w-full items-center gap-3 p-3 text-left transition-colors hover:border-primary/40 sm:gap-4"
       >
-        <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-border/40 bg-muted shadow-inner sm:h-20 sm:w-20">
-          {meal.imageUrl ? (
-            <img
-              src={meal.imageUrl}
-              alt=""
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center bg-muted/50">
-              <Camera className="h-8 w-8 text-muted-foreground/20" />
-            </div>
-          )}
-        </div>
+        <MealThumb src={meal.imageUrl} className="h-14 w-14 shrink-0 rounded-xl sm:h-16 sm:w-16" />
         <div className="min-w-0 flex-1">
-          <p className="text-lg font-black tracking-tight text-foreground truncate group-hover:text-primary transition-colors">
-            {meal.foodName}
-          </p>
-          <div className="mt-1 flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-60">
-            <Clock className="h-3 w-3" />
+          <p className="truncate font-medium">{meal.foodName}</p>
+          <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground tabular">
+            <Clock className="h-3 w-3 shrink-0" />
             {formatTime(meal.createdAt)}
             {meal.isPlanned && (
-              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[9px] text-primary opacity-100">
+              <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-medium text-accent-foreground">
                 Planeado
               </span>
             )}
-          </div>
-
-          <div className="mt-4 flex flex-wrap items-center gap-3">
-            <div className={cn("rounded-full px-3 py-1 text-[11px] font-black tabular-nums shadow-sm", getCaloriesBadgeColor(meal.calories))}>
-              {meal.calories} kcal
-            </div>
-            <div className="text-[10px] font-bold text-muted-foreground tracking-tight bg-accent/50 px-2 py-0.5 rounded-lg">
-              P <span className="text-foreground">{meal.macros.protein}g</span> ·
-              C <span className="text-foreground">{meal.macros.carbs}g</span> ·
-              G <span className="text-foreground">{meal.macros.fat}g</span>
-            </div>
-          </div>
+          </p>
+          <p className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted-foreground tabular">
+            <span className="flex items-center gap-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-protein" />P {Math.round(meal.macros.protein)}g
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-carbs" />C {Math.round(meal.macros.carbs)}g
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-fat" />G {Math.round(meal.macros.fat)}g
+            </span>
+          </p>
         </div>
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/50 text-muted-foreground transition-all group-hover:bg-primary/10 group-hover:text-primary">
-          <ChevronRight className="h-5 w-5" />
+        <div className="shrink-0 text-right">
+          <p className="font-display text-lg font-semibold leading-none tabular">{meal.calories}</p>
+          <p className="mt-1 text-[11px] text-muted-foreground">kcal</p>
         </div>
+        <ChevronRight className="hidden h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover:text-primary sm:block" />
       </motion.button>
     </motion.div>
   );

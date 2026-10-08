@@ -2,6 +2,7 @@ import { doc, getDoc, setDoc, Timestamp } from "firebase/firestore";
 import { logger } from "@/lib/logger";
 import { normalizeBirthDateFromFirestore } from "@/lib/age-from-birthdate";
 import type { UserProfile } from "@/types/meal";
+import { stripUndefined } from "@/lib/firestore-clean";
 import { getDb } from "./db";
 
 export async function saveUserProfile(
@@ -12,12 +13,23 @@ export async function saveUserProfile(
     const userProfileRef = doc(getDb(), "users", userId, "profile", "main");
     const now = Timestamp.now();
 
-    await setDoc(userProfileRef, {
-      ...profileData,
-      uid: userId,
-      createdAt: now,
-      updatedAt: now,
-    });
+    // `merge` para no borrar puntos/logros/racha ya existentes; `createdAt` solo
+    // se escribe si el documento aún no lo tiene. Si la lectura falla no se toca.
+    const existing = await getDoc(userProfileRef).catch(() => null);
+    const hasCreatedAt = existing
+      ? existing.exists() && existing.data()?.createdAt != null
+      : true;
+
+    await setDoc(
+      userProfileRef,
+      stripUndefined({
+        ...profileData,
+        uid: userId,
+        ...(hasCreatedAt ? {} : { createdAt: now }),
+        updatedAt: now,
+      }),
+      { merge: true }
+    );
   } catch (error) {
     logger.error("Error saving user profile", error);
     throw new Error("Error al guardar el perfil del usuario");
@@ -59,10 +71,10 @@ export async function updateUserProfile(
 
     await setDoc(
       userProfileRef,
-      {
+      stripUndefined({
         ...profileData,
         updatedAt: now,
-      },
+      }),
       { merge: true }
     );
   } catch (error) {

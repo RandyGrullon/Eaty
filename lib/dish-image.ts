@@ -10,10 +10,7 @@ export type DishImageContext = Pick<Meal, "foodName"> & {
  * Usa el nombre + lo que la IA dedujo (porción, recipiente, componentes).
  */
 export function buildDishPrompt(meal: DishImageContext): string {
-  const parts: string[] = [
-    "professional food photography of",
-    meal.foodName,
-  ];
+  const parts: string[] = [`professional food photography of ${meal.foodName.trim()}`];
 
   const ai = meal.aiContext;
   if (ai?.portionLabel) parts.push(`portion: ${ai.portionLabel}`);
@@ -35,41 +32,23 @@ export function buildDishPrompt(meal: DishImageContext): string {
 }
 
 /**
- * Clave/token de Pollinations (opcional). Desde 2025 Pollinations limita el uso
- * anónimo (HTTP 402 "queue full"): para generar imágenes con fiabilidad hace falta
- * una clave. Una *publishable key* (`pk_*`) es segura en el navegador.
- * Regístrate gratis en https://enter.pollinations.ai y pega la clave en
- * `NEXT_PUBLIC_POLLINATIONS_TOKEN`.
+ * Origen público de la app para que las URLs funcionen también fuera del navegador
+ * (p. ej. la app móvil). En el navegador basta con el origen actual.
  */
-export function getPollinationsToken(): string | undefined {
-  return process.env.NEXT_PUBLIC_POLLINATIONS_TOKEN?.trim() || undefined;
-}
-
-/** `true` si hay clave configurada (las imágenes IA funcionarán con fiabilidad). */
-export function isDishImageConfigured(): boolean {
-  return Boolean(getPollinationsToken());
+function publicOrigin(): string {
+  const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, "");
+  if (fromEnv) return fromEnv;
+  if (typeof window !== "undefined") return window.location.origin;
+  return "";
 }
 
 /**
- * URL de imagen generada por Pollinations.ai. Incluye la clave si está configurada.
- * `seed` permite regenerar variaciones del mismo plato.
+ * URL de la imagen IA del plato, servida por `/api/dish-image` (proxy a Pollinations
+ * con reintentos, cola y caché). `seed` permite regenerar variaciones del mismo plato.
  */
 export function buildDishImageUrl(prompt: string, seed: number): string {
-  const encoded = encodeURIComponent(prompt);
-  const params = new URLSearchParams({
-    width: "768",
-    height: "768",
-    nologo: "true",
-    model: "flux",
-    seed: String(seed),
-  });
-  const token = getPollinationsToken();
-  if (token) {
-    // Pollinations ha usado ambas convenciones; enviamos las dos por compatibilidad.
-    params.set("token", token);
-    params.set("key", token);
-  }
-  return `https://image.pollinations.ai/prompt/${encoded}?${params.toString()}`;
+  const params = new URLSearchParams({ p: prompt, s: String(seed) });
+  return `${publicOrigin()}/api/dish-image?${params.toString()}`;
 }
 
 /** Conveniencia: prompt + URL con una semilla aleatoria. */

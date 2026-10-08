@@ -1,35 +1,43 @@
 {
   "name": "Eaty",
   "short_name": "Eaty",
-  "description": "Analiza tu comida con inteligencia artificial",
+  "description": "Fotografía tu comida y obtén calorías y macros al instante",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#faf8ff",
-  "theme_color": "#4f46e5",
+  "background_color": "#f7f9f4",
+  "theme_color": "#0b8a55",
   "orientation": "portrait-primary",
   "scope": "/",
   "lang": "es",
-  "categories": ["health", "food", "lifestyle"],
-  "screenshots": [
-    {
-      "src": "/icon-512x512.jpg",
-      "sizes": "512x512",
-      "type": "image/jpeg",
-      "form_factor": "narrow"
-    }
+  "categories": [
+    "health",
+    "food",
+    "lifestyle"
   ],
   "icons": [
     {
-      "src": "/icon-192x192.jpg",
+      "src": "/icon-192.png",
       "sizes": "192x192",
-      "type": "image/jpeg",
-      "purpose": "maskable any"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "/icon-512x512.jpg",
+      "src": "/icon-512.png",
       "sizes": "512x512",
-      "type": "image/jpeg",
-      "purpose": "maskable any"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ],
   "shortcuts": [
@@ -40,8 +48,9 @@
       "url": "/?action=scan",
       "icons": [
         {
-          "src": "/icon-192x192.jpg",
-          "sizes": "192x192"
+          "src": "/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
         }
       ]
     },
@@ -52,8 +61,35 @@
       "url": "/?action=history",
       "icons": [
         {
-          "src": "/icon-192x192.jpg",
-          "sizes": "192x192"
+          "src": "/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Mis Dietas",
+      "short_name": "Dietas",
+      "description": "Ver y crear dietas",
+      "url": "/?action=diets",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Planificador",
+      "short_name": "Planificar",
+      "description": "Planificar comidas de la semana",
+      "url": "/?action=planning",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
         }
       ]
     }

@@ -1,22 +1,24 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
 import {
   Calendar as CalendarIcon,
   Target,
   Award,
   Flame,
   Sparkles,
+  Droplets,
+  Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// Tonos con tokens del sistema (clases literales para que Tailwind las detecte).
 const ACHIEVEMENTS_MAP = {
-  first_meal: { label: "Primera Comida", desc: "¡Has comenzado tu viaje!", icon: Sparkles, color: "text-yellow-500", bg: "bg-yellow-500/10" },
-  explorer: { label: "Explorador", desc: "10 comidas registradas", icon: CalendarIcon, color: "text-blue-500", bg: "bg-blue-500/10" },
-  nutrition_master: { label: "Maestro Nutricional", desc: "50 comidas registradas", icon: Award, color: "text-purple-500", bg: "bg-purple-500/10" },
-  streak_3: { label: "Racha de 3", desc: "3 días seguidos", icon: Flame, color: "text-orange-500", bg: "bg-orange-500/10" },
-  streak_7: { label: "Racha de 7", desc: "¡Una semana impecable!", icon: Target, color: "text-red-500", bg: "bg-red-500/10" },
-  hydrated_hero: { icon: Award, label: "Héroe Hidratado", desc: "8+ vasos de agua en un día", color: "text-cyan-500", bg: "bg-cyan-500/10" },
+  first_meal: { label: "Primera comida", desc: "Has comenzado tu viaje.", icon: Sparkles, tone: "bg-primary/10 text-primary" },
+  explorer: { label: "Explorador", desc: "10 comidas registradas", icon: CalendarIcon, tone: "bg-fat/15 text-fat" },
+  nutrition_master: { label: "Maestro nutricional", desc: "50 comidas registradas", icon: Award, tone: "bg-accent text-accent-foreground" },
+  streak_3: { label: "Racha de 3", desc: "3 días seguidos", icon: Flame, tone: "bg-carbs/20 text-foreground" },
+  streak_7: { label: "Racha de 7", desc: "Una semana impecable", icon: Target, tone: "bg-protein/12 text-protein" },
+  hydrated_hero: { label: "Héroe hidratado", desc: "8+ vasos de agua en un día", icon: Droplets, tone: "bg-water/15 text-water" },
 } as const;
 
 interface ProfileAchievementsProps {
@@ -25,18 +27,18 @@ interface ProfileAchievementsProps {
 
 export function ProfileAchievements({ unlockedIds }: ProfileAchievementsProps) {
   const totalCount = Object.keys(ACHIEVEMENTS_MAP).length;
-  const unlockedCount = unlockedIds?.filter(id => id in ACHIEVEMENTS_MAP).length || 0;
+  const unlockedCount = unlockedIds?.filter((id) => id in ACHIEVEMENTS_MAP).length || 0;
 
   return (
-    <section className="space-y-6 pb-20">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-black tracking-tight text-foreground">Logros y Medallas</h2>
-        <span className="text-xs font-black uppercase tracking-widest text-primary bg-primary/10 px-3.5 py-1.5 rounded-xl border border-primary/20 animate-pulse">
-          {unlockedCount} de {totalCount} Desbloqueados
+    <section className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold">Logros</h2>
+        <span className="shrink-0 rounded-full bg-accent px-3 py-1 text-xs font-medium text-accent-foreground tabular">
+          {unlockedCount} de {totalCount} desbloqueados
         </span>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {Object.entries(ACHIEVEMENTS_MAP).map(([id, info]) => {
           const isUnlocked = unlockedIds?.includes(id);
           const Icon = info.icon;
@@ -44,29 +46,23 @@ export function ProfileAchievements({ unlockedIds }: ProfileAchievementsProps) {
             <div
               key={id}
               className={cn(
-                "relative overflow-hidden rounded-[2rem] border p-6 transition-all duration-500",
-                isUnlocked
-                  ? "border-border/40 bg-card/40 shadow-xl shadow-black/[0.02] grayscale-0 opacity-100"
-                  : "border-dashed border-border/20 bg-muted/5 grayscale opacity-40"
+                "flex items-center gap-3 p-4",
+                isUnlocked ? "surface" : "rounded-2xl border border-dashed border-border bg-muted/40"
               )}
             >
-              <div className="flex items-start gap-4">
-                <div className={cn(
-                  "flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl shadow-inner",
-                  isUnlocked ? info.bg : "bg-muted"
-                )}>
-                  <Icon className={cn("h-7 w-7", isUnlocked ? info.color : "text-muted-foreground")} />
-                </div>
-                <div>
-                  <p className="font-black text-foreground">{info.label}</p>
-                  <p className="mt-1 text-xs font-medium text-muted-foreground leading-snug">{info.desc}</p>
-                </div>
+              <span
+                className={cn(
+                  "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl",
+                  isUnlocked ? info.tone : "bg-muted text-muted-foreground"
+                )}
+              >
+                {isUnlocked ? <Icon className="h-5 w-5" /> : <Lock className="h-4 w-4" />}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className={cn("font-semibold", !isUnlocked && "text-muted-foreground")}>{info.label}</p>
+                <p className="text-sm text-muted-foreground">{info.desc}</p>
               </div>
-              {!isUnlocked && (
-                <div className="absolute top-2 right-4">
-                  <Badge variant="outline" className="text-[9px] font-black uppercase tracking-tighter border-muted-foreground/20 text-muted-foreground/40">Bloqueado</Badge>
-                </div>
-              )}
+              {!isUnlocked && <span className="sr-only">Bloqueado</span>}
             </div>
           );
         })}

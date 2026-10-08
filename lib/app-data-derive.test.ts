@@ -114,6 +114,25 @@ describe("deriveCalorieData", () => {
     expect(cd.dailyGoal).toBeGreaterThan(2000);
   });
 
+  it("acepta peso/altura como strings numéricos (datos antiguos)", () => {
+    const base = {
+      age: 30,
+      gender: "male" as const,
+      activityLevel: "moderate" as const,
+      fitnessGoal: "maintenance" as const,
+    };
+    const asNumbers = deriveCalorieData(
+      makeProfile({ ...base, weight: 70, height: 175 }),
+      today
+    )!;
+    const asStrings = deriveCalorieData(
+      makeProfile({ ...base, weight: "70", height: "175" }),
+      today
+    )!;
+    expect(asStrings.dailyGoal).toBe(asNumbers.dailyGoal);
+    expect(asStrings.bmr).toBeGreaterThan(0);
+  });
+
   it("cae a 2000 con perfil incompleto", () => {
     const profile = makeProfile({ age: 30 }); // sin peso/altura
     const cd = deriveCalorieData(profile, today)!;

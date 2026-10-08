@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 interface PageHeaderProps {
   title: string;
-  /** Texto pequeño bajo el título (mayúsculas, tracking ancho). */
+  /** Texto breve bajo el título. */
   subtitle?: string;
   /** Elemento a la izquierda del título (p. ej. botón "volver"). */
   leading?: ReactNode;
@@ -18,10 +18,7 @@ interface PageHeaderProps {
   className?: string;
 }
 
-/**
- * Cabecera de página consistente: hero con degradado, título, subtítulo y
- * acciones. Unifica el lenguaje visual del inicio en el resto de páginas.
- */
+/** Cabecera de página consistente: título, subtítulo y acciones. */
 export function PageHeader({
   title,
   subtitle,
@@ -32,37 +29,21 @@ export function PageHeader({
   className,
 }: PageHeaderProps) {
   return (
-    <section className={cn("relative overflow-hidden", className)}>
-      <div
-        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-primary/[0.08] to-transparent"
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-primary/10 blur-3xl opacity-50"
-        aria-hidden
-      />
-      <div className="relative z-10 mx-auto max-w-4xl px-4 pt-10 pb-8 sm:px-8">
-        <div className="flex items-center gap-4">
-          {leading}
-          <div className="min-w-0 flex-1">
-            <h1 className="text-3xl font-black tracking-tight text-foreground sm:text-4xl">
-              {title}
-            </h1>
-            {(subtitle || badge) && (
-              <div className="mt-1 flex items-center gap-2">
-                {badge}
-                {subtitle && (
-                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest opacity-60">
-                    {subtitle}
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
-          {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+    <header className={cn("mx-auto max-w-6xl px-4 pb-2 pt-6 sm:px-6 lg:px-10 lg:pt-10", className)}>
+      <div className="flex items-center gap-3">
+        {leading}
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-2xl font-bold sm:text-3xl">{title}</h1>
+          {(subtitle || badge) && (
+            <div className="mt-1 flex items-center gap-2">
+              {badge}
+              {subtitle && <p className="truncate text-sm text-muted-foreground">{subtitle}</p>}
+            </div>
+          )}
         </div>
-        {children}
+        {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
       </div>
-    </section>
+      {children}
+    </header>
   );
 }

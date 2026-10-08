@@ -1,5 +1,6 @@
 import { calculateTDEEPrecise } from "@/lib/tdee";
 import { getProfileDisplayAge } from "@/lib/age-from-birthdate";
+import { parseMeasure } from "@/lib/profile-measure";
 import type { Meal, UserProfile } from "@/types/meal";
 
 /**
@@ -146,10 +147,9 @@ export function deriveCalorieData(
   const hasCustom = Boolean(profile.activeDietId && profile.customGoals);
   const custom = profile.customGoals;
   const displayAge = getProfileDisplayAge(profile);
-  const weightNum =
-    typeof profile.weight === "string" ? 0 : profile.weight || 0;
-  const heightNum =
-    typeof profile.height === "string" ? 0 : profile.height || 0;
+  // Strings numéricos ("72.5") cuentan; valores no numéricos (p. ej. cifrados antiguos) → 0.
+  const weightNum = parseMeasure(profile.weight) ?? 0;
+  const heightNum = parseMeasure(profile.height) ?? 0;
 
   const consumed = today.totalCalories;
   const base = {

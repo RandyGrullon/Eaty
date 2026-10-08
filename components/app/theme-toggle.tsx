@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Moon, Sun, Palette, Leaf, Sunrise } from "lucide-react";
+import { Moon, Sun, Leaf, Sunrise } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,7 +22,7 @@ export function ThemeToggle() {
   if (!mounted) {
     return (
       <div
-        className="h-10 w-10 shrink-0 animate-pulse rounded-xl border border-border/80 bg-muted/40"
+        className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-muted"
         aria-hidden
       />
     );
@@ -35,24 +35,24 @@ export function ThemeToggle() {
           type="button"
           variant="outline"
           size="icon"
-          className="h-10 w-10 shrink-0 rounded-xl border-border/80 bg-card/90 shadow-sm"
+          className="h-10 w-10 shrink-0"
           aria-label="Cambiar tema"
         >
-          <Palette className="h-4 w-4 text-primary" />
+          {theme === "dark" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="rounded-2xl p-2 border-border/40 shadow-2xl">
-        <DropdownMenuItem onClick={() => setTheme("light")} className="rounded-xl gap-2 font-bold cursor-pointer">
-          <Sun className="h-4 w-4 text-amber-500" /> Claro
+      <DropdownMenuContent align="end" className="rounded-2xl p-1.5">
+        <DropdownMenuItem onClick={() => setTheme("light")} className="cursor-pointer gap-2 rounded-xl">
+          <Sun className="h-4 w-4" /> Claro
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("dark")} className="rounded-xl gap-2 font-bold cursor-pointer">
-          <Moon className="h-4 w-4 text-primary" /> Oscuro
+        <DropdownMenuItem onClick={() => setTheme("dark")} className="cursor-pointer gap-2 rounded-xl">
+          <Moon className="h-4 w-4" /> Oscuro
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("theme-nature")} className="rounded-xl gap-2 font-bold cursor-pointer">
-          <Leaf className="h-4 w-4 text-emerald-500" /> Naturaleza
+        <DropdownMenuItem onClick={() => setTheme("theme-nature")} className="cursor-pointer gap-2 rounded-xl">
+          <Leaf className="h-4 w-4" /> Océano
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("theme-sunset")} className="rounded-xl gap-2 font-bold cursor-pointer">
-          <Sunrise className="h-4 w-4 text-orange-500" /> Atardecer
+        <DropdownMenuItem onClick={() => setTheme("theme-sunset")} className="cursor-pointer gap-2 rounded-xl">
+          <Sunrise className="h-4 w-4" /> Atardecer
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

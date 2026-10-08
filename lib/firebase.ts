@@ -7,6 +7,7 @@ import {
   isFirebaseConfigReady,
   getMissingFirebaseConfigKeys,
 } from "@/lib/firebase-config";
+import { isDemoMode } from "@/lib/demo/mode";
 
 const googleProvider = new GoogleAuthProvider();
 
@@ -19,7 +20,7 @@ function initClientFirebase(): void {
   if (_app) {
     return;
   }
-  if (!isFirebaseConfigReady()) {
+  if (!isFirebaseConfigReady() && !isDemoMode()) {
     throw new Error(
       "Falta configuración de Firebase: " +
         getMissingFirebaseConfigKeys().join(", ") +

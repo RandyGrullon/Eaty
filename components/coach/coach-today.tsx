@@ -30,16 +30,14 @@ function StatPill({
   tone: string;
 }) {
   return (
-    <div className="rounded-2xl border border-border/40 bg-card/50 p-4">
-      <div className="mb-2 flex items-center gap-2">
-        <div className={cn("flex h-8 w-8 items-center justify-center rounded-xl", tone)}>
-          <Icon className="h-4 w-4" />
-        </div>
-        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">
-          {label}
+    <div className="min-w-0 rounded-xl bg-muted/60 px-3 py-2.5">
+      <div className="flex items-center gap-2">
+        <span className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-lg", tone)}>
+          <Icon className="h-3.5 w-3.5" />
         </span>
+        <span className="truncate text-xs text-muted-foreground">{label}</span>
       </div>
-      <p className="text-2xl font-black tabular-nums tracking-tight">{value}</p>
+      <p className="mt-1.5 font-display text-xl font-bold tabular">{value}</p>
     </div>
   );
 }
@@ -106,108 +104,70 @@ export function CoachToday() {
   };
 
   return (
-    <div className="space-y-5 p-1">
-      <div className="grid grid-cols-2 gap-3">
-        <StatPill
-          icon={Flame}
-          label="Restantes"
-          value={`${remainingCalories}`}
-          tone="bg-primary/10 text-primary"
-        />
-        <StatPill
-          icon={Beef}
-          label="Proteína falta"
-          value={`${remainingProtein} g`}
-          tone="bg-chart-1/10 text-chart-1"
-        />
-        <StatPill
-          icon={Target}
-          label="Meta cubierta"
-          value={`${pct}%`}
-          tone="bg-chart-2/10 text-chart-2"
-        />
+    <div className="space-y-4 p-1">
+      <div className="grid grid-cols-2 gap-2">
+        <StatPill icon={Flame} label="Kcal restantes" value={`${remainingCalories}`} tone="bg-primary/10 text-primary" />
+        <StatPill icon={Beef} label="Proteína pendiente" value={`${remainingProtein} g`} tone="bg-protein/12 text-protein" />
+        <StatPill icon={Target} label="Meta cubierta" value={`${pct}%`} tone="bg-accent text-accent-foreground" />
         <StatPill
           icon={Droplets}
-          label="Hidratación"
+          label="Vasos de agua"
           value={`${calorieData?.waterGlasses ?? 0}`}
-          tone="bg-chart-3/10 text-chart-3"
+          tone="bg-water/15 text-water"
         />
       </div>
 
       {insight ? (
-        <div className="space-y-4">
-          <div className="rounded-2xl border border-primary/20 bg-primary/5 p-5">
-            <div className="mb-1 flex items-center gap-2 text-primary">
-              <Sparkles className="h-4 w-4" />
-              <h4 className="text-sm font-black uppercase tracking-wide">
-                {insight.focusTitle}
-              </h4>
-            </div>
-            <p className="text-sm leading-relaxed text-foreground/90">
-              {insight.focusMessage}
-            </p>
+        <div className="space-y-3">
+          <div className="rounded-2xl border border-primary/25 bg-primary/5 p-4">
+            <h4 className="flex items-center gap-2 text-base font-semibold text-primary">
+              <Sparkles className="h-4 w-4 shrink-0" />
+              {insight.focusTitle}
+            </h4>
+            <p className="mt-1 text-sm leading-relaxed">{insight.focusMessage}</p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl border border-border/40 bg-card/50 p-4">
-              <div className="mb-2 flex items-center gap-2">
-                <UtensilsCrossed className="h-4 w-4 text-chart-2" />
-                <h5 className="text-xs font-black uppercase tracking-wide text-foreground">
-                  {insight.nextMeal.title}
-                </h5>
-              </div>
-              <p className="text-sm text-muted-foreground">{insight.nextMeal.idea}</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <div className="rounded-2xl border border-border bg-card p-4">
+              <h5 className="flex items-center gap-2 text-sm font-semibold">
+                <UtensilsCrossed className="h-4 w-4 shrink-0 text-primary" />
+                {insight.nextMeal.title}
+              </h5>
+              <p className="mt-1 text-sm text-muted-foreground">{insight.nextMeal.idea}</p>
               {insight.nextMeal.approxCalories ? (
-                <p className="mt-2 text-[11px] font-bold text-primary">
-                  ~{insight.nextMeal.approxCalories} kcal
-                </p>
+                <p className="mt-2 text-xs font-medium text-primary tabular">~{insight.nextMeal.approxCalories} kcal</p>
               ) : null}
             </div>
-            <div className="rounded-2xl border border-border/40 bg-card/50 p-4">
-              <div className="mb-2 flex items-center gap-2">
-                <Dumbbell className="h-4 w-4 text-chart-4" />
-                <h5 className="text-xs font-black uppercase tracking-wide text-foreground">
-                  {insight.training.title}
-                </h5>
-              </div>
-              <p className="text-sm text-muted-foreground">{insight.training.idea}</p>
+            <div className="rounded-2xl border border-border bg-card p-4">
+              <h5 className="flex items-center gap-2 text-sm font-semibold">
+                <Dumbbell className="h-4 w-4 shrink-0 text-primary" />
+                {insight.training.title}
+              </h5>
+              <p className="mt-1 text-sm text-muted-foreground">{insight.training.idea}</p>
             </div>
           </div>
 
-          <p className="px-1 text-center text-sm font-bold italic text-primary">
-            “{insight.motivation}”
-          </p>
+          <p className="px-1 text-center text-sm italic text-muted-foreground">“{insight.motivation}”</p>
 
-          <Button
-            variant="outline"
-            className="w-full rounded-xl font-bold"
-            onClick={generate}
-            disabled={loading}
-          >
+          <Button variant="outline" className="h-10 w-full rounded-full" onClick={generate} disabled={loading}>
             {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Actualizar resumen
           </Button>
         </div>
       ) : (
-        <div className="rounded-2xl border border-dashed border-border/50 bg-muted/20 p-6 text-center">
-          <Sparkles className="mx-auto mb-3 h-8 w-8 text-primary/50" />
-          <p className="mb-4 text-sm font-medium text-muted-foreground">
-            Genera un resumen personalizado con tu foco del día, qué comer ahora y
-            una sugerencia de entrenamiento.
+        <div className="rounded-2xl border border-dashed border-border bg-muted/40 p-6 text-center">
+          <Sparkles className="mx-auto h-7 w-7 text-muted-foreground/60" />
+          <p className="mt-3 font-medium">Tu resumen del día</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Tu foco de hoy, qué comer ahora y una sugerencia de entrenamiento.
           </p>
           {error ? (
-            <p className="mb-3 text-xs font-bold text-destructive">{error}</p>
+            <p role="alert" className="mt-3 text-sm text-destructive">
+              {error}
+            </p>
           ) : null}
-          <Button
-            className="rounded-xl font-black shadow-lg shadow-primary/20"
-            onClick={generate}
-            disabled={loading || !user}
-          >
-            {loading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Sparkles className="mr-2 h-4 w-4" />
-            )}
+          <Button className="mt-4 h-10 rounded-full" onClick={generate} disabled={loading || !user}>
+            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
             {loading ? "Analizando tu día…" : "Generar resumen de hoy"}
           </Button>
         </div>

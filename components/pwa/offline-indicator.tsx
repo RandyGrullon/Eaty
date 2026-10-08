@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent } from "@/components/ui/card"
+import { cn } from "@/lib/utils"
 import { WifiOff, Wifi } from "lucide-react"
 
 export function OfflineIndicator() {
@@ -46,26 +46,25 @@ export function OfflineIndicator() {
   }
 
   return (
-    <div className="fixed top-4 left-4 right-4 z-50">
-      <Card
-        className={`${isOnline ? "bg-success text-success-foreground" : "bg-warning text-warning-foreground"} border-none`}
+    <div className="pointer-events-none fixed inset-x-0 top-4 z-50 flex justify-center px-4" role="status" aria-live="polite">
+      <div
+        className={cn(
+          "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium shadow-soft",
+          isOnline ? "bg-success text-success-foreground" : "bg-warning text-warning-foreground"
+        )}
       >
-        <CardContent className="p-3">
-          <div className="flex items-center gap-2 justify-center">
-            {isOnline ? (
-              <>
-                <Wifi className="h-4 w-4" />
-                <span className="text-sm font-medium">Conexión restaurada</span>
-              </>
-            ) : (
-              <>
-                <WifiOff className="h-4 w-4" />
-                <span className="text-sm font-medium">Sin conexión - Modo offline</span>
-              </>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+        {isOnline ? (
+          <>
+            <Wifi className="h-4 w-4" />
+            Conexión restaurada
+          </>
+        ) : (
+          <>
+            <WifiOff className="h-4 w-4" />
+            Sin conexión: modo offline
+          </>
+        )}
+      </div>
     </div>
   )
 }

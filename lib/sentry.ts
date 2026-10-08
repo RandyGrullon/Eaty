@@ -1,18 +1,19 @@
 /**
- * Mock de integración con Sentry para reporte de errores centralizado.
- * En producción, esto enviaría los errores a un dashboard externo.
+ * SIMULACIÓN: no hay integración con Sentry. Este objeto solo escribe en la
+ * consola del navegador/servidor; ningún error se envía a un servicio externo.
+ * Para tener monitoreo real hay que instalar `@sentry/nextjs` y reemplazar esto.
  */
 
 export const SentryMock = {
   captureException: (error: unknown, context?: Record<string, any>) => {
-    console.group("🚀 Sentry Capture");
+    console.group("[errores] captura");
     console.error("Error:", error);
     if (context) console.log("Context:", context);
     console.groupEnd();
     
-    // Aquí iría la lógica real de Sentry.init() y Sentry.captureException()
+    // Pendiente: Sentry.captureException() real (ver REMAINING_FEATURES.md).
   },
   captureMessage: (message: string, level: "info" | "warning" | "error" = "info") => {
-    console.log(`[Sentry ${level.toUpperCase()}]: ${message}`);
+    console.log(`[errores ${level}] ${message}`);
   }
 };

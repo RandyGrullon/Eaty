@@ -29,26 +29,24 @@ type Level = GeneratedWorkout["level"];
 function WorkoutView({ w }: { w: GeneratedWorkout }) {
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap gap-2 text-[10px] font-bold uppercase tracking-wide">
+      <div className="flex flex-wrap gap-2 text-xs font-medium">
         <span className="rounded-full bg-primary/10 px-2.5 py-1 text-primary">
           {LEVEL_LABEL[w.level]}
         </span>
-        <span className="rounded-full bg-chart-2/10 px-2.5 py-1 text-chart-2">
+        <span className="rounded-full bg-accent px-2.5 py-1 text-accent-foreground tabular">
           {w.daysPerWeek} días/sem
         </span>
         {w.estimatedCaloriesPerSession ? (
-          <span className="flex items-center gap-1 rounded-full bg-chart-4/10 px-2.5 py-1 text-chart-4">
+          <span className="flex items-center gap-1 rounded-full bg-protein/12 px-2.5 py-1 text-protein tabular">
             <Flame className="h-3 w-3" />~{w.estimatedCaloriesPerSession} kcal
           </span>
         ) : null}
       </div>
 
       {w.warmup.length > 0 && (
-        <div className="rounded-xl border border-border/40 bg-muted/20 p-3">
-          <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-            Calentamiento
-          </p>
-          <ul className="list-disc space-y-0.5 pl-4 text-xs text-muted-foreground">
+        <div className="rounded-xl bg-muted/60 px-3 py-2.5">
+          <p className="mb-1 text-sm font-semibold">Calentamiento</p>
+          <ul className="list-disc space-y-0.5 pl-4 text-sm text-muted-foreground">
             {w.warmup.map((x, i) => (
               <li key={i}>{x}</li>
             ))}
@@ -58,11 +56,11 @@ function WorkoutView({ w }: { w: GeneratedWorkout }) {
 
       <div className="space-y-3">
         {w.days.map((d, i) => (
-          <div key={i} className="rounded-xl border border-border/40 bg-card/40 p-3">
-            <div className="mb-2 flex items-baseline justify-between">
-              <p className="text-sm font-black text-foreground">{d.day}</p>
+          <div key={i} className="rounded-xl border border-border bg-card p-3">
+            <div className="mb-2 flex items-baseline justify-between gap-3">
+              <p className="text-sm font-semibold">{d.day}</p>
               {d.focus ? (
-                <span className="text-[10px] font-bold uppercase tracking-wide text-primary">
+                <span className="truncate text-xs font-medium text-primary">
                   {d.focus}
                 </span>
               ) : null}
@@ -71,10 +69,10 @@ function WorkoutView({ w }: { w: GeneratedWorkout }) {
               {d.exercises.map((ex, j) => (
                 <div
                   key={j}
-                  className="flex items-center justify-between gap-3 text-xs"
+                  className="flex items-center justify-between gap-3 text-sm"
                 >
-                  <span className="font-medium text-foreground">{ex.name}</span>
-                  <span className="shrink-0 font-bold tabular-nums text-muted-foreground">
+                  <span className="min-w-0">{ex.name}</span>
+                  <span className="shrink-0 font-medium text-muted-foreground tabular">
                     {ex.sets} × {ex.reps}
                   </span>
                 </div>
@@ -85,11 +83,9 @@ function WorkoutView({ w }: { w: GeneratedWorkout }) {
       </div>
 
       {w.tips.length > 0 && (
-        <div className="rounded-xl border border-primary/15 bg-primary/5 p-3">
-          <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-primary">
-            Consejos
-          </p>
-          <ul className="list-disc space-y-0.5 pl-4 text-xs text-foreground/80">
+        <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5">
+          <p className="mb-1 text-sm font-semibold text-primary">Consejos</p>
+          <ul className="list-disc space-y-0.5 pl-4 text-sm">
             {w.tips.map((x, i) => (
               <li key={i}>{x}</li>
             ))}
@@ -109,17 +105,17 @@ function SavedWorkoutItem({
 }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="rounded-2xl border border-border/40 bg-card/50">
+    <div className="rounded-2xl border border-border bg-card">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         className="flex w-full items-center justify-between gap-3 p-4 text-left"
       >
         <div className="min-w-0">
-          <p className="truncate text-sm font-black text-foreground">
+          <p className="truncate text-sm font-semibold">
             {workout.title}
           </p>
-          <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             {workout.goal} · {workout.daysPerWeek} días
           </p>
         </div>
@@ -131,12 +127,12 @@ function SavedWorkoutItem({
         />
       </button>
       {open && (
-        <div className="border-t border-border/40 p-4">
+        <div className="border-t border-border p-4">
           <WorkoutView w={workout} />
           <Button
             variant="ghost"
             size="sm"
-            className="mt-3 gap-2 rounded-xl text-destructive hover:bg-destructive/10"
+            className="mt-3 gap-2 rounded-full text-destructive hover:bg-destructive/10 hover:text-destructive"
             onClick={() => onDelete(workout.id)}
           >
             <Trash2 className="h-4 w-4" />
@@ -230,9 +226,9 @@ export function CoachWorkout() {
 
   return (
     <div className="space-y-5 p-1">
-      <div className="space-y-4 rounded-2xl border border-border/40 bg-card/40 p-4">
+      <div className="space-y-4 rounded-2xl border border-border bg-card p-4">
         <div className="space-y-2">
-          <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+          <Label className="font-medium">
             Nivel
           </Label>
           <div className="flex gap-2">
@@ -242,10 +238,10 @@ export function CoachWorkout() {
                 type="button"
                 onClick={() => setLevel(lv)}
                 className={cn(
-                  "flex-1 rounded-xl border px-2 py-2 text-[11px] font-bold transition-all",
+                  "h-9 min-w-0 flex-1 truncate rounded-full border px-2 text-sm font-medium transition-colors",
                   level === lv
                     ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border/40 bg-card/40 text-muted-foreground hover:bg-card"
+                    : "border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
                 {LEVEL_LABEL[lv]}
@@ -255,7 +251,7 @@ export function CoachWorkout() {
         </div>
 
         <div className="space-y-2">
-          <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+          <Label className="font-medium">
             Días por semana
           </Label>
           <div className="flex flex-wrap gap-2">
@@ -265,10 +261,10 @@ export function CoachWorkout() {
                 type="button"
                 onClick={() => setDays(n)}
                 className={cn(
-                  "h-9 w-9 rounded-xl border text-xs font-black tabular-nums transition-all",
+                  "h-9 w-9 rounded-full border text-sm font-medium tabular transition-colors",
                   days === n
                     ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border/40 bg-card/40 text-muted-foreground hover:bg-card"
+                    : "border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
                 {n}
@@ -279,31 +275,31 @@ export function CoachWorkout() {
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+            <Label className="font-medium">
               Equipamiento (opcional)
             </Label>
             <Input
               placeholder="mancuernas, banco…"
               value={equipment}
               onChange={(e) => setEquipment(e.target.value)}
-              className="h-10 rounded-xl border-border/40 bg-card/40"
+              className="h-10 rounded-xl"
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+            <Label className="font-medium">
               Enfoque (opcional)
             </Label>
             <Input
               placeholder="glúteos, core…"
               value={focus}
               onChange={(e) => setFocus(e.target.value)}
-              className="h-10 rounded-xl border-border/40 bg-card/40"
+              className="h-10 rounded-xl"
             />
           </div>
         </div>
 
         <Button
-          className="w-full rounded-xl font-black shadow-lg shadow-primary/20"
+          className="h-11 w-full rounded-full"
           onClick={generate}
           disabled={generating || !user}
         >
@@ -317,12 +313,12 @@ export function CoachWorkout() {
       </div>
 
       {draft && (
-        <div className="space-y-3 rounded-2xl border border-primary/20 bg-primary/5 p-4">
-          <div className="flex items-center justify-between">
-            <h4 className="text-base font-black text-foreground">{draft.title}</h4>
+        <div className="space-y-3 rounded-2xl border border-primary/25 bg-primary/5 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <h4 className="min-w-0 text-base font-semibold">{draft.title}</h4>
             <Button
               size="sm"
-              className="gap-2 rounded-xl font-bold"
+              className="shrink-0 gap-2 rounded-full"
               onClick={handleSave}
               disabled={saving}
             >
@@ -342,7 +338,7 @@ export function CoachWorkout() {
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <Check className="h-4 w-4 text-primary" />
-            <h4 className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+            <h4 className="text-sm font-semibold">
               Mis rutinas ({workouts.length})
             </h4>
           </div>

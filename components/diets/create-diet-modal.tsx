@@ -153,45 +153,46 @@ export function CreateDietModal({
 
   return (
     <Dialog open={open} onOpenChange={(o) => (busy ? null : onOpenChange(o))}>
-      <DialogContent className="max-h-[92vh] overflow-y-auto rounded-3xl sm:max-w-lg">
+      <DialogContent className="max-h-[92vh] overflow-y-auto rounded-2xl sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-xl font-black">
-            <ChefHat className="h-5 w-5 text-primary" />
+          <DialogTitle className="flex items-center gap-2.5 text-xl font-semibold">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <ChefHat className="h-4 w-4" />
+            </span>
             Crear mi dieta
           </DialogTitle>
           <DialogDescription>
-            Añade tus platos. Al guardar, la IA calcula los macros y genera el
-            tutorial paso a paso de cada uno.
+            Añade tus platos. Al guardar, la IA calcula los macros y crea el paso a paso de cada uno.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5 py-2">
           <div className="space-y-2">
-            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+            <Label className="text-sm font-medium">
               Nombre
             </Label>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Mi semana fitness"
-              className="h-11 rounded-xl border-border/40 bg-card/40"
+              className="h-11 rounded-xl"
             />
           </div>
 
           <div className="space-y-2">
-            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+            <Label className="text-sm font-medium">
               Descripción (opcional)
             </Label>
             <Input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Alta en proteína, sin azúcar…"
-              className="h-11 rounded-xl border-border/40 bg-card/40"
+              className="h-11 rounded-xl"
             />
           </div>
 
           <div className="space-y-2">
-            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+            <Label className="text-sm font-medium">
               Objetivo
             </Label>
             <div className="flex flex-wrap gap-2">
@@ -201,10 +202,10 @@ export function CreateDietModal({
                   type="button"
                   onClick={() => setGoal(g)}
                   className={cn(
-                    "rounded-full border px-3 py-1.5 text-xs font-bold transition-all",
+                    "rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
                     goal === g
                       ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border/40 bg-card/40 text-muted-foreground hover:bg-card"
+                      : "border-border bg-card text-muted-foreground hover:bg-muted"
                   )}
                 >
                   {DIET_GOAL_LABEL[g]}
@@ -214,27 +215,28 @@ export function CreateDietModal({
           </div>
 
           <div className="space-y-3">
-            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+            <Label className="text-sm font-medium">
               Platos
             </Label>
             {dishes.map((dish, i) => (
               <div
                 key={i}
-                className="space-y-2 rounded-2xl border border-border/40 bg-card/40 p-3"
+                className="space-y-2 rounded-xl bg-muted/60 p-3"
               >
                 <div className="flex gap-2">
                   <Input
                     value={dish.name}
                     onChange={(e) => updateDish(i, { name: e.target.value })}
                     placeholder="Nombre del plato"
-                    className="h-10 flex-1 rounded-xl border-border/40 bg-background"
+                    className="h-10 min-w-0 flex-1 rounded-xl bg-card"
                   />
                   {dishes.length > 1 && (
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="h-10 w-10 shrink-0 rounded-xl text-destructive hover:bg-destructive/10"
+                      className="h-10 w-10 shrink-0 rounded-full text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      aria-label="Quitar plato"
                       onClick={() => removeDish(i)}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -248,10 +250,10 @@ export function CreateDietModal({
                       type="button"
                       onClick={() => updateDish(i, { type: t })}
                       className={cn(
-                        "rounded-lg border px-2.5 py-1 text-[10px] font-bold transition-all",
+                        "rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
                         dish.type === t
                           ? "border-primary bg-primary/10 text-primary"
-                          : "border-border/40 text-muted-foreground"
+                          : "border-border bg-card text-muted-foreground hover:bg-muted"
                       )}
                     >
                       {DIET_MEAL_TYPE_LABEL[t]}
@@ -263,7 +265,7 @@ export function CreateDietModal({
             <Button
               type="button"
               variant="outline"
-              className="w-full gap-2 rounded-xl font-bold"
+              className="h-10 w-full rounded-full"
               onClick={addDish}
             >
               <Plus className="h-4 w-4" />
@@ -273,14 +275,14 @@ export function CreateDietModal({
         </div>
 
         <Button
-          className="w-full rounded-xl font-black shadow-lg shadow-primary/20"
+          className="h-11 w-full rounded-full"
           onClick={save}
           disabled={busy || !user}
         >
           {busy ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            <ChefHat className="mr-2 h-4 w-4" />
+            <ChefHat className="h-4 w-4" />
           )}
           {busy ? progress ?? "Guardando…" : "Guardar y generar tutoriales"}
         </Button>

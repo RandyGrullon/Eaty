@@ -3,6 +3,7 @@ import { Timestamp } from "firebase-admin/firestore";
 import { z } from "zod";
 import { setSubscriptionState } from "@/lib/subscription-server";
 import { logger } from "@/lib/logger";
+import { safeEqual } from "@/lib/safe-compare";
 
 export const runtime = "nodejs";
 
@@ -46,8 +47,11 @@ export async function POST(req: Request) {
     logger.error("revenuecat-webhook", "Falta REVENUECAT_WEBHOOK_AUTH en .env");
     return NextResponse.json({ error: "Webhook no configurado." }, { status: 503 });
   }
-  const auth = req.headers.get("authorization")?.trim();
-  if (auth !== secret && auth !== `Bearer ${secret}`) {
+  const auth = req.headers.get("authorization")?.trim() ?? "";
+  // Comparación en tiempo constante (acepta el secreto tal cual o como Bearer).
+  const authorized =
+    safeEqual(auth, secret) || safeEqual(auth, `Bearer ${secret}`);
+  if (!authorized) {
     return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   }
 

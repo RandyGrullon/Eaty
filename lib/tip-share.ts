@@ -3,11 +3,11 @@ import type { PersonalizedNutritionTip } from "@/lib/food-analysis-schema";
 /** Convierte un consejo nutricional en texto plano para compartir/copiar. */
 export function formatTipForShare(tip: PersonalizedNutritionTip): string {
   const lines = [
-    `🔧 Qué cambiar: ${tip.whatToChange}`,
-    `📍 Dónde aplicarlo: ${tip.whereApply}`,
-    ...(tip.whyItHelps ? [`💡 Por qué ayuda: ${tip.whyItHelps}`] : []),
+    `Qué cambiar: ${tip.whatToChange}`,
+    `Dónde aplicarlo: ${tip.whereApply}`,
+    ...(tip.whyItHelps ? [`Por qué ayuda: ${tip.whyItHelps}`] : []),
     "",
-    `📖 Receta: ${tip.recipe.title}`,
+    `Receta: ${tip.recipe.title}`,
     "Ingredientes:",
     ...tip.recipe.ingredients.map((ing) => `- ${ing}`),
     "",

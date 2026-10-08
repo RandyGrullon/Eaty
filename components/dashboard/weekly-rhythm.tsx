@@ -1,120 +1,117 @@
 "use client";
 
-import { Loader2, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
+import { useMemo } from "react";
 import { motion } from "framer-motion";
+import { TrendingDown, TrendingUp, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { getWeeklyProgress } from "@/lib/meals";
-
-type WeeklyProgressData = Awaited<ReturnType<typeof getWeeklyProgress>>;
+import { deriveLastDays } from "@/lib/week-chart";
+import type { WeeklyProgress } from "@/lib/app-data-derive";
+import type { Meal } from "@/types/meal";
 
 interface WeeklyRhythmProps {
   loading: boolean;
-  weeklyProgress: WeeklyProgressData | null;
+  meals: Meal[];
+  dailyGoal?: number;
+  weeklyProgress: WeeklyProgress | null;
 }
 
-export function WeeklyRhythm({ loading, weeklyProgress }: WeeklyRhythmProps) {
+const WEEKDAY = new Intl.DateTimeFormat("es", { weekday: "narrow" });
+
+function Delta({ value, label }: { value: number; label: string }) {
+  const Icon = value > 0 ? TrendingUp : value < 0 ? TrendingDown : Minus;
   return (
-    <>
-      <div className="mb-8">
-        <h2 className="text-2xl font-black tracking-tight text-foreground">
-          Ritmo semanal
-        </h2>
-        <p className="text-sm font-medium text-muted-foreground">
-          Comparativa con tu actividad previa
-        </p>
-      </div>
+    <div className="rounded-xl bg-muted/60 px-3 py-2.5">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p
+        className={cn(
+          "mt-0.5 flex items-center gap-1 text-sm font-semibold tabular",
+          value > 0 && "text-success",
+          value < 0 && "text-destructive"
+        )}
+      >
+        <Icon className="h-3.5 w-3.5" />
+        {Math.abs(value)}%
+      </p>
+    </div>
+  );
+}
 
-      {loading ? (
-        <div className="flex h-64 items-center justify-center rounded-3xl border border-border/40 bg-card/20 backdrop-blur-sm">
-          <Loader2 className="h-10 w-10 animate-spin text-primary/40" />
-        </div>
-      ) : weeklyProgress ? (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.98 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
-          className="space-y-6"
-        >
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="relative overflow-hidden rounded-[2rem] border border-primary/20 bg-gradient-to-br from-primary/10 via-card/50 to-card/50 p-6 shadow-2xl shadow-primary/5">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">
-                Esta semana
-              </p>
-              <div className="mt-4 flex items-baseline gap-2">
-                <p className="text-4xl font-black tabular-nums tracking-tighter">
-                  {weeklyProgress.currentWeek.totalMeals}
-                </p>
-                <p className="text-xs font-bold text-muted-foreground">comidas</p>
-              </div>
-              <div className="mt-6">
-                <p className="text-2xl font-black tabular-nums tracking-tighter text-chart-2">
-                  {weeklyProgress.currentWeek.totalCalories}
-                </p>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">kcal totales</p>
-              </div>
-            </div>
+/** Calorías de los últimos 7 días frente a la meta, más la comparativa semanal. */
+export function WeeklyRhythm({ loading, meals, dailyGoal, weeklyProgress }: WeeklyRhythmProps) {
+  const bars = useMemo(() => deriveLastDays(meals, 7), [meals]);
+  const max = Math.max(dailyGoal ?? 0, ...bars.map((b) => b.calories), 1) * 1.1;
+  const goalPct = dailyGoal ? (dailyGoal / max) * 100 : null;
+  const logged = bars.filter((b) => b.calories > 0);
+  const avg = logged.length ? Math.round(logged.reduce((a, b) => a + b.calories, 0) / logged.length) : 0;
 
-            <div className="rounded-[2rem] border border-border/40 bg-card/40 p-6 shadow-sm backdrop-blur-sm">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
-                Semana anterior
-              </p>
-              <div className="mt-4 flex items-baseline gap-2">
-                <p className="text-4xl font-black tabular-nums tracking-tighter text-muted-foreground/60">
-                  {weeklyProgress.previousWeek.totalMeals}
-                </p>
-                <p className="text-xs font-bold text-muted-foreground/40">comidas</p>
-              </div>
-              <div className="mt-6">
-                <p className="text-2xl font-black tabular-nums tracking-tighter text-muted-foreground/60">
-                  {weeklyProgress.previousWeek.totalCalories}
-                </p>
-                <p className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest">kcal totales</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-[2rem] border border-border/40 bg-card/40 p-6 shadow-xl shadow-black/[0.02] backdrop-blur-sm">
-            <div className="mb-6 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-primary">
-              <Sparkles className="h-4 w-4" />
-              Progreso vs semana pasada
-            </div>
-            <div className="grid grid-cols-3 gap-4 text-center">
-              {[
-                { label: "Comidas", v: weeklyProgress.progress.mealsChange },
-                { label: "Calorías", v: weeklyProgress.progress.caloriesChange },
-                { label: "Días activos", v: weeklyProgress.progress.daysChange },
-              ].map((row) => (
-                <div key={row.label} className="group">
-                  <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mb-2 group-hover:text-primary transition-colors">
-                    {row.label}
-                  </p>
-                  <div
-                    className={cn(
-                      "flex items-center justify-center gap-0.5 text-lg font-black tabular-nums transition-transform group-hover:scale-110",
-                      row.v > 0 && "text-chart-3",
-                      row.v < 0 && "text-destructive",
-                      row.v === 0 && "text-muted-foreground/40"
-                    )}
-                  >
-                    {row.v > 0 ? (
-                      <TrendingUp className="h-4 w-4" />
-                    ) : row.v < 0 ? (
-                      <TrendingDown className="h-4 w-4" />
-                    ) : null}
-                    {Math.abs(row.v)}%
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </motion.div>
-      ) : (
-        <div className="rounded-3xl border-2 border-dashed border-border/40 bg-muted/10 py-16 text-center">
-          <p className="text-sm font-bold text-muted-foreground/40">
-            Sin datos comparativos suficientes.
+  return (
+    <section className="surface p-5 sm:p-6">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-semibold">Últimos 7 días</h2>
+          <p className="text-sm text-muted-foreground">
+            Media <span className="font-semibold text-foreground tabular">{avg}</span> kcal/día
           </p>
         </div>
-      )}
-    </>
+        {dailyGoal ? (
+          <span className="flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground">
+            <span className="h-0.5 w-3 rounded bg-foreground/50" /> Meta {dailyGoal}
+          </span>
+        ) : null}
+      </div>
+
+      <div className="relative mt-6 h-40">
+        {goalPct !== null ? (
+          <div
+            className="absolute inset-x-0 border-t border-dashed border-foreground/30"
+            style={{ bottom: `${goalPct}%` }}
+            aria-hidden
+          />
+        ) : null}
+        <div className="absolute inset-0 flex items-end gap-2 sm:gap-3">
+          {bars.map((b, i) => {
+            const h = loading ? 8 : Math.max((b.calories / max) * 100, b.calories ? 4 : 2);
+            const over = dailyGoal ? b.calories > dailyGoal * 1.1 : false;
+            return (
+              <div key={b.date.toISOString()} className="group relative flex h-full flex-1 items-end">
+                <motion.div
+                  initial={{ height: 0 }}
+                  animate={{ height: `${h}%` }}
+                  transition={{ duration: 0.7, delay: i * 0.05, ease: [0.22, 1, 0.36, 1] }}
+                  className={cn(
+                    "w-full rounded-lg",
+                    b.calories === 0 ? "bg-muted" : over ? "bg-warning" : b.isToday ? "bg-primary" : "bg-primary/35"
+                  )}
+                />
+                <span className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-foreground px-1.5 py-0.5 text-[11px] text-background opacity-0 transition-opacity group-hover:opacity-100 tabular">
+                  {b.calories} kcal
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <div className="mt-2 flex gap-2 sm:gap-3">
+        {bars.map((b) => (
+          <span
+            key={b.date.toISOString()}
+            className={cn(
+              "flex-1 text-center text-xs capitalize",
+              b.isToday ? "font-semibold text-foreground" : "text-muted-foreground"
+            )}
+          >
+            {WEEKDAY.format(b.date)}
+          </span>
+        ))}
+      </div>
+
+      {weeklyProgress ? (
+        <div className="mt-5 grid grid-cols-3 gap-2">
+          <Delta label="Comidas" value={weeklyProgress.progress.mealsChange} />
+          <Delta label="Calorías" value={weeklyProgress.progress.caloriesChange} />
+          <Delta label="Días activos" value={weeklyProgress.progress.daysChange} />
+        </div>
+      ) : null}
+    </section>
   );
 }

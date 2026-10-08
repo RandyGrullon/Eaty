@@ -7,6 +7,7 @@ import { CoachDrawer } from "./coach-drawer";
 /**
  * Botón flotante del Coach, presente en todas las pestañas principales. Tiene
  * acceso completo al estado de la DB vía `useAppData` (a través del drawer).
+ * En móvil queda por encima de la barra inferior (≈68 px + 12 px de margen).
  */
 export function CoachFab() {
   const [open, setOpen] = useState(false);
@@ -17,10 +18,9 @@ export function CoachFab() {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Abrir Eaty Coach"
-        className="group fixed bottom-24 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-chart-2 text-primary-foreground shadow-xl shadow-primary/30 transition-transform active:scale-95 sm:bottom-6 sm:right-6 sm:h-16 sm:w-16"
+        className="fixed bottom-28 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/25 transition-transform hover:bg-primary/90 active:scale-95 md:bottom-8 md:right-8"
       >
-        <span className="absolute inset-0 animate-ping rounded-2xl bg-primary/30 opacity-0 group-hover:opacity-100" />
-        <Sparkles className="h-6 w-6 sm:h-7 sm:w-7" />
+        <Sparkles className="h-6 w-6" />
       </button>
       <CoachDrawer open={open} onOpenChange={setOpen} />
     </>

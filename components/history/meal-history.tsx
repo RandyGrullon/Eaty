@@ -10,7 +10,6 @@ import {
   Calendar as CalendarIcon,
   Download,
   FileText,
-  Loader2,
   Search,
   Filter,
   X,
@@ -96,28 +95,27 @@ export function MealHistory({ onBack }: MealHistoryProps) {
       subtitle={getFilterLabel(filterPeriod)}
       leading={
         <Button
-          variant="ghost"
+          variant="outline"
           size="icon"
           onClick={onBack}
-          className="h-12 w-12 shrink-0 rounded-[1.25rem] border border-border/40 bg-card/40 shadow-sm backdrop-blur-xl hover:bg-card"
+          className="h-10 w-10 shrink-0 rounded-full"
           aria-label="Volver"
         >
-          <ArrowLeft className="h-6 w-6" />
+          <ArrowLeft className="h-5 w-5" />
         </Button>
       }
       badge={
-        <Badge variant="secondary" className="bg-primary/10 text-primary border-none font-bold px-2 py-0">
+        <Badge variant="secondary" className="shrink-0 rounded-full border-none bg-primary/10 px-2 py-0 text-primary tabular">
           {filteredMeals.length} registros
         </Badge>
       }
       actions={
         <>
-          <div className="hidden sm:flex gap-2">
+          <div className="hidden gap-2 sm:flex">
             <Button
               type="button"
               variant="outline"
-              size="sm"
-              className="gap-2 rounded-2xl border-border/40 bg-card/40 font-bold shadow-sm backdrop-blur-sm"
+              className="h-10 rounded-full"
               onClick={() => exportMealsJson(filteredMeals, filterPeriod)}
               disabled={filteredMeals.length === 0}
             >
@@ -127,8 +125,7 @@ export function MealHistory({ onBack }: MealHistoryProps) {
             <Button
               type="button"
               variant="outline"
-              size="sm"
-              className="gap-2 rounded-2xl border-border/40 bg-card/40 font-bold shadow-sm backdrop-blur-sm"
+              className="h-10 rounded-full"
               onClick={() => exportMealsCsv(filteredMeals, filterPeriod)}
               disabled={filteredMeals.length === 0}
             >
@@ -138,14 +135,14 @@ export function MealHistory({ onBack }: MealHistoryProps) {
           </div>
           <Button
             type="button"
-            variant="ghost"
+            variant="outline"
             size="icon"
-            className="flex sm:hidden h-12 w-12 shrink-0 rounded-[1.25rem] border border-border/40 bg-card/40 shadow-sm backdrop-blur-xl hover:bg-card disabled:opacity-40"
+            className="flex h-10 w-10 shrink-0 rounded-full sm:hidden"
             onClick={() => exportMealsCsv(filteredMeals, filterPeriod)}
             disabled={filteredMeals.length === 0}
             aria-label="Exportar historial (CSV)"
           >
-            <Download className="h-5 w-5" />
+            <Download className="h-4 w-4" />
           </Button>
         </>
       }
@@ -154,10 +151,18 @@ export function MealHistory({ onBack }: MealHistoryProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background pb-32">
+      <div className="min-h-full bg-background pb-32 md:pb-12">
         {header}
-        <div className="flex justify-center py-20">
-          <Loader2 className="h-12 w-12 animate-spin text-primary/40" />
+        <div className="mx-auto max-w-6xl space-y-3 px-4 pt-4 sm:px-6 lg:px-10">
+          <div className="h-11 animate-pulse rounded-xl bg-muted" />
+          <div className="grid grid-cols-3 gap-3">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="h-20 animate-pulse rounded-xl bg-muted" />
+            ))}
+          </div>
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="h-20 animate-pulse rounded-2xl bg-muted" />
+          ))}
         </div>
       </div>
     );
@@ -168,32 +173,34 @@ export function MealHistory({ onBack }: MealHistoryProps) {
   const avgCal = filteredMeals.length > 0 ? Math.round(totalCal / filteredMeals.length) : 0;
 
   return (
-    <div className="min-h-screen bg-background pb-32">
+    <div className="min-h-full bg-background pb-32 md:pb-12">
       {header}
 
-      <div className="mx-auto max-w-4xl space-y-8 px-4 py-4 sm:px-8">
-        <div className="flex flex-col gap-6">
-          {/* Barra de Búsqueda y Botones de Período */}
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-            <div className="relative flex-1">
+      <div className="mx-auto max-w-6xl space-y-6 px-4 pt-4 sm:px-6 lg:px-10">
+        <section className="surface space-y-4 p-4 sm:p-5">
+          {/* Búsqueda y período */}
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+            <div className="relative min-w-0 flex-1">
               <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Buscar por nombre, recomendación…"
+                placeholder="Buscar por nombre o recomendación…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-11 rounded-xl border-border/40 bg-card/40 pl-10 pr-10 focus-visible:ring-primary/20"
+                className="h-11 rounded-xl pl-10 pr-10"
               />
               {searchQuery && (
                 <button
+                  type="button"
                   onClick={() => setSearchQuery("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 hover:bg-muted"
+                  aria-label="Borrar búsqueda"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-muted-foreground hover:bg-muted"
                 >
-                  <X className="h-3 w-3 text-muted-foreground" />
+                  <X className="h-3.5 w-3.5" />
                 </button>
               )}
             </div>
 
-            <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none sm:pb-0">
+            <div className="flex gap-1 overflow-x-auto rounded-full bg-muted/60 p-1 scrollbar-none">
               {(["day", "week", "month", "all"] as const).map((period) => (
                 <button
                   key={period}
@@ -201,10 +208,10 @@ export function MealHistory({ onBack }: MealHistoryProps) {
                   onClick={() => setFilterPeriod(period)}
                   aria-pressed={filterPeriod === period}
                   className={cn(
-                    "inline-flex shrink-0 items-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-black tracking-tight transition-all duration-300",
+                    "inline-flex flex-1 shrink-0 items-center justify-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-medium transition-colors",
                     filterPeriod === period
-                      ? "border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/10"
-                      : "border-border/40 bg-card/40 text-muted-foreground hover:bg-card hover:text-foreground"
+                      ? "bg-card text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   {period !== "all" && getFilterIcon(period)}
@@ -214,68 +221,65 @@ export function MealHistory({ onBack }: MealHistoryProps) {
             </div>
           </div>
 
-          {/* Filtros de Calorías */}
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 mr-2">
-              <Filter className="h-3 w-3" />
-              Calorías:
-            </div>
+          {/* Rango de calorías */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="mr-1 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <Filter className="h-3.5 w-3.5" />
+              Calorías
+            </span>
             {CALORIE_RANGES.map((range) => (
               <button
                 key={range.id}
+                type="button"
                 onClick={() => setCalorieRange(range.id)}
                 aria-pressed={calorieRange === range.id}
                 className={cn(
-                  "rounded-full px-4 py-1.5 text-[10px] font-bold border transition-all",
+                  "rounded-full border px-3 py-1 text-xs font-medium tabular transition-colors",
                   calorieRange === range.id
-                    ? "bg-primary/10 border-primary text-primary shadow-sm"
-                    : "bg-muted/30 border-transparent text-muted-foreground hover:bg-muted/50"
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border text-muted-foreground hover:bg-muted"
                 )}
               >
                 {range.label}
               </button>
             ))}
           </div>
-        </div>
+        </section>
 
         {filteredMeals.length === 0 ? (
-          <div className="rounded-[3rem] border-2 border-dashed border-border/40 bg-muted/20 px-6 py-24 text-center">
-            <Calendar className="mx-auto h-16 w-16 text-muted-foreground/20 mb-6" />
-            <h3 className="text-xl font-black text-foreground">
-              Nada por aquí...
-            </h3>
-            <p className="mt-2 text-sm font-medium text-muted-foreground max-w-xs mx-auto">
+          <div className="rounded-2xl border border-dashed border-border bg-muted/40 p-8 text-center">
+            <Calendar className="mx-auto h-8 w-8 text-muted-foreground/60" />
+            <h3 className="mt-3 font-semibold">Nada por aquí</h3>
+            <p className="mx-auto mt-1 max-w-xs text-sm text-muted-foreground">
               {filterPeriod === "day"
-                ? "Aún no has registrado nada hoy. ¿Qué tal un snack saludable?"
-                : "Parece que no hay registros en este periodo."}
+                ? "Aún no has registrado nada hoy."
+                : "No hay registros en este periodo."}
             </p>
-            <Button onClick={onBack} className="mt-10 rounded-2xl font-black h-14 px-10 shadow-xl shadow-primary/20">
-              Registrar mi primera comida
+            <Button onClick={onBack} className="mt-4 h-11 rounded-full px-6">
+              Registrar una comida
             </Button>
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <dl className="grid grid-cols-3 gap-2 sm:gap-3">
               {[
-                { label: "Registros", value: filteredMeals.length, color: "text-primary", bg: "bg-primary/5" },
-                { label: "Promedio", value: `${avgCal} kcal`, color: "text-chart-2", bg: "bg-chart-2/5" },
-                { label: "Total", value: `${totalCal} kcal`, color: "text-chart-3", bg: "bg-chart-3/5" }
+                { label: "Registros", value: String(filteredMeals.length), unit: "" },
+                { label: "Promedio", value: String(avgCal), unit: "kcal" },
+                { label: "Total", value: String(totalCal), unit: "kcal" },
               ].map((stat) => (
-                <div key={stat.label} className={cn("rounded-[2rem] border border-border/40 bg-card/40 p-6 shadow-2xl shadow-black/[0.02] backdrop-blur-sm", stat.bg)}>
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 mb-2">
-                    {stat.label}
-                  </p>
-                  <p className={cn("text-3xl font-black tracking-tighter tabular-nums", stat.color)}>
+                <div key={stat.label} className="min-w-0 rounded-xl bg-muted/60 px-3 py-2.5 sm:px-4 sm:py-3">
+                  <dt className="text-xs text-muted-foreground">{stat.label}</dt>
+                  <dd className="truncate font-display text-xl font-semibold tabular sm:text-2xl">
                     {stat.value}
-                  </p>
+                    {stat.unit ? (
+                      <span className="ml-1 text-xs font-normal text-muted-foreground">{stat.unit}</span>
+                    ) : null}
+                  </dd>
                 </div>
               ))}
-            </div>
+            </dl>
 
-            <div className="relative space-y-12">
-              {/* Línea de tiempo decorativa en Desktop */}
-              <div className="absolute left-[31px] top-4 bottom-4 w-px bg-gradient-to-b from-primary/30 via-border/50 to-transparent hidden sm:block" />
-
+            <div className="space-y-8">
               {groupedMeals.map(([dateString, dayMeals]) => (
                 <MealTimelineGroup
                   key={dateString}

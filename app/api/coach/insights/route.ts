@@ -3,7 +3,7 @@ import { z } from "zod";
 import { runCoachInsightsGroq } from "@/lib/groq-server";
 import {
   HttpApiError,
-  enforceDailyQuota,
+  withDailyQuota,
   requireUidFromRequest,
 } from "@/lib/api-auth-usage";
 import { logger } from "@/lib/logger";
@@ -36,15 +36,16 @@ export async function POST(req: Request) {
     const uid = await requireUidFromRequest(req);
     const body = bodySchema.parse(await req.json());
 
-    const insight = await runCoachInsightsGroq({
-      context: body.context,
-      todayMeals: body.todayMeals,
-      remainingCalories: body.remainingCalories,
-      remainingProtein: body.remainingProtein,
-      lang: body.lang,
-    });
-
-    await enforceDailyQuota(uid, "tips");
+    // Reserva la cuota ANTES de llamar al LLM; se devuelve si la llamada falla.
+    const insight = await withDailyQuota(uid, "coach", () =>
+      runCoachInsightsGroq({
+        context: body.context,
+        todayMeals: body.todayMeals,
+        remainingCalories: body.remainingCalories,
+        remainingProtein: body.remainingProtein,
+        lang: body.lang,
+      })
+    );
 
     return NextResponse.json({ insight });
   } catch (e) {

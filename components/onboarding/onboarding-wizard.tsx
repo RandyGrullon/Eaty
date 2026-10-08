@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { ChevronLeft, ChevronRight, Loader2, Settings } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { EatyMark } from "@/components/app/eaty-logo";
+import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useOnboardingForm } from "@/hooks/use-onboarding-form";
 import { isOnboardingStepValid } from "@/lib/onboarding-validation";
@@ -26,6 +26,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const { user, logout } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const {
     data,
     updateData,
@@ -51,6 +52,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     if (!user) return;
 
     setLoading(true);
+    setSaveError("");
     try {
       // Convertir unidades a valores estándar.
       const weightInKg =
@@ -77,6 +79,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
       onComplete?.();
     } catch (error) {
       logger.error("Error saving profile", error);
+      setSaveError("No se pudo guardar tu perfil. Revisa tu conexión e inténtalo de nuevo.");
     } finally {
       setLoading(false);
     }
@@ -109,109 +112,97 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center p-4">
-      <Card className="w-full max-w-4xl shadow-2xl border-0 bg-card/95 backdrop-blur-sm">
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between mb-6">
-            <span className="text-sm text-muted-foreground">
-              Paso {currentStep} de {totalSteps}
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={async () => {
-                try {
-                  await logout();
-                } catch (error) {
-                  logger.error("Error al cerrar sesión", error);
-                }
-              }}
-              className="text-sm text-muted-foreground hover:text-destructive"
-            >
-              Cerrar sesión
-            </Button>
+    <div className="flex min-h-[100dvh] flex-col bg-background">
+      <header className="sticky top-0 z-10 border-b border-border bg-background/85 backdrop-blur">
+        <div className="mx-auto flex max-w-xl items-center gap-4 px-4 py-3">
+          <EatyMark className="h-8 w-8 shrink-0" />
+          <div className="flex-1">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>
+                Paso {currentStep} de {totalSteps}
+              </span>
+              <span className="tabular">{Math.round(progress)}%</span>
+            </div>
+            <div className="mt-1.5 flex gap-1">
+              {Array.from({ length: totalSteps }, (_, i) => (
+                <span
+                  key={i}
+                  className={cn(
+                    "h-1.5 flex-1 rounded-full transition-colors duration-300",
+                    i < currentStep ? "bg-primary" : "bg-muted"
+                  )}
+                />
+              ))}
+            </div>
           </div>
-
-          {/* Indicadores de pasos visuales */}
-          <div className="flex items-center justify-center space-x-2 mb-4">
-            {Array.from({ length: totalSteps }, (_, i) => i + 1).map((step) => (
-              <div key={step} className="flex items-center">
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all ${
-                    step === currentStep
-                      ? "bg-primary text-primary-foreground shadow-md"
-                      : step < currentStep
-                      ? "bg-primary/20 text-primary border-2 border-primary"
-                      : "bg-muted text-muted-foreground"
-                  }`}
-                >
-                  {step < currentStep ? "✓" : step}
-                </div>
-                {step < totalSteps && (
-                  <div
-                    className={`w-8 h-0.5 mx-1 transition-colors ${
-                      step < currentStep ? "bg-primary" : "bg-muted"
-                    }`}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-
-          <Progress value={progress} className="h-2" />
-        </CardHeader>
-        <CardContent className="space-y-6 min-h-[400px] transition-all duration-300 ease-in-out">
-          <div
-            key={currentStep}
-            className="animate-in fade-in-0 slide-in-from-right-5 duration-300"
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={async () => {
+              try {
+                await logout();
+              } catch (error) {
+                logger.error("Error al cerrar sesión", error);
+              }
+            }}
+            className="rounded-full text-muted-foreground"
           >
-            {renderStep()}
-          </div>
+            Salir
+          </Button>
+        </div>
+      </header>
 
-          <div className="flex gap-3 pt-6">
-            {currentStep > 1 && (
-              <Button
-                variant="outline"
-                onClick={prevStep}
-                className="flex-1 h-12 text-base font-medium"
-                disabled={loading}
-              >
-                <ChevronLeft className="h-5 w-5 mr-2" />
-                Anterior
-              </Button>
-            )}
+      <main className="mx-auto w-full max-w-xl flex-1 px-4 pb-32 pt-8">
+        <div key={currentStep} className="animate-in fade-in-0 slide-in-from-right-4 duration-300">
+          {renderStep()}
+        </div>
+        {saveError ? (
+          <p role="alert" className="mt-4 rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
+            {saveError}
+          </p>
+        ) : null}
+      </main>
 
-            {currentStep < totalSteps ? (
-              <Button
-                onClick={nextStep}
-                className="flex-1 h-12 text-base font-medium shadow-md"
-                disabled={!stepValid || loading}
-              >
-                Siguiente
-                <ChevronRight className="h-5 w-5 ml-2" />
-              </Button>
-            ) : (
-              <Button
-                onClick={handleComplete}
-                className="flex-1 h-12 text-base font-medium shadow-md bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                    Guardando...
-                  </>
-                ) : (
-                  <>
-                    <Settings className="h-5 w-5 mr-2" />
-                    Completar Setup
-                  </>
-                )}
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      <footer className="fixed inset-x-0 bottom-0 border-t border-border bg-background/90 backdrop-blur">
+        <div className="mx-auto flex max-w-xl gap-3 px-4 py-4 pb-[max(env(safe-area-inset-bottom),16px)]">
+          {currentStep > 1 && (
+            <Button
+              variant="outline"
+              onClick={prevStep}
+              className="h-12 rounded-full px-5"
+              disabled={loading}
+              aria-label="Paso anterior"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+          )}
+
+          {currentStep < totalSteps ? (
+            <Button
+              onClick={nextStep}
+              className="h-12 flex-1 rounded-full text-base"
+              disabled={!stepValid || loading}
+            >
+              Continuar
+              <ChevronRight className="ml-1 h-5 w-5" />
+            </Button>
+          ) : (
+            <Button onClick={handleComplete} className="h-12 flex-1 rounded-full text-base" disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Guardando…
+                </>
+              ) : (
+                <>
+                  <Check className="mr-2 h-5 w-5" />
+                  Empezar a usar Eaty
+                </>
+              )}
+            </Button>
+          )}
+        </div>
+      </footer>
     </div>
   );
 }

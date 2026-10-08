@@ -21,7 +21,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Calendar } from "@/components/ui/calendar";
 import { format, isAfter, isBefore, startOfDay, subYears } from "date-fns";
 import { es as esLocale } from "date-fns/locale";
-import { encryptData, decryptData } from "@/lib/encryption";
+import { parseMeasure } from "@/lib/profile-measure";
 import {
   calculateAgeFromBirthDateString,
   formatDateOnlyLocal,
@@ -76,34 +76,28 @@ export function ProfileEditModal({
   const [editData, setEditData] = useState<EditData>(DEFAULT_EDIT_DATA);
   const [saving, setSaving] = useState(false);
 
-  // Inicializa el formulario desde el perfil (descifrando peso/altura) cuando se abre.
+  // Inicializa el formulario desde el perfil cuando se abre (peso en kg, altura en cm).
   useEffect(() => {
     if (!open || !userProfile) return;
 
     let cancelled = false;
     const init = async () => {
-      const decryptedWeight =
-        typeof userProfile.weight === "string"
-          ? await decryptData(userProfile.weight, userId)
-          : userProfile.weight;
-      const decryptedHeight =
-        typeof userProfile.height === "string"
-          ? await decryptData(userProfile.height, userId)
-          : userProfile.height;
+      const weightKg = parseMeasure(userProfile.weight);
+      const heightCm = parseMeasure(userProfile.height);
 
       const weightUnit = userProfile.weightUnit || "kg";
       const heightUnit = userProfile.heightUnit || "cm";
 
-      const weightDisplay = decryptedWeight
+      const weightDisplay = weightKg
         ? weightUnit === "lbs"
-          ? Math.round(Number(decryptedWeight) * 2.20462)
-          : Number(decryptedWeight)
+          ? Math.round(weightKg * 2.20462)
+          : weightKg
         : "";
 
-      const heightDisplay = decryptedHeight
+      const heightDisplay = heightCm
         ? heightUnit === "inches"
-          ? Math.round(Number(decryptedHeight) / 2.54)
-          : Number(decryptedHeight)
+          ? Math.round(heightCm / 2.54)
+          : heightCm
         : "";
 
       if (cancelled) return;
@@ -184,16 +178,12 @@ export function ProfileEditModal({
       const weightInKg = convertWeight(weightValue, editData.weightUnit, "kg");
       const heightInCm = convertHeight(heightValue, editData.heightUnit, "cm");
 
-      // Cifrado de datos sensibles antes de guardar.
-      const encryptedWeight = await encryptData(weightInKg.toString(), userId);
-      const encryptedHeight = await encryptData(heightInCm.toString(), userId);
-
       await updateUserProfile(userId, {
         birthDate: birthIso,
         age: computedAge,
         gender: editData.gender,
-        weight: encryptedWeight,
-        height: encryptedHeight,
+        weight: weightInKg > 0 ? weightInKg : undefined,
+        height: heightInCm > 0 ? heightInCm : undefined,
         weightUnit: editData.weightUnit,
         heightUnit: editData.heightUnit,
         activityLevel: editData.activityLevel,
@@ -205,7 +195,7 @@ export function ProfileEditModal({
       onOpenChange(false);
       toast({
         title: "Perfil actualizado",
-        description: "Tus datos sensibles han sido cifrados localmente.",
+        description: "Tus datos se han guardado correctamente.",
       });
     } catch (error) {
       logger.error("Error updating profile", error);
@@ -223,13 +213,13 @@ export function ProfileEditModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="sm:max-w-lg"
+        className="max-h-[90vh] overflow-y-auto rounded-2xl sm:max-w-lg"
         onInteractOutside={preventPortalClose}
         onPointerDownOutside={preventPortalClose}
         onFocusOutside={preventPortalClose}
       >
         <DialogHeader>
-          <DialogTitle>Editar Perfil</DialogTitle>
+          <DialogTitle className="text-xl font-semibold">Editar perfil</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -238,7 +228,7 @@ export function ProfileEditModal({
             <p className="mt-1 text-xs text-muted-foreground">
               Elige el día en el calendario.
             </p>
-            <div className="mt-2 max-h-[min(340px,45vh)] overflow-y-auto overflow-x-hidden rounded-lg border border-border bg-card p-2">
+            <div className="mt-2 max-h-[min(340px,45vh)] overflow-y-auto overflow-x-hidden rounded-xl border border-border bg-card p-2">
               <Calendar
                 mode="single"
                 locale={esLocale}
@@ -318,13 +308,13 @@ export function ProfileEditModal({
                 min={editData.weightUnit === "kg" ? "30" : "66"}
                 max={editData.weightUnit === "kg" ? "300" : "661"}
                 step="0.1"
-                className="flex-1"
+                className="h-11 flex-1 rounded-xl tabular"
               />
               <Select
                 value={editData.weightUnit}
                 onValueChange={handleWeightUnitChange}
               >
-                <SelectTrigger className="w-20">
+                <SelectTrigger className="h-11 w-24 rounded-xl">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -348,13 +338,13 @@ export function ProfileEditModal({
                 min={editData.heightUnit === "cm" ? "100" : "39"}
                 max={editData.heightUnit === "cm" ? "250" : "98"}
                 step="0.1"
-                className="flex-1"
+                className="h-11 flex-1 rounded-xl tabular"
               />
               <Select
                 value={editData.heightUnit}
                 onValueChange={handleHeightUnitChange}
               >
-                <SelectTrigger className="w-20">
+                <SelectTrigger className="h-11 w-24 rounded-xl">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -366,7 +356,7 @@ export function ProfileEditModal({
           </div>
 
           <div>
-            <Label>Nivel de Actividad</Label>
+            <Label>Nivel de actividad</Label>
             <Select
               value={editData.activityLevel}
               onValueChange={(value) =>
@@ -376,7 +366,7 @@ export function ProfileEditModal({
                 }))
               }
             >
-              <SelectTrigger className="mt-1">
+              <SelectTrigger className="mt-1 h-11 w-full rounded-xl">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -384,7 +374,7 @@ export function ProfileEditModal({
                 <SelectItem value="light">Ligero</SelectItem>
                 <SelectItem value="moderate">Moderado</SelectItem>
                 <SelectItem value="active">Activo</SelectItem>
-                <SelectItem value="very_active">Muy Activo</SelectItem>
+                <SelectItem value="very_active">Muy activo</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -400,7 +390,7 @@ export function ProfileEditModal({
                 }))
               }
             >
-              <SelectTrigger className="mt-1">
+              <SelectTrigger className="mt-1 h-11 w-full rounded-xl">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -419,7 +409,7 @@ export function ProfileEditModal({
                 setEditData((prev) => ({ ...prev, language: value }))
               }
             >
-              <SelectTrigger className="mt-1">
+              <SelectTrigger className="mt-1 h-11 w-full rounded-xl">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -434,12 +424,12 @@ export function ProfileEditModal({
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            className="flex-1"
+            className="h-11 flex-1 rounded-full"
           >
             Cancelar
           </Button>
-          <Button onClick={handleSave} className="flex-1" disabled={saving}>
-            {saving ? "Guardando..." : "Guardar"}
+          <Button onClick={handleSave} className="h-11 flex-1 rounded-full" disabled={saving}>
+            {saving ? "Guardando…" : "Guardar"}
           </Button>
         </div>
       </DialogContent>

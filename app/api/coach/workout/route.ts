@@ -3,7 +3,7 @@ import { z } from "zod";
 import { runWorkoutGroq } from "@/lib/groq-server";
 import {
   HttpApiError,
-  enforceDailyQuota,
+  withDailyQuota,
   requireUidFromRequest,
 } from "@/lib/api-auth-usage";
 import { logger } from "@/lib/logger";
@@ -24,16 +24,17 @@ export async function POST(req: Request) {
     const uid = await requireUidFromRequest(req);
     const body = bodySchema.parse(await req.json());
 
-    const workout = await runWorkoutGroq({
-      goal: body.goal,
-      level: body.level,
-      daysPerWeek: body.daysPerWeek,
-      equipment: body.equipment,
-      focus: body.focus,
-      lang: body.lang,
-    });
-
-    await enforceDailyQuota(uid, "analyze");
+    // Reserva la cuota ANTES de llamar al LLM; se devuelve si la llamada falla.
+    const workout = await withDailyQuota(uid, "coach", () =>
+      runWorkoutGroq({
+        goal: body.goal,
+        level: body.level,
+        daysPerWeek: body.daysPerWeek,
+        equipment: body.equipment,
+        focus: body.focus,
+        lang: body.lang,
+      })
+    );
 
     return NextResponse.json({ workout });
   } catch (e) {

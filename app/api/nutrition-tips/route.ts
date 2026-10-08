@@ -3,7 +3,7 @@ import { z } from "zod";
 import { runNutritionTipsGroq } from "@/lib/groq-server";
 import {
   HttpApiError,
-  enforceDailyQuota,
+  withDailyQuota,
   requireUidFromRequest,
 } from "@/lib/api-auth-usage";
 import { logger } from "@/lib/logger";
@@ -35,16 +35,16 @@ export async function POST(req: Request) {
     const json: unknown = await req.json();
     const body = bodySchema.parse(json);
 
-    const tips = await runNutritionTipsGroq({
-      meals: body.meals,
-      totalCalories: body.totalCalories,
-      dailyGoal: body.dailyGoal,
-      recentSummary: body.recentSummary,
-      lang: body.lang,
-    });
-
-    // Contar cuota solo cuando el resultado está listo.
-    await enforceDailyQuota(uid, "tips");
+    // Reserva la cuota ANTES de llamar al LLM; se devuelve si la llamada falla.
+    const tips = await withDailyQuota(uid, "tips", () =>
+      runNutritionTipsGroq({
+        meals: body.meals,
+        totalCalories: body.totalCalories,
+        dailyGoal: body.dailyGoal,
+        recentSummary: body.recentSummary,
+        lang: body.lang,
+      })
+    );
 
     return NextResponse.json({ tips });
   } catch (e) {

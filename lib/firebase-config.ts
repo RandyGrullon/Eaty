@@ -1,3 +1,5 @@
+import { isDemoMode } from "@/lib/demo/mode";
+
 export const FIREBASE_CLIENT_ENV_KEYS = [
   "NEXT_PUBLIC_FIREBASE_API_KEY",
   "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN",
@@ -57,13 +59,23 @@ export function getMissingFirebaseConfigKeys(): string[] {
 }
 
 export function isFirebaseConfigReady(): boolean {
-  return getMissingFirebaseConfigKeys().length === 0;
+  return isDemoMode() || getMissingFirebaseConfigKeys().length === 0;
 }
 
 /**
  * Configuración del SDK web. Define todas las claves en `.env` o `.env.local` (ver `.env.example`).
  */
 export function getFirebaseClientConfig(): FirebaseClientConfig {
+  if (isDemoMode()) {
+    return {
+      apiKey: "demo",
+      authDomain: "demo.local",
+      projectId: "eaty-demo",
+      storageBucket: "eaty-demo",
+      messagingSenderId: "0",
+      appId: "demo",
+    };
+  }
   const missing = getMissingFirebaseConfigKeys();
   if (missing.length > 0) {
     throw new Error(

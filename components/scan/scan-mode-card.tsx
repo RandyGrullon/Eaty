@@ -1,11 +1,9 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-
-const scanCardClass =
-  "group relative flex flex-col items-start gap-4 overflow-hidden rounded-[2.5rem] border border-border/40 bg-card/40 p-6 text-left shadow-2xl shadow-black/[0.03] backdrop-blur-md transition-all duration-300 hover:shadow-primary/10 hover:bg-card active:scale-[0.98]";
 
 interface ScanModeCardProps {
   icon: LucideIcon;
@@ -28,35 +26,31 @@ export function ScanModeCard({
 }: ScanModeCardProps) {
   return (
     <motion.button
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.1 }}
-      whileHover={{ y: -4 }}
+      transition={{ duration: 0.4, delay: index * 0.05, ease: [0.22, 1, 0.36, 1] }}
       type="button"
       onClick={onClick}
-      className={scanCardClass}
+      className="surface group flex w-full min-w-0 items-center gap-4 p-4 text-left transition-colors hover:border-primary/40 hover:bg-muted/40 sm:flex-col sm:items-start sm:p-5"
     >
-      <div className="flex w-full items-start justify-between">
-        <div
-          className={cn(
-            "flex h-14 w-14 items-center justify-center rounded-2xl shadow-inner transition-transform group-hover:scale-110 duration-300",
-            iconWrapClassName
-          )}
+      <div className="flex shrink-0 items-start justify-between sm:w-full">
+        <span
+          className={cn("flex h-11 w-11 items-center justify-center rounded-xl", iconWrapClassName)}
         >
-          <Icon className="h-6 w-6" aria-hidden />
-        </div>
-        <span className="rounded-full border border-border/40 bg-background/50 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground/80">
+          <Icon className="h-5 w-5" aria-hidden />
+        </span>
+        <span className="hidden rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground sm:inline-flex">
           {badge}
         </span>
       </div>
-      <div>
-        <p className="text-xl font-black tracking-tight text-foreground">{title}</p>
-        <p className="mt-1.5 text-xs font-medium leading-relaxed text-muted-foreground/80">
-          {description}
-        </p>
+      <div className="min-w-0 flex-1">
+        <p className="font-semibold">{title}</p>
+        <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
       </div>
-      {/* Decorative gradient corner */}
-      <div className="absolute -bottom-6 -right-6 h-12 w-12 bg-primary/10 blur-xl opacity-0 transition-opacity group-hover:opacity-100" />
+      <ChevronRight
+        className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 sm:hidden"
+        aria-hidden
+      />
     </motion.button>
   );
 }

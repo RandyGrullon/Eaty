@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { AlertCircle } from "lucide-react";
+import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserProfile } from "@/hooks/use-user-profile";
 import { useProfileStats } from "@/hooks/use-profile-stats";
-import { useToast } from "@/hooks/use-toast";
 import { ProfileHeader } from "./profile-header";
 import { ProfileStatsSection } from "./profile-stats-section";
 import { ProfileAchievements } from "./profile-achievements";
@@ -29,10 +29,16 @@ export function ProfilePage({ onTabChange }: ProfilePageProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background pb-28 md:pb-10">
-        <div className="h-40 border-b border-border/60 bg-muted/30" />
-        <div className="flex justify-center py-24">
-          <Loader2 className="h-9 w-9 animate-spin text-primary" />
+      <div className="min-h-full bg-background pb-32 md:pb-12">
+        <div className="mx-auto max-w-4xl space-y-4 px-4 pt-6 sm:px-6 lg:px-10 lg:pt-10">
+          <div className="h-8 w-40 animate-pulse rounded-xl bg-muted" />
+          <div className="h-36 animate-pulse rounded-2xl bg-muted" />
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="h-24 animate-pulse rounded-2xl bg-muted" />
+            ))}
+          </div>
+          <div className="h-64 animate-pulse rounded-2xl bg-muted" />
         </div>
       </div>
     );
@@ -40,17 +46,23 @@ export function ProfilePage({ onTabChange }: ProfilePageProps) {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background px-4 pb-28 pt-16 text-center md:pb-10">
-        <p className="text-sm font-medium text-destructive">{error}</p>
-        <Button onClick={reload} variant="outline" className="mt-6 rounded-xl">
-          Reintentar
-        </Button>
+      <div className="min-h-full bg-background pb-32 md:pb-12">
+        <div className="mx-auto max-w-4xl px-4 pt-16 sm:px-6 lg:px-10">
+          <div className="rounded-2xl border border-dashed border-border bg-muted/40 p-8 text-center">
+            <AlertCircle className="mx-auto h-8 w-8 text-destructive" />
+            <p className="mt-3 font-medium">No se pudo cargar tu perfil</p>
+            <p className="mt-1 text-sm text-muted-foreground">{error}</p>
+            <Button onClick={reload} variant="outline" className="mt-4 rounded-full">
+              Reintentar
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background pb-32 animate-in fade-in duration-500">
+    <div className="min-h-full bg-background pb-32 md:pb-12">
       <ProfileHeader
         user={user}
         userProfile={userProfile}
@@ -59,30 +71,25 @@ export function ProfilePage({ onTabChange }: ProfilePageProps) {
         onSettingsClick={() => onTabChange?.("settings")}
       />
 
-      <div className="mx-auto max-w-4xl space-y-12 px-4 py-8 sm:px-8">
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100 fill-mode-both">
-          <ProfileStatsSection
-            stats={stats}
-            selectedPeriod={selectedPeriod}
-            onPeriodChange={setSelectedPeriod}
-            userProfile={userProfile}
-          />
-        </div>
-        
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, delay: 0.05, ease: [0.22, 1, 0.36, 1] }}
+        className="mx-auto max-w-4xl space-y-10 px-4 pt-8 sm:px-6 lg:px-10"
+      >
+        <ProfileStatsSection
+          stats={stats}
+          selectedPeriod={selectedPeriod}
+          onPeriodChange={setSelectedPeriod}
+          userProfile={userProfile}
+        />
+
         {user && (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200 fill-mode-both">
-            <ProfileUpdateProgress
-              userId={user.uid}
-              userProfile={userProfile}
-              onSaved={refreshUserProfile}
-            />
-          </div>
+          <ProfileUpdateProgress userId={user.uid} userProfile={userProfile} onSaved={refreshUserProfile} />
         )}
-        
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-300 fill-mode-both">
-          <ProfileAchievements unlockedIds={userProfile?.achievements} />
-        </div>
-      </div>
+
+        <ProfileAchievements unlockedIds={userProfile?.achievements} />
+      </motion.div>
 
       {user && (
         <ProfileEditModal

@@ -5,22 +5,15 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
-import { Loader2, Chrome, Lock, Mail } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Loader2, Lock, Mail } from "lucide-react";
+import { GoogleIcon } from "./google-icon";
 
 interface RegisterFormProps {
   onToggleMode: () => void;
 }
 
-export function RegisterForm({ onToggleMode }: RegisterFormProps) {
+export function RegisterForm(_props: RegisterFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -69,16 +62,7 @@ export function RegisterForm({ onToggleMode }: RegisterFormProps) {
   };
 
   return (
-    <Card className="border-primary/10 shadow-lg shadow-primary/5">
-      <CardHeader className="space-y-1 pb-4">
-        <CardTitle className="text-xl font-semibold text-foreground">
-          Crear cuenta
-        </CardTitle>
-        <CardDescription className="text-base">
-          Elige correo y contraseña, o entra con Google.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
+    <div className="space-y-5">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="register-email">Correo electrónico</Label>
@@ -96,7 +80,7 @@ export function RegisterForm({ onToggleMode }: RegisterFormProps) {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={loading}
-                className="h-11 pl-10"
+                className="h-11 rounded-xl pl-10"
               />
             </div>
           </div>
@@ -116,7 +100,7 @@ export function RegisterForm({ onToggleMode }: RegisterFormProps) {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={loading}
-                className="h-11 pl-10"
+                className="h-11 rounded-xl pl-10"
               />
             </div>
           </div>
@@ -136,7 +120,7 @@ export function RegisterForm({ onToggleMode }: RegisterFormProps) {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 disabled={loading}
-                className="h-11 pl-10"
+                className="h-11 rounded-xl pl-10"
               />
             </div>
           </div>
@@ -144,13 +128,13 @@ export function RegisterForm({ onToggleMode }: RegisterFormProps) {
           {error ? (
             <div
               role="alert"
-              className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
+              className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
             >
               {error}
             </div>
           ) : null}
 
-          <Button type="submit" className="w-full h-11 text-base" disabled={loading}>
+          <Button type="submit" className="h-11 w-full rounded-full text-base" disabled={loading}>
             {loading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -162,13 +146,8 @@ export function RegisterForm({ onToggleMode }: RegisterFormProps) {
           </Button>
         </form>
 
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-border" />
-          </div>
-          <div className="relative flex justify-center text-xs font-medium uppercase tracking-wide">
-            <span className="bg-card px-3 text-muted-foreground">o</span>
-          </div>
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <span className="h-px flex-1 bg-border" />o<span className="h-px flex-1 bg-border" />
         </div>
 
         <Button
@@ -176,26 +155,12 @@ export function RegisterForm({ onToggleMode }: RegisterFormProps) {
           variant="outline"
           onClick={handleGoogleSignIn}
           disabled={loading}
-          className={cn(
-            "w-full h-11 text-base border-primary/20 bg-background",
-            "hover:bg-primary/5 hover:border-primary/30"
-          )}
+          className="h-11 w-full gap-2 rounded-full text-base"
         >
-          <Chrome className="mr-2 h-4 w-4 text-primary shrink-0" aria-hidden />
+          <GoogleIcon className="h-4 w-4 shrink-0" />
           Continuar con Google
         </Button>
 
-        <p className="text-center text-sm text-muted-foreground">
-          ¿Ya tienes cuenta?{" "}
-          <button
-            type="button"
-            onClick={onToggleMode}
-            className="font-semibold text-primary hover:underline underline-offset-4"
-          >
-            Inicia sesión
-          </button>
-        </p>
-      </CardContent>
-    </Card>
+    </div>
   );
 }

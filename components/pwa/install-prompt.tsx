@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import { Download, X } from "lucide-react"
 
 interface BeforeInstallPromptEvent extends Event {
@@ -64,33 +63,30 @@ export function InstallPrompt() {
   }
 
   return (
-    <div className="fixed bottom-20 left-4 right-4 z-40">
-      <Card className="bg-primary text-primary-foreground border-primary">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary-foreground/20 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Download className="h-5 w-5" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-sm">Instalar Eaty</h3>
-              <p className="text-xs opacity-90">Accede más rápido desde tu pantalla de inicio</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button size="sm" variant="secondary" onClick={handleInstallClick} className="text-xs px-3 py-1 h-auto">
-                Instalar
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleDismiss}
-                className="text-primary-foreground hover:bg-primary-foreground/20 p-1 h-auto"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="fixed inset-x-4 bottom-24 z-40 md:inset-x-auto md:bottom-6 md:right-6 md:w-96">
+      <div className="surface flex items-center gap-3 p-3.5">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <Download className="h-5 w-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h3 className="text-sm font-semibold">Instalar Eaty</h3>
+          <p className="text-xs text-muted-foreground">Ábrela más rápido desde tu pantalla de inicio.</p>
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          <Button size="sm" onClick={handleInstallClick} className="rounded-full">
+            Instalar
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={handleDismiss}
+            className="h-8 w-8 rounded-full text-muted-foreground"
+            aria-label="Cerrar"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }

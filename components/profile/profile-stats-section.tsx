@@ -1,6 +1,5 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Calendar as CalendarIcon,
   TrendingUp,
@@ -42,26 +41,28 @@ export function ProfileStatsSection({
   const fiberTarget = (25 * periodDays) || 1;
   const sugarTarget = (35 * periodDays) || 1;
 
+  const pctOf = (value: number, target: number) => (value / target) * 100;
+
   const statTiles = [
-    { label: "Comidas", value: stats.totalMeals, icon: Target, color: "text-chart-1", bg: "bg-chart-1/10" },
-    { label: "Kcal Media", value: stats.averageCalories, icon: TrendingUp, color: "text-chart-3", bg: "bg-chart-3/10" },
-    { label: "Kcal Totales", value: stats.totalCalories.toLocaleString(), icon: Flame, color: "text-primary", bg: "bg-primary/10" },
-    { label: "En Período", value: stats.weeklyMeals, icon: CalendarIcon, color: "text-chart-2", bg: "bg-chart-2/10" },
+    { label: "Comidas", value: stats.totalMeals.toLocaleString("es-ES"), icon: Target },
+    { label: "Kcal media", value: stats.averageCalories.toLocaleString("es-ES"), icon: TrendingUp },
+    { label: "Kcal totales", value: stats.totalCalories.toLocaleString("es-ES"), icon: Flame },
+    { label: "En el período", value: stats.weeklyMeals.toLocaleString("es-ES"), icon: CalendarIcon },
   ];
 
   const macroRows = [
-    { label: "Proteína", value: stats.totalProtein, unit: "g", color: "bg-chart-1", percentage: Math.min(100, (stats.totalProtein / proteinTarget) * 100), displayPct: Math.round((stats.totalProtein / proteinTarget) * 100) },
-    { label: "Carbos", value: stats.totalCarbs, unit: "g", color: "bg-chart-2", percentage: Math.min(100, (stats.totalCarbs / carbsTarget) * 100), displayPct: Math.round((stats.totalCarbs / carbsTarget) * 100) },
-    { label: "Grasas", value: stats.totalFat, unit: "g", color: "bg-chart-4", percentage: Math.min(100, (stats.totalFat / fatTarget) * 100), displayPct: Math.round((stats.totalFat / fatTarget) * 100) },
-    { label: "Fibra", value: stats.totalFiber, unit: "g", color: "bg-chart-3", percentage: Math.min(100, (stats.totalFiber / fiberTarget) * 100), displayPct: Math.round((stats.totalFiber / fiberTarget) * 100) },
-    { label: "Azúcar", value: stats.totalSugar, unit: "g", color: "bg-chart-5", percentage: Math.min(100, (stats.totalSugar / sugarTarget) * 100), displayPct: Math.round((stats.totalSugar / sugarTarget) * 100) },
+    { label: "Proteína", value: stats.totalProtein, dot: "bg-protein", bar: "bg-protein", track: "bg-protein/15", pct: pctOf(stats.totalProtein, proteinTarget) },
+    { label: "Carbohidratos", value: stats.totalCarbs, dot: "bg-carbs", bar: "bg-carbs", track: "bg-carbs/20", pct: pctOf(stats.totalCarbs, carbsTarget) },
+    { label: "Grasa", value: stats.totalFat, dot: "bg-fat", bar: "bg-fat", track: "bg-fat/15", pct: pctOf(stats.totalFat, fatTarget) },
+    { label: "Fibra", value: stats.totalFiber, dot: "bg-primary", bar: "bg-primary", track: "bg-primary/15", pct: pctOf(stats.totalFiber, fiberTarget) },
+    { label: "Azúcar", value: stats.totalSugar, dot: "bg-chart-5", bar: "bg-chart-5", track: "bg-muted", pct: pctOf(stats.totalSugar, sugarTarget) },
   ];
 
   return (
-    <section className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-2xl font-black tracking-tight text-foreground">Estadísticas</h2>
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+    <section className="space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="text-lg font-semibold">Estadísticas</h2>
+        <div className="-mx-4 flex min-w-0 gap-2 overflow-x-auto px-4 pb-1 scrollbar-none sm:mx-0 sm:px-0">
           {PERIOD_OPTIONS.map(({ value, label }) => (
             <button
               key={value}
@@ -69,10 +70,10 @@ export function ProfileStatsSection({
               onClick={() => onPeriodChange(value)}
               aria-pressed={selectedPeriod === value}
               className={cn(
-                "shrink-0 rounded-xl px-4 py-2 text-xs font-black uppercase tracking-widest transition-all",
+                "h-9 shrink-0 rounded-full border px-4 text-sm font-medium transition-colors",
                 selectedPeriod === value
-                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                  : "bg-card/40 text-muted-foreground border border-border/40 hover:bg-card hover:text-foreground"
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
             >
               {label}
@@ -81,47 +82,52 @@ export function ProfileStatsSection({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-        <div className="lg:col-span-12 grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:col-span-12">
           {statTiles.map((stat) => (
-            <div key={stat.label} className="rounded-[2rem] border border-border/40 bg-card/40 p-6 shadow-xl shadow-black/[0.02] backdrop-blur-sm transition-transform hover:-translate-y-1">
-              <div className={cn("mb-3 flex h-10 w-10 items-center justify-center rounded-2xl", stat.bg, stat.color)}>
-                <stat.icon className="h-5 w-5" />
-              </div>
-              <p className="text-3xl font-black tabular-nums tracking-tighter">{stat.value}</p>
-              <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">{stat.label}</p>
+            <div key={stat.label} className="surface min-w-0 p-4">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <stat.icon className="h-4 w-4" />
+              </span>
+              <p className="mt-3 truncate font-display text-2xl font-bold tabular">{stat.value}</p>
+              <p className="eyebrow mt-0.5">{stat.label}</p>
             </div>
           ))}
         </div>
 
         <div className="lg:col-span-5">
-          <Card className="rounded-[2.5rem] border border-border/40 bg-card/40 shadow-xl shadow-black/[0.02] backdrop-blur-sm overflow-hidden h-full">
-            <CardHeader className="p-8 pb-4">
-              <CardTitle className="text-xl font-black tracking-tight flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-primary" />
-                Acumulado
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-8 pt-0 space-y-4">
+          <div className="surface h-full p-5 sm:p-6">
+            <h3 className="flex items-center gap-2 text-base font-semibold">
+              <Sparkles className="h-4 w-4 text-primary" />
+              Acumulado
+            </h3>
+            <p className="text-sm text-muted-foreground">Respecto a tu meta del período</p>
+            <div className="mt-4 space-y-4">
               {macroRows.map((row) => (
-                <div key={row.label} className="group">
-                  <div className="flex justify-between items-end mb-1.5">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">{row.label}</span>
-                    <span className="text-sm font-black tabular-nums">
-                      {Math.round(row.value)}{row.unit}
-                      <span className="text-[10px] text-muted-foreground ml-1.5 font-normal">({row.displayPct}%)</span>
+                <div key={row.label}>
+                  <div className="mb-1.5 flex items-baseline justify-between gap-2 text-sm">
+                    <span className="flex items-center gap-2 font-medium">
+                      <span className={cn("h-2 w-2 rounded-full", row.dot)} aria-hidden />
+                      {row.label}
+                    </span>
+                    <span className="tabular text-muted-foreground">
+                      <span className="font-semibold text-foreground">{Math.round(row.value)} g</span> ·{" "}
+                      {Math.round(row.pct)}%
                     </span>
                   </div>
-                  <div className="h-1.5 w-full rounded-full bg-muted shadow-inner overflow-hidden">
-                    <div className={cn("h-full rounded-full opacity-70 transition-all duration-500", row.color)} style={{ width: `${row.percentage}%` }} />
+                  <div className={cn("h-2 overflow-hidden rounded-full", row.track)}>
+                    <div
+                      className={cn("h-full rounded-full transition-all duration-500", row.bar)}
+                      style={{ width: `${Math.min(100, row.pct)}%` }}
+                    />
                   </div>
                 </div>
               ))}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
 
-        <div className="lg:col-span-7">
+        <div className="min-w-0 lg:col-span-7">
           <MealCalendar />
         </div>
       </div>

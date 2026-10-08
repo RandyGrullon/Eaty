@@ -1,14 +1,10 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import {
-  Camera,
-  UtensilsCrossed,
-  ChevronRight,
-  Loader2,
-} from "lucide-react";
+import { Camera, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { formatMealDate } from "@/lib/date-format";
+import { MealThumb } from "@/components/meal/meal-thumb";
 import type { Meal } from "@/types/meal";
 
 interface RecentMealsProps {
@@ -16,101 +12,81 @@ interface RecentMealsProps {
   meals: Meal[];
   onSelect: (meal: Meal) => void;
   onViewHistory: () => void;
+  onScan?: () => void;
 }
 
-export function RecentMeals({ loading, meals, onSelect, onViewHistory }: RecentMealsProps) {
+export function RecentMeals({ loading, meals, onSelect, onViewHistory, onScan }: RecentMealsProps) {
   return (
-    <>
-      <div className="mb-8 flex items-end justify-between gap-4">
+    <section className="surface p-5 sm:p-6">
+      <div className="mb-4 flex items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-black tracking-tight text-foreground">
-            Últimas comidas
-          </h2>
-          <p className="text-sm font-medium text-muted-foreground">
-            Tu registro fotográfico más reciente
-          </p>
+          <h2 className="text-lg font-semibold">Últimas comidas</h2>
+          <p className="text-sm text-muted-foreground">Toca una para editarla</p>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="group gap-1 text-primary hover:bg-primary/5 font-bold"
-          onClick={onViewHistory}
-        >
-          Ver todo
-          <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+        <Button variant="ghost" size="sm" className="gap-1 rounded-full text-primary" onClick={onViewHistory}>
+          Historial
+          <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
 
-      <div className="relative">
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="h-10 w-10 animate-spin text-primary/40" />
-          </div>
-        ) : meals.length > 0 ? (
-          <motion.div
-            initial="hidden"
-            animate="show"
-            variants={{
-              hidden: { opacity: 0 },
-              show: { opacity: 1, transition: { staggerChildren: 0.05 } },
-            }}
-            className="grid grid-cols-1 gap-3"
-          >
-            {meals.map((meal) => (
-              <motion.button
-                key={meal.id}
-                variants={{
-                  hidden: { opacity: 0, x: -10 },
-                  show: { opacity: 1, x: 0 },
-                }}
+      {loading ? (
+        <div className="space-y-3">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="flex items-center gap-3">
+              <div className="h-14 w-14 animate-pulse rounded-xl bg-muted" />
+              <div className="flex-1 space-y-2">
+                <div className="h-3.5 w-2/3 animate-pulse rounded bg-muted" />
+                <div className="h-3 w-1/3 animate-pulse rounded bg-muted" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : meals.length > 0 ? (
+        <ul className="-mx-2 divide-y divide-border">
+          {meals.map((meal, i) => (
+            <motion.li
+              key={meal.id}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.04 }}
+            >
+              <button
                 type="button"
                 onClick={() => onSelect(meal)}
-                className="group flex w-full items-center gap-4 rounded-3xl border border-border/40 bg-card/40 p-3 pr-5 text-left transition-all hover:bg-card hover:shadow-xl hover:shadow-black/[0.02] hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 sm:gap-5"
+                className="flex w-full items-center gap-3 rounded-xl px-2 py-2.5 text-left transition-colors hover:bg-muted/70"
               >
-                <div className="relative shrink-0">
-                  <div className="h-14 w-14 overflow-hidden rounded-2xl border border-border/40 bg-muted shadow-inner sm:h-16 sm:w-16">
-                    {meal.imageUrl ? (
-                      <img
-                        src={meal.imageUrl}
-                        alt=""
-                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center">
-                        <Camera className="h-6 w-6 text-muted-foreground/40" />
-                      </div>
-                    )}
-                  </div>
-                </div>
+                <MealThumb src={meal.imageUrl} className="h-14 w-14 shrink-0 rounded-xl" />
                 <div className="min-w-0 flex-1">
-                  <p className="font-bold text-foreground truncate group-hover:text-primary transition-colors">
-                    {meal.foodName}
-                  </p>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 mt-0.5">
+                  <p className="truncate font-medium">{meal.foodName}</p>
+                  <p className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground tabular">
                     {formatMealDate(meal.createdAt)}
+                    <span className="hidden items-center gap-1.5 sm:flex">
+                      <span className="h-1.5 w-1.5 rounded-full bg-protein" />P {Math.round(meal.macros.protein)}
+                      <span className="h-1.5 w-1.5 rounded-full bg-carbs" />C {Math.round(meal.macros.carbs)}
+                      <span className="h-1.5 w-1.5 rounded-full bg-fat" />G {Math.round(meal.macros.fat)}
+                    </span>
                   </p>
                 </div>
                 <div className="shrink-0 text-right">
-                  <p className="text-xl font-black tabular-nums text-primary tracking-tighter">
-                    {meal.calories}
-                  </p>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
-                    kcal
-                  </p>
+                  <p className="font-display text-lg font-semibold tabular leading-none">{meal.calories}</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">kcal</p>
                 </div>
-              </motion.button>
-            ))}
-          </motion.div>
-        ) : (
-          <div className="rounded-[2.5rem] border-2 border-dashed border-border/40 bg-muted/20 py-16 text-center">
-            <UtensilsCrossed className="mx-auto h-12 w-12 text-muted-foreground/20 mb-4" />
-            <p className="text-sm font-bold text-muted-foreground">
-              Aún no hay comidas registradas.
-            </p>
-            <Button variant="link" className="mt-2 text-primary font-bold">Escanea tu primer plato ahora</Button>
-          </div>
-        )}
-      </div>
-    </>
+              </button>
+            </motion.li>
+          ))}
+        </ul>
+      ) : (
+        <div className="rounded-xl border border-dashed border-border bg-muted/40 px-6 py-10 text-center">
+          <Camera className="mx-auto h-8 w-8 text-muted-foreground/60" />
+          <p className="mt-3 font-medium">Aún no has registrado comidas</p>
+          <p className="mt-1 text-sm text-muted-foreground">Haz una foto a tu plato y Eaty calcula el resto.</p>
+          {onScan ? (
+            <Button onClick={onScan} className="mt-4 rounded-full">
+              Registrar mi primera comida
+            </Button>
+          ) : null}
+        </div>
+      )}
+    </section>
   );
 }

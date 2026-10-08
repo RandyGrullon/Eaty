@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Bell, BellOff, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
+import { cn } from "@/lib/utils";
 
 export function PushNotificationManager() {
   const [permission, setPermission] = useState<NotificationPermission>("default");
@@ -46,17 +47,22 @@ export function PushNotificationManager() {
   if (!isSupported) return null;
 
   return (
-    <div className="flex items-center justify-between rounded-2xl border border-border/40 bg-card/40 p-4 backdrop-blur-md">
-      <div className="flex items-center gap-3">
-        <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${permission === "granted" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+    <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4">
+      <div className="flex min-w-0 items-center gap-3">
+        <span
+          className={cn(
+            "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
+            permission === "granted" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+          )}
+        >
           {permission === "granted" ? <Bell className="h-5 w-5" /> : <BellOff className="h-5 w-5" />}
-        </div>
-        <div>
-          <p className="text-sm font-bold">Recordatorios Push</p>
-          <p className="text-[10px] text-muted-foreground">
-            {permission === "granted" 
-              ? "Activados: te avisaremos si olvidas una comida." 
-              : "No te pierdas ninguna comida. Activa los avisos."}
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold">Recordatorios</p>
+          <p className="text-xs text-muted-foreground">
+            {permission === "granted"
+              ? "Activados: te avisamos si olvidas una comida."
+              : "Activa los avisos para no olvidar ninguna comida."}
           </p>
         </div>
       </div>
@@ -65,7 +71,7 @@ export function PushNotificationManager() {
         size="sm"
         disabled={loading || permission === "granted"}
         onClick={requestPermission}
-        className="rounded-xl font-bold"
+        className="shrink-0 rounded-full"
       >
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : permission === "granted" ? "Activos" : "Activar"}
       </Button>

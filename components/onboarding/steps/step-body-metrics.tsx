@@ -4,11 +4,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Target } from "lucide-react";
 import type {
   OnboardingData,
   UpdateOnboardingField,
 } from "../onboarding-types";
+import { StepHeader } from "../option-card";
 
 interface StepBodyMetricsProps {
   data: OnboardingData;
@@ -28,21 +28,14 @@ export function StepBodyMetrics({
   formatHeightDisplay,
 }: StepBodyMetricsProps) {
   return (
-    <div className="space-y-8">
-      <div className="text-center">
-        <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-          <Target className="h-8 w-8 text-primary" />
-        </div>
-        <h2 className="text-2xl font-bold text-primary mb-2">
-          Medidas Corporales
-        </h2>
-        <p className="text-muted-foreground">
-          Necesitamos tus medidas para calcular mejor tus necesidades calóricas
-        </p>
-      </div>
+    <div>
+      <StepHeader
+        title="Peso y altura"
+        description="Con estos datos calculamos tu metabolismo basal."
+      />
 
       <div className="space-y-8">
-        <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+        <div className="flex items-center justify-between rounded-2xl border border-border bg-card p-4">
           <div>
             <Label className="text-base font-medium">Sistema de Unidades</Label>
             <p className="text-sm text-muted-foreground">
@@ -66,7 +59,7 @@ export function StepBodyMetrics({
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <Label className="text-base font-medium">Peso</Label>
-            <Badge variant="secondary" className="text-lg px-3 py-1">
+            <Badge variant="secondary" className="rounded-full px-3 py-1 text-sm tabular">
               {data.weight || "0"} {data.weightUnit}
             </Badge>
           </div>
@@ -79,7 +72,7 @@ export function StepBodyMetrics({
               min={data.weightUnit === "kg" ? "30" : "66"}
               max={data.weightUnit === "kg" ? "300" : "661"}
               step="0.1"
-              className="text-lg h-12 pr-16"
+              className="h-12 rounded-xl pr-16 text-lg"
             />
             <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">
               {data.weightUnit}
@@ -95,7 +88,7 @@ export function StepBodyMetrics({
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <Label className="text-base font-medium">Altura</Label>
-            <Badge variant="secondary" className="text-lg px-3 py-1">
+            <Badge variant="secondary" className="rounded-full px-3 py-1 text-sm tabular">
               {formatHeightDisplay()}
             </Badge>
           </div>
@@ -110,7 +103,7 @@ export function StepBodyMetrics({
                 min="100"
                 max="250"
                 step="1"
-                className="text-lg h-12 pr-16"
+                className="h-12 rounded-xl pr-16 text-lg"
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">
                 cm
@@ -126,7 +119,7 @@ export function StepBodyMetrics({
                   onChange={(e) => onFeetChange(e.target.value)}
                   min="3"
                   max="8"
-                  className="text-lg h-12 pr-8"
+                  className="h-12 rounded-xl pr-8 text-lg"
                 />
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">
                   ft
@@ -140,7 +133,7 @@ export function StepBodyMetrics({
                   onChange={(e) => onInchesChange(e.target.value)}
                   min="0"
                   max="11"
-                  className="text-lg h-12 pr-8"
+                  className="h-12 rounded-xl pr-8 text-lg"
                 />
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">
                   in

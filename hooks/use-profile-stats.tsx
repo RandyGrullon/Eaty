@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { getUserMeals } from "@/lib/meals";
+import { useState, useCallback, useMemo } from "react";
+import { useAppData } from "@/hooks/use-app-data";
 import type { Meal } from "@/types/meal";
 
 export type TimePeriod =
@@ -107,42 +107,34 @@ function computeStats(meals: Meal[], period: TimePeriod): ProfileStats {
 }
 
 /**
- * Carga las comidas del usuario y calcula sus estadísticas según el período
- * seleccionado. Antes esta lógica vivía dentro de ProfilePage (1233 líneas).
+ * Calcula las estadísticas del usuario según el período seleccionado a partir de
+ * las comidas en tiempo real del store global (`useAppData`). Las comidas
+ * planificadas (`isPlanned`) no cuentan como consumidas.
  */
 export function useProfileStats(userId: string | undefined) {
-  const [meals, setMeals] = useState<Meal[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { meals: allMeals, loading: appLoading, refresh } = useAppData();
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>("weekly");
 
-  const reload = useCallback(async () => {
-    if (!userId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      setMeals(await getUserMeals(userId));
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Error al cargar");
-    } finally {
-      setLoading(false);
-    }
-  }, [userId]);
-
-  useEffect(() => {
-    if (userId) reload();
-  }, [userId, reload]);
+  const meals = useMemo(
+    () => (userId ? allMeals.filter((m) => !m.isPlanned) : []),
+    [allMeals, userId]
+  );
 
   const stats = useMemo(
     () => computeStats(meals, selectedPeriod),
     [meals, selectedPeriod]
   );
 
+  // Los datos llegan en tiempo real; `reload` se mantiene por compatibilidad.
+  const reload = useCallback(async () => {
+    await refresh();
+  }, [refresh]);
+
   return {
     meals,
     stats,
-    loading,
-    error,
+    loading: Boolean(userId) && appLoading,
+    error: null as string | null,
     selectedPeriod,
     setSelectedPeriod,
     reload,

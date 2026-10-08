@@ -25,7 +25,6 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { generateTutorialApi } from "@/lib/diets";
 import { logger } from "@/lib/logger";
-import { cn } from "@/lib/utils";
 import {
   DIFFICULTY_LABEL,
   type Diet,
@@ -89,68 +88,45 @@ export function DishTutorialDrawer({
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent className="max-h-[92vh]">
         <div className="mx-auto flex h-[88vh] w-full max-w-2xl flex-col overflow-hidden">
-          <DrawerHeader className="shrink-0 border-b pb-4 text-left">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">
-              Tutorial paso a paso
-            </p>
-            <DrawerTitle className="text-2xl font-black tracking-tight">
-              {dish?.name ?? "Plato"}
-            </DrawerTitle>
+          <DrawerHeader className="shrink-0 border-b border-border pb-4 text-left">
+            <p className="eyebrow">Tutorial paso a paso</p>
+            <DrawerTitle className="text-2xl font-bold">{dish?.name ?? "Plato"}</DrawerTitle>
           </DrawerHeader>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-8 pt-5">
             {!dish ? null : !tutorial ? (
-              <div className="rounded-2xl border border-dashed border-border/50 bg-muted/20 p-8 text-center">
-                <ChefHat className="mx-auto mb-3 h-10 w-10 text-primary/50" />
-                <p className="mb-5 text-sm font-medium text-muted-foreground">
-                  Aún no hay tutorial para este plato. Genera uno paso a paso,
-                  extremadamente detallado, con la IA.
+              <div className="rounded-2xl border border-dashed border-border bg-muted/40 p-8 text-center">
+                <ChefHat className="mx-auto h-8 w-8 text-muted-foreground/60" />
+                <p className="mt-3 font-semibold">Sin tutorial todavía</p>
+                <p className="mx-auto mt-1 max-w-xs text-sm text-muted-foreground">
+                  Genera con IA una receta paso a paso, bien detallada.
                 </p>
-                <Button
-                  className="rounded-xl font-black shadow-lg shadow-primary/20"
-                  onClick={generate}
-                  disabled={loading || !user}
-                >
-                  {loading ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Sparkles className="mr-2 h-4 w-4" />
-                  )}
+                <Button className="mt-4 h-11 rounded-full px-6" onClick={generate} disabled={loading || !user}>
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                   {loading ? "Creando tutorial…" : "Generar tutorial"}
                 </Button>
               </div>
             ) : (
               <div className="space-y-7">
                 {/* Meta */}
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                   <MetaTile icon={Users} label="Raciones" value={`${tutorial.servings}`} />
                   <MetaTile
                     icon={Clock}
                     label="Prep + cocción"
                     value={`${tutorial.prepTimeMin + tutorial.cookTimeMin} min`}
                   />
-                  <MetaTile
-                    icon={Flame}
-                    label="Dificultad"
-                    value={DIFFICULTY_LABEL[tutorial.difficulty]}
-                  />
-                  <MetaTile
-                    icon={UtensilsCrossed}
-                    label="Pasos"
-                    value={`${tutorial.steps.length}`}
-                  />
+                  <MetaTile icon={Flame} label="Dificultad" value={DIFFICULTY_LABEL[tutorial.difficulty]} />
+                  <MetaTile icon={UtensilsCrossed} label="Pasos" value={`${tutorial.steps.length}`} />
                 </div>
 
                 {/* Equipo */}
                 {tutorial.equipment.length > 0 && (
                   <section>
                     <SectionTitle icon={ChefHat}>Utensilios</SectionTitle>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-1.5">
                       {tutorial.equipment.map((e, i) => (
-                        <span
-                          key={i}
-                          className="rounded-full border border-border/40 bg-card/50 px-3 py-1 text-xs font-medium"
-                        >
+                        <span key={i} className="rounded-full bg-muted px-3 py-1 text-sm">
                           {e}
                         </span>
                       ))}
@@ -161,67 +137,56 @@ export function DishTutorialDrawer({
                 {/* Ingredientes */}
                 <section>
                   <SectionTitle icon={UtensilsCrossed}>Ingredientes</SectionTitle>
-                  <div className="overflow-hidden rounded-2xl border border-border/40">
+                  <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
                     {tutorial.ingredients.map((ing, i) => (
-                      <div
-                        key={i}
-                        className={cn(
-                          "flex items-center justify-between gap-3 px-4 py-2.5 text-sm",
-                          i % 2 === 0 ? "bg-card/40" : "bg-transparent"
-                        )}
-                      >
-                        <span className="font-medium text-foreground">{ing.item}</span>
-                        <span className="shrink-0 font-bold tabular-nums text-primary">
-                          {ing.amount}
-                        </span>
-                      </div>
+                      <li key={i} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
+                        <span className="min-w-0 font-medium">{ing.item}</span>
+                        <span className="shrink-0 text-right font-semibold tabular text-primary">{ing.amount}</span>
+                      </li>
                     ))}
-                  </div>
+                  </ul>
                 </section>
 
                 {/* Pasos */}
                 <section>
                   <SectionTitle icon={ChefHat}>Paso a paso</SectionTitle>
-                  <div className="space-y-3">
+                  <ol className="space-y-2.5">
                     {tutorial.steps.map((step) => (
-                      <div
-                        key={step.n}
-                        className="rounded-2xl border border-border/40 bg-card/40 p-4"
-                      >
-                        <div className="mb-1 flex items-center gap-3">
-                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-primary text-xs font-black text-primary-foreground">
+                      <li key={step.n} className="rounded-2xl border border-border bg-card p-4">
+                        <div className="flex items-start gap-3">
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold tabular text-primary-foreground">
                             {step.n}
                           </span>
-                          <h4 className="text-sm font-black text-foreground">
-                            {step.title}
-                          </h4>
-                        </div>
-                        <p className="ml-10 text-sm leading-relaxed text-muted-foreground">
-                          {step.detail}
-                        </p>
-                        <div className="ml-10 mt-2 flex flex-wrap gap-3 text-[11px] font-bold">
-                          {step.durationMin ? (
-                            <span className="flex items-center gap-1 text-chart-2">
-                              <Clock className="h-3 w-3" />
-                              {step.durationMin} min
-                            </span>
-                          ) : null}
-                          {step.tempC ? (
-                            <span className="flex items-center gap-1 text-chart-4">
-                              <Thermometer className="h-3 w-3" />
-                              {step.tempC} °C
-                            </span>
-                          ) : null}
-                        </div>
-                        {step.tip ? (
-                          <div className="ml-10 mt-2 flex items-start gap-2 rounded-xl bg-primary/5 p-2.5 text-xs text-foreground/80">
-                            <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-                            <span>{step.tip}</span>
+                          <div className="min-w-0 flex-1">
+                            <h4 className="text-sm font-semibold">{step.title}</h4>
+                            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{step.detail}</p>
+                            {step.durationMin || step.tempC ? (
+                              <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                                {step.durationMin ? (
+                                  <span className="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 tabular text-muted-foreground">
+                                    <Clock className="h-3 w-3" />
+                                    {step.durationMin} min
+                                  </span>
+                                ) : null}
+                                {step.tempC ? (
+                                  <span className="flex items-center gap-1 rounded-full bg-protein/12 px-2 py-0.5 tabular text-protein">
+                                    <Thermometer className="h-3 w-3" />
+                                    {step.tempC} °C
+                                  </span>
+                                ) : null}
+                              </div>
+                            ) : null}
+                            {step.tip ? (
+                              <div className="mt-2 flex items-start gap-2 rounded-xl bg-muted/60 px-3 py-2.5 text-xs">
+                                <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                                <span>{step.tip}</span>
+                              </div>
+                            ) : null}
                           </div>
-                        ) : null}
-                      </div>
+                        </div>
+                      </li>
                     ))}
-                  </div>
+                  </ol>
                 </section>
 
                 {/* Errores comunes */}
@@ -230,10 +195,7 @@ export function DishTutorialDrawer({
                     <SectionTitle icon={AlertTriangle}>Errores a evitar</SectionTitle>
                     <ul className="space-y-2">
                       {tutorial.commonMistakes.map((m, i) => (
-                        <li
-                          key={i}
-                          className="flex items-start gap-2 rounded-xl border border-destructive/20 bg-destructive/5 p-3 text-sm text-foreground/80"
-                        >
+                        <li key={i} className="flex items-start gap-2 rounded-xl bg-destructive/10 px-3 py-2.5 text-sm">
                           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
                           <span>{m}</span>
                         </li>
@@ -246,23 +208,14 @@ export function DishTutorialDrawer({
                 {tutorial.plating ? (
                   <section>
                     <SectionTitle icon={Sparkles}>Emplatado</SectionTitle>
-                    <p className="rounded-2xl border border-border/40 bg-card/40 p-4 text-sm leading-relaxed text-muted-foreground">
+                    <p className="rounded-xl bg-muted/60 px-4 py-3 text-sm leading-relaxed text-muted-foreground">
                       {tutorial.plating}
                     </p>
                   </section>
                 ) : null}
 
-                <Button
-                  variant="outline"
-                  className="w-full rounded-xl font-bold"
-                  onClick={generate}
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Sparkles className="mr-2 h-4 w-4" />
-                  )}
+                <Button variant="outline" className="h-11 w-full rounded-full" onClick={generate} disabled={loading}>
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                   Regenerar tutorial
                 </Button>
               </div>
@@ -274,36 +227,22 @@ export function DishTutorialDrawer({
   );
 }
 
-function MetaTile({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: typeof Clock;
-  label: string;
-  value: string;
-}) {
+function MetaTile({ icon: Icon, label, value }: { icon: typeof Clock; label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-border/40 bg-card/40 p-3 text-center">
+    <div className="min-w-0 rounded-xl bg-muted/60 px-3 py-2.5 text-center">
       <Icon className="mx-auto mb-1 h-4 w-4 text-primary" />
-      <p className="text-sm font-black tabular-nums">{value}</p>
-      <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/70">
-        {label}
-      </p>
+      <p className="truncate font-display text-base font-semibold tabular">{value}</p>
+      <p className="truncate text-xs text-muted-foreground">{label}</p>
     </div>
   );
 }
 
-function SectionTitle({
-  icon: Icon,
-  children,
-}: {
-  icon: typeof Clock;
-  children: React.ReactNode;
-}) {
+function SectionTitle({ icon: Icon, children }: { icon: typeof Clock; children: React.ReactNode }) {
   return (
-    <h3 className="mb-3 flex items-center gap-2 text-lg font-black tracking-tight text-foreground">
-      <Icon className="h-5 w-5 text-primary" />
+    <h3 className="mb-3 flex items-center gap-2 text-lg font-semibold">
+      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
+        <Icon className="h-4 w-4" />
+      </span>
       {children}
     </h3>
   );

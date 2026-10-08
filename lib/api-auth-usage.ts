@@ -9,6 +9,15 @@ import { logger } from "@/lib/logger";
 import { isPremiumUser } from "@/lib/subscription-server";
 import { getCookieValueFromRequest } from "@/lib/parse-cookie-header";
 import { EATY_SERVER_SESSION_COOKIE } from "@/lib/server-auth-session-constants";
+import {
+  QUOTA_SPECS,
+  dailyQuotaLimit,
+  quotaExceededMessage,
+  refundedCount,
+  type QuotaKind,
+} from "@/lib/quota-config";
+
+export type { QuotaKind };
 
 export class HttpApiError extends Error {
   readonly status: number;
@@ -49,7 +58,13 @@ function logAuthFailure(label: string, e: unknown): void {
  * en cabecera esté vencido pero la cookie de sesión siga vigente, o vía
  * `credentials: 'include'` sin depender del header.
  */
+/** Demo sin Firebase Admin: todas las peticiones son del usuario de ejemplo. */
+function isDemoServer(): boolean {
+  return process.env.NEXT_PUBLIC_DEMO_MODE === "1" && !isFirebaseServiceAccountJsonConfigured();
+}
+
 export async function requireUidFromRequest(req: Request): Promise<string> {
+  if (isDemoServer()) return "demo-user";
   const bearer = getBearerIdToken(req);
   const sessionCookie = getSessionCookieRaw(req);
   const auth = getAdminAuth();
@@ -102,85 +117,90 @@ function usageDayKeyUtc(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function envLimit(name: string, fallback: number): number {
-  const n = parseInt(process.env[name] ?? "", 10);
-  return Number.isFinite(n) && n > 0 ? n : fallback;
-}
-
-/** Límites por plan: free acotado (modelo de suscripción), premium amplio. */
-function dailyAnalyzeLimit(isPremium: boolean): number {
-  return isPremium
-    ? envLimit("DAILY_ANALYZE_LIMIT", 120)
-    : envLimit("FREE_DAILY_ANALYZE_LIMIT", 5);
-}
-
-function dailyTipsLimit(isPremium: boolean): number {
-  return isPremium
-    ? envLimit("DAILY_TIPS_LIMIT", 40)
-    : envLimit("FREE_DAILY_TIPS_LIMIT", 5);
-}
+export type QuotaReservation = {
+  kind: QuotaKind;
+  /** Devuelve la unidad reservada (best effort, nunca deja el contador negativo). */
+  refund: () => Promise<void>;
+};
 
 /**
- * Incrementa contador diario (UTC) y rechaza si supera el límite.
+ * Reserva una unidad de la cuota diaria (UTC) ANTES de llamar al LLM: la
+ * transacción incrementa el contador y rechaza con 429 si se supera el límite.
+ * Si la llamada posterior falla, usa `refund()` (o `withDailyQuota`) para devolverla.
  * Escritura solo desde servidor (Admin); reglas Firestore deniegan write cliente en `usage`.
  */
-export async function enforceDailyQuota(
+export async function reserveDailyQuota(
   uid: string,
-  kind: "analyze" | "tips"
-): Promise<void> {
+  kind: QuotaKind
+): Promise<QuotaReservation> {
+  if (isDemoServer()) return { kind, refund: async () => undefined };
   const db = getAdminFirestore();
   const ref = db.doc(`users/${uid}/usage/${usageDayKeyUtc()}`);
   const isPremium = await isPremiumUser(uid);
-  const analyzeLimit = dailyAnalyzeLimit(isPremium);
-  const tipsLimit = dailyTipsLimit(isPremium);
+  const limit = dailyQuotaLimit(kind, isPremium);
+  const { field } = QUOTA_SPECS[kind];
 
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     const d = snap.data() ?? {};
-    const analyzeCount =
-      typeof d.analyzeCount === "number" ? d.analyzeCount : 0;
-    const tipsCount = typeof d.tipsCount === "number" ? d.tipsCount : 0;
-    const gymTipsCount =
-      typeof d.gymTipsCount === "number" ? d.gymTipsCount : 0;
-
-    if (kind === "analyze") {
-      if (analyzeCount >= analyzeLimit) {
-        throw new HttpApiError(
-          429,
-          isPremium
-            ? `Límite diario de análisis (${analyzeLimit}) alcanzado (UTC). Vuelve mañana.`
-            : `Llegaste al límite gratuito de ${analyzeLimit} análisis por día. Pásate a Eaty Premium para análisis ilimitados.`
-        );
-      }
-      tx.set(
-        ref,
-        {
-          analyzeCount: analyzeCount + 1,
-          tipsCount,
-          gymTipsCount,
-          updatedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true }
-      );
-    } else {
-      if (tipsCount >= tipsLimit) {
-        throw new HttpApiError(
-          429,
-          isPremium
-            ? `Límite diario de consejos por IA (${tipsLimit}) alcanzado.`
-            : `Llegaste al límite gratuito de ${tipsLimit} consejos por día. Eaty Premium lo desbloquea.`
-        );
-      }
-      tx.set(
-        ref,
-        {
-          analyzeCount,
-          tipsCount: tipsCount + 1,
-          gymTipsCount,
-          updatedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true }
-      );
+    const count = typeof d[field] === "number" ? (d[field] as number) : 0;
+    if (count >= limit) {
+      throw new HttpApiError(429, quotaExceededMessage(kind, limit, isPremium));
     }
+    tx.set(
+      ref,
+      { [field]: count + 1, updatedAt: FieldValue.serverTimestamp() },
+      { merge: true }
+    );
   });
+
+  let refunded = false;
+  return {
+    kind,
+    refund: async () => {
+      if (refunded) return;
+      refunded = true;
+      try {
+        await db.runTransaction(async (tx) => {
+          const snap = await tx.get(ref);
+          if (!snap.exists) return;
+          tx.set(
+            ref,
+            {
+              [field]: refundedCount(snap.data()?.[field]),
+              updatedAt: FieldValue.serverTimestamp(),
+            },
+            { merge: true }
+          );
+        });
+      } catch (e) {
+        logger.error("refund quota", e);
+      }
+    },
+  };
+}
+
+/**
+ * Reserva cuota, ejecuta `fn` (la llamada al LLM) y devuelve la reserva si `fn` lanza.
+ */
+export async function withDailyQuota<T>(
+  uid: string,
+  kind: QuotaKind,
+  fn: () => Promise<T>
+): Promise<T> {
+  const reservation = await reserveDailyQuota(uid, kind);
+  try {
+    return await fn();
+  } catch (e) {
+    await reservation.refund();
+    throw e;
+  }
+}
+
+/** @deprecated Usa `withDailyQuota` (reserva antes + devolución si falla). */
+export async function enforceDailyQuota(
+  uid: string,
+  kind: QuotaKind
+): Promise<void> {
+  await reserveDailyQuota(uid, kind);
 }

@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
@@ -24,6 +23,7 @@ import { motion } from "framer-motion";
 import { toDateInputValue, fromDateInputValue } from "@/lib/date-format";
 import { confidenceLabel } from "@/lib/confidence";
 import { GenerateDishImage } from "@/components/meal/generate-dish-image";
+import { MealThumb } from "@/components/meal/meal-thumb";
 
 interface AnalysisResultsProps {
   result: Omit<Meal, "id" | "createdAt">;
@@ -37,16 +37,30 @@ interface AnalysisResultsProps {
   defaultPlannedDate?: Date | null;
 }
 
+// Colores fijos por macro (clases literales para que Tailwind las detecte).
 const MACRO_MAIN = [
-  { key: "protein" as const, name: "Proteína", color: "bg-chart-1" },
-  { key: "carbs" as const, name: "Carbohidratos", color: "bg-chart-2" },
-  { key: "fat" as const, name: "Grasas", color: "bg-chart-4" },
+  { key: "protein" as const, label: "Proteína", dot: "bg-protein", bar: "bg-protein", track: "bg-protein/15" },
+  { key: "carbs" as const, label: "Carbohidratos", dot: "bg-carbs", bar: "bg-carbs", track: "bg-carbs/20" },
+  { key: "fat" as const, label: "Grasa", dot: "bg-fat", bar: "bg-fat", track: "bg-fat/15" },
 ] as const;
 
 const MACRO_FIBER_SUGAR = [
-  { key: "fiber" as const, name: "Fibra", color: "bg-chart-3" },
-  { key: "sugar" as const, name: "Azúcar", color: "bg-chart-5" },
+  { key: "fiber" as const, label: "Fibra", bar: "bg-primary", track: "bg-primary/15" },
+  { key: "sugar" as const, label: "Azúcar", bar: "bg-chart-5", track: "bg-muted" },
 ] as const;
+
+const MOODS = [
+  { id: "energetic" as const, label: "Con energía", icon: Zap, tone: "bg-carbs/20 text-foreground" },
+  { id: "satisfied" as const, label: "Satisfecho", icon: Smile, tone: "bg-primary/10 text-primary" },
+  { id: "neutral" as const, label: "Normal", icon: Coffee, tone: "bg-fat/15 text-fat" },
+  { id: "heavy" as const, label: "Pesado", icon: Info, tone: "bg-protein/12 text-protein" },
+];
+
+const CONFIDENCE_TONE: Record<string, string> = {
+  high: "bg-success/15 text-success hover:bg-success/15",
+  medium: "bg-warning/20 text-foreground hover:bg-warning/20",
+  low: "bg-muted text-muted-foreground hover:bg-muted",
+};
 
 export function AnalysisResults({
   result: initialResult,
@@ -126,16 +140,16 @@ export function AnalysisResults({
     try {
       const aiShort =
         ctx != null
-          ? `\n🧠 Lo que interpretó la IA: ${ctx.dishDescription.slice(0, 200)}${
+          ? `\nLo que interpretó la IA: ${ctx.dishDescription.slice(0, 200)}${
               ctx.dishDescription.length > 200 ? "…" : ""
             }`
           : "";
       const shareText =
-        `🍽️ Análisis Nutricional - ${editedResult.foodName}\n\n` +
-        `📊 Calorías: ${editedResult.calories} kcal\n` +
-        `🥩 Proteínas: ${editedResult.macros.protein} g\n` +
-        `🌾 Carbohidratos: ${editedResult.macros.carbs} g\n` +
-        `🧈 Grasas: ${editedResult.macros.fat} g\n` +
+        `Análisis nutricional: ${editedResult.foodName}\n\n` +
+        `Calorías: ${editedResult.calories} kcal\n` +
+        `Proteínas: ${editedResult.macros.protein} g\n` +
+        `Carbohidratos: ${editedResult.macros.carbs} g\n` +
+        `Grasas: ${editedResult.macros.fat} g\n` +
         aiShort +
         `\n\nAnalizado con Eaty`;
 
@@ -155,121 +169,139 @@ export function AnalysisResults({
   };
 
   return (
-    <div className="min-h-screen bg-background pb-32">
-      {/* Header flotante */}
-      <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/60 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-4xl items-center justify-between px-4">
-          <Button variant="ghost" size="icon" onClick={onBack} className="rounded-xl">
+    <div className="min-h-screen bg-background pb-36">
+      {/* Cabecera */}
+      <header className="sticky top-0 z-40 w-full border-b border-border bg-background/90 backdrop-blur">
+        <div className="mx-auto flex h-16 max-w-4xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-10">
+          <Button variant="ghost" size="icon" onClick={onBack} className="rounded-full" aria-label="Volver">
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div className="text-center">
-            <h1 className="text-sm font-black uppercase tracking-[0.2em] text-foreground/80">
-              Resultados
-            </h1>
-            <p className="text-[10px] font-bold text-primary uppercase tracking-widest">
-              Análisis IA
-            </p>
+          <div className="min-w-0 text-center">
+            <h1 className="truncate text-lg font-bold">Resultado</h1>
+            <p className="text-xs text-muted-foreground">Análisis con IA</p>
           </div>
-          <Button variant="ghost" size="icon" onClick={shareAnalysis} className="rounded-xl">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={shareAnalysis}
+            className="rounded-full"
+            aria-label="Compartir análisis"
+          >
             <Share2 className="h-5 w-5" />
           </Button>
         </div>
       </header>
 
-      <div className="mx-auto mt-6 max-w-4xl space-y-8 px-4">
+      <div className="mx-auto mt-6 max-w-4xl space-y-6 px-4 sm:px-6 lg:px-10">
         {fromPlanner && (
           <div className="flex items-center gap-3 rounded-2xl border border-primary/25 bg-primary/5 p-4">
             <Calendar className="h-5 w-5 shrink-0 text-primary" />
-            <p className="text-sm font-semibold text-foreground">
-              Planificando para <span className="text-primary capitalize">{plannedLabel}</span>.
-              Se guardará directamente en ese día.
+            <p className="text-sm">
+              Planificando para <span className="font-semibold capitalize text-primary">{plannedLabel}</span>. Se
+              guardará directamente en ese día.
             </p>
           </div>
         )}
-        {/* Hero Section */}
-        <section className="relative overflow-hidden rounded-[2.5rem] border border-border/40 bg-card/40 shadow-2xl shadow-black/[0.03]">
+
+        {/* Plato */}
+        <motion.section
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+          className="surface overflow-hidden"
+        >
           {imageSrc ? (
-            <div className="aspect-video w-full overflow-hidden sm:aspect-[21/9]">
-              <img src={imageSrc} alt={imageAlt} className="h-full w-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-card/80 via-transparent to-transparent" />
-            </div>
+            <MealThumb src={imageSrc} alt={imageAlt} className="aspect-video w-full sm:aspect-[21/9]" iconClassName="h-8 w-8" />
           ) : (
-            <div className="flex flex-col items-center justify-center gap-4 bg-muted/30 px-6 py-8">
-              <Camera className="h-10 w-10 text-muted-foreground/20" />
+            <div className="flex flex-col items-center justify-center gap-4 bg-muted/60 px-6 py-8">
+              <Camera className="h-8 w-8 text-muted-foreground/60" />
               <GenerateDishImage
                 meal={{ foodName: editedResult.foodName, aiContext: editedResult.aiContext }}
-                onUseImage={(url) =>
-                  setEditedResult((prev) => ({ ...prev, imageUrl: url }))
-                }
+                onUseImage={(url) => setEditedResult((prev) => ({ ...prev, imageUrl: url }))}
                 className="w-full max-w-xs"
               />
             </div>
           )}
-          <div className="relative p-6 sm:p-8 space-y-6 sm:flex sm:items-center sm:justify-between sm:gap-6 sm:space-y-0">
-            <div className="min-w-0 flex-1 space-y-4">
+          <div className="space-y-5 p-5 sm:flex sm:items-end sm:justify-between sm:gap-6 sm:space-y-0 sm:p-6">
+            <div className="min-w-0 flex-1 space-y-3">
               <div className="space-y-1.5">
-                <Label htmlFor="foodName" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Nombre del plato</Label>
-                <div className="relative group">
-                  <Input 
+                <Label htmlFor="foodName" className="eyebrow">
+                  Nombre del plato
+                </Label>
+                <div className="group relative">
+                  <Input
                     id="foodName"
                     value={editedResult.foodName}
-                    onChange={(e) => setEditedResult(prev => ({ ...prev, foodName: e.target.value }))}
-                    className="h-12 text-xl font-black bg-background/50 border-border/40 rounded-2xl pr-10 focus-visible:ring-primary/20"
+                    onChange={(e) => setEditedResult((prev) => ({ ...prev, foodName: e.target.value }))}
+                    className="h-12 rounded-xl pr-10 font-display text-lg font-semibold"
                   />
-                  <Edit3 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
+                  <Edit3 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60 transition-colors group-focus-within:text-primary" />
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
                 {ctx && (
-                  <Badge variant="secondary" className={cn("px-3 py-1 font-bold", confidenceLabel(ctx.confidence).className)}>
-                    Confianza: {confidenceLabel(ctx.confidence).text}
+                  <Badge className={cn("rounded-full px-3 py-1 font-medium", CONFIDENCE_TONE[ctx.confidence] ?? CONFIDENCE_TONE.low)}>
+                    Confianza {confidenceLabel(ctx.confidence).text.toLowerCase()}
                   </Badge>
                 )}
-                <Badge variant="outline" className="px-3 py-1 font-bold bg-background/50">
-                  {ctx?.portionLabel || "Porción Estándar"}
+                <Badge variant="outline" className="rounded-full px-3 py-1 font-medium">
+                  {ctx?.portionLabel || "Porción estándar"}
                 </Badge>
               </div>
             </div>
-            <div className="text-center sm:text-right shrink-0 space-y-2">
-              <Label htmlFor="calories" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Kcal Totales</Label>
-              <Input 
-                id="calories"
-                type="number"
-                value={editedResult.calories}
-                onChange={(e) => setEditedResult(prev => ({ ...prev, calories: parseInt(e.target.value) || 0 }))}
-                className="h-16 text-5xl font-black text-center sm:text-right bg-transparent border-none p-0 focus-visible:ring-0 text-primary tabular-nums"
-              />
+            <div className="shrink-0 rounded-xl bg-muted/60 px-4 py-3 sm:min-w-40 sm:text-right">
+              <Label htmlFor="calories" className="eyebrow">
+                Calorías totales
+              </Label>
+              <div className="flex items-baseline gap-1.5 sm:justify-end">
+                <Input
+                  id="calories"
+                  type="number"
+                  value={editedResult.calories}
+                  onChange={(e) =>
+                    setEditedResult((prev) => ({ ...prev, calories: parseInt(e.target.value) || 0 }))
+                  }
+                  className="h-12 w-auto min-w-[2ch] max-w-[6ch] border-none bg-transparent p-0 font-display text-4xl font-bold text-primary tabular shadow-none [field-sizing:content] focus-visible:ring-0 sm:text-right dark:bg-transparent"
+                />
+                <span className="text-sm text-muted-foreground">kcal</span>
+              </div>
             </div>
           </div>
-        </section>
+        </motion.section>
 
-        <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          {MACRO_MAIN.map((m) => {
+        {/* Macros */}
+        <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {MACRO_MAIN.map((m, i) => {
             const val = editedResult.macros[m.key];
             const kcal = macroKcal[m.key];
             const pct = pfcShare(m.key);
             return (
-              <div key={m.key} className="relative overflow-hidden rounded-[2rem] border border-border/40 bg-card/40 p-6 shadow-xl shadow-black/[0.02] backdrop-blur-sm group">
-                <div className={cn("absolute -right-4 -top-4 h-20 w-20 rounded-full blur-3xl opacity-10 transition-opacity group-hover:opacity-20", m.color)} />
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80 mb-3">
-                  {m.name} (g)
-                </p>
-                <Input 
-                  type="number"
-                  value={val}
-                  onChange={(e) => handleMacroChange(m.key, e.target.value)}
-                  className="h-10 text-3xl font-black p-0 bg-transparent border-none focus-visible:ring-0 tabular-nums"
-                />
-                <div className="mt-4 space-y-2">
-                  <div className="flex justify-between text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                    <span>{pct.toFixed(0)}% energía</span>
+              <div key={m.key} className="surface p-5">
+                <Label htmlFor={`macro-${m.key}`} className="flex items-center gap-2 text-sm font-medium">
+                  <span className={cn("h-2 w-2 rounded-full", m.dot)} aria-hidden />
+                  {m.label}
+                </Label>
+                <div className="mt-2 flex items-baseline gap-1">
+                  <Input
+                    id={`macro-${m.key}`}
+                    type="number"
+                    value={val}
+                    onChange={(e) => handleMacroChange(m.key, e.target.value)}
+                    className="h-10 w-auto min-w-[2ch] max-w-[5ch] border-none bg-transparent p-0 font-display text-3xl font-bold tabular shadow-none [field-sizing:content] focus-visible:ring-0 dark:bg-transparent"
+                  />
+                  <span className="text-sm text-muted-foreground">g</span>
+                </div>
+                <div className="mt-3 space-y-1.5">
+                  <div className="flex justify-between text-xs text-muted-foreground tabular">
+                    <span>{pct.toFixed(0)}% de la energía</span>
                     <span>{kcal.toFixed(0)} kcal</span>
                   </div>
-                  <div className="h-1.5 w-full rounded-full bg-muted shadow-inner">
-                    <motion.div 
-                      className={cn("h-full rounded-full shadow-lg", m.color)} 
+                  <div className={cn("h-2 w-full overflow-hidden rounded-full", m.track)}>
+                    <motion.div
+                      className={cn("h-full rounded-full", m.bar)}
                       initial={{ width: 0 }}
-                      animate={{ width: `${pct}%` }} 
+                      animate={{ width: `${pct}%` }}
+                      transition={{ duration: 0.9, delay: 0.1 + i * 0.08, ease: [0.22, 1, 0.36, 1] }}
                     />
                   </div>
                 </div>
@@ -278,151 +310,154 @@ export function AnalysisResults({
           })}
         </section>
 
-        {/* Mood Selection */}
-        <section className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Heart className="h-5 w-5 text-pink-500" />
-            <h3 className="text-lg font-black tracking-tight text-foreground">¿Cómo te sientes tras comer?</h3>
-          </div>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {[
-              { id: "energetic" as const, label: "Energético", icon: Zap, color: "text-yellow-500", bg: "bg-yellow-500/10" },
-              { id: "satisfied" as const, label: "Satisfecho", icon: Smile, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-              { id: "neutral" as const, label: "Neutral", icon: Coffee, color: "text-blue-500", bg: "bg-blue-500/10" },
-              { id: "heavy" as const, label: "Pesado", icon: Info, color: "text-purple-500", bg: "bg-purple-500/10" },
-            ].map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => handleMoodSelect(m.id)}
-                className={cn(
-                  "flex flex-col items-center gap-3 p-4 rounded-3xl border transition-all duration-300",
-                  editedResult.mood === m.id 
-                    ? `border-primary bg-primary/5 shadow-lg shadow-primary/5 scale-[1.02]` 
-                    : "border-border/40 bg-card/40 opacity-60 hover:opacity-100 hover:bg-card"
-                )}
-              >
-                <div className={cn("h-10 w-10 flex items-center justify-center rounded-xl", editedResult.mood === m.id ? m.bg : "bg-muted")}>
-                  <m.icon className={cn("h-5 w-5", editedResult.mood === m.id ? m.color : "text-muted-foreground")} />
-                </div>
-                <span className="text-[10px] font-black uppercase tracking-widest">{m.label}</span>
-              </button>
-            ))}
+        {/* Estado de ánimo */}
+        <section className="surface p-5 sm:p-6">
+          <h3 className="flex items-center gap-2 text-base font-semibold">
+            <Heart className="h-4 w-4 text-protein" />
+            ¿Cómo te sientes tras comer?
+          </h3>
+          <div role="radiogroup" aria-label="Cómo te sientes" className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {MOODS.map((m) => {
+              const selected = editedResult.mood === m.id;
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  onClick={() => handleMoodSelect(m.id)}
+                  className={cn(
+                    "flex items-center gap-2.5 rounded-xl border p-3 text-left text-sm font-medium transition-colors",
+                    selected
+                      ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                      : "border-border bg-card hover:border-primary/40 hover:bg-muted/40"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+                      selected ? m.tone : "bg-muted text-muted-foreground"
+                    )}
+                  >
+                    <m.icon className="h-4 w-4" />
+                  </span>
+                  {m.label}
+                </button>
+              );
+            })}
           </div>
         </section>
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:gap-12">
-          {/* Interpretación IA */}
-          <div className="lg:col-span-7 space-y-8">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+          {/* Interpretación IA y consejos */}
+          <div className="space-y-6 lg:col-span-7">
             {ctx ? (
-              <section className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                  <h3 className="text-lg font-black tracking-tight text-foreground">Análisis Detallado</h3>
-                </div>
-                <div className="rounded-[2rem] border border-border/40 bg-card/40 p-6 shadow-sm backdrop-blur-sm space-y-4">
-                  <p className="text-sm font-medium leading-relaxed text-muted-foreground">
-                    {ctx.dishDescription}
-                  </p>
-                  
-                  {ctx.ambiguityNotes && (
-                    <div className="flex gap-3 rounded-2xl bg-amber-500/5 border border-amber-500/20 p-4">
-                      <Info className="h-5 w-5 text-amber-500 shrink-0" />
-                      <p className="text-xs font-medium text-amber-700/80 dark:text-amber-400/80 leading-snug">
-                        {ctx.ambiguityNotes}
-                      </p>
-                    </div>
-                  )}
+              <section className="surface p-5 sm:p-6">
+                <h3 className="flex items-center gap-2 text-base font-semibold">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  Lo que ve la IA
+                </h3>
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{ctx.dishDescription}</p>
 
-                  {ctx.visibleComponents.length > 0 && (
-                    <div className="pt-4 border-t border-border/40">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 mb-3">Componentes identificados</p>
-                      <div className="flex flex-wrap gap-2">
-                        {ctx.visibleComponents.map((c) => (
-                          <span key={c} className="px-3 py-1 rounded-full bg-accent/50 border border-border/40 text-[10px] font-bold text-foreground/80">
-                            {c}
-                          </span>
-                        ))}
-                      </div>
+                {ctx.ambiguityNotes && (
+                  <div className="mt-4 flex gap-3 rounded-xl border border-warning/40 bg-warning/10 p-3">
+                    <Info className="mt-0.5 h-4 w-4 shrink-0 text-warning-foreground dark:text-warning" />
+                    <p className="text-sm leading-snug">{ctx.ambiguityNotes}</p>
+                  </div>
+                )}
+
+                {ctx.visibleComponents.length > 0 && (
+                  <div className="mt-4 border-t border-border pt-4">
+                    <p className="eyebrow mb-2">Componentes identificados</p>
+                    <div className="flex flex-wrap gap-2">
+                      {ctx.visibleComponents.map((c) => (
+                        <span
+                          key={c}
+                          className="rounded-full bg-accent px-3 py-1 text-xs font-medium text-accent-foreground"
+                        >
+                          {c}
+                        </span>
+                      ))}
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </section>
             ) : (
-              <div className="rounded-[2rem] border-2 border-dashed border-border/40 p-8 text-center">
-                <p className="text-sm font-medium text-muted-foreground/60">Análisis básico sin contexto IA avanzado.</p>
+              <div className="rounded-2xl border border-dashed border-border bg-muted/40 p-8 text-center">
+                <Sparkles className="mx-auto h-6 w-6 text-muted-foreground/60" />
+                <p className="mt-2 text-sm text-muted-foreground">Análisis básico, sin contexto detallado de la IA.</p>
               </div>
             )}
 
-            <section className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Lightbulb className="h-5 w-5 text-chart-2" />
-                <h3 className="text-lg font-black tracking-tight text-foreground">Consejos de Salud</h3>
-              </div>
-              <div className="grid gap-3">
-                {editedResult.recommendations.map((rec, i) => (
-                  <div key={i} className="flex gap-4 items-start rounded-2xl border border-border/40 bg-card/40 p-4 transition-colors hover:bg-card">
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-[10px] font-black text-primary">
-                      {i + 1}
-                    </span>
-                    <p className="text-sm font-medium text-muted-foreground leading-relaxed">
-                      {rec}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </section>
+            {editedResult.recommendations.length > 0 && (
+              <section className="surface p-5 sm:p-6">
+                <h3 className="flex items-center gap-2 text-base font-semibold">
+                  <Lightbulb className="h-4 w-4 text-primary" />
+                  Consejos
+                </h3>
+                <ol className="mt-3 space-y-2">
+                  {editedResult.recommendations.map((rec, i) => (
+                    <li key={i} className="flex items-start gap-3 rounded-xl bg-muted/60 px-3 py-2.5">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary tabular">
+                        {i + 1}
+                      </span>
+                      <p className="text-sm leading-relaxed">{rec}</p>
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            )}
           </div>
 
-          {/* Otros Detalles Macros */}
+          {/* Otros detalles */}
           <div className="lg:col-span-5">
-            <section className="space-y-4">
-              <h3 className="text-lg font-black tracking-tight text-foreground">Otros Detalles</h3>
-              <div className="rounded-[2rem] border border-border/40 bg-card/40 p-6 shadow-sm backdrop-blur-sm space-y-6">
-                {MACRO_FIBER_SUGAR.map((m) => (
-                  <div key={m.key} className="group">
-                    <div className="flex justify-between items-end mb-2">
-                      <span className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">{m.name}</span>
-                      <span className="text-lg font-black tabular-nums">{editedResult.macros[m.key]}g</span>
-                    </div>
-                    <div className="h-1.5 w-full rounded-full bg-muted shadow-inner overflow-hidden">
-                      <div className={cn("h-full rounded-full opacity-60", m.color)} style={{ width: `${Math.min(((editedResult.macros[m.key] as number)/20)*100, 100)}%` }} />
-                    </div>
+            <section className="surface space-y-4 p-5 sm:p-6">
+              <h3 className="text-base font-semibold">Otros detalles</h3>
+              {MACRO_FIBER_SUGAR.map((m) => (
+                <div key={m.key}>
+                  <div className="mb-1.5 flex items-baseline justify-between text-sm">
+                    <span className="flex items-center gap-2 font-medium">
+                      <span className={cn("h-2 w-2 rounded-full", m.bar)} aria-hidden />
+                      {m.label}
+                    </span>
+                    <span className="font-semibold tabular">{editedResult.macros[m.key]} g</span>
                   </div>
-                ))}
-
-                <div className="pt-6 border-t border-border/40">
-                  <div className="flex items-start gap-3 rounded-2xl bg-muted/30 p-4 text-[10px] font-medium text-muted-foreground/80 leading-relaxed">
-                    <Info className="h-4 w-4 shrink-0 text-primary/40" />
-                    <p>
-                      La suma técnica es de <span className="font-bold text-foreground">{fromMacros.toFixed(0)} kcal</span>. 
-                      La diferencia con las {editedResult.calories} kcal mostradas es normal debido al redondeo nutricional estándar.
-                    </p>
+                  <div className={cn("h-2 w-full overflow-hidden rounded-full", m.track)}>
+                    <div
+                      className={cn("h-full rounded-full", m.bar)}
+                      style={{
+                        width: `${Math.min(((editedResult.macros[m.key] as number) / 20) * 100, 100)}%`,
+                      }}
+                    />
                   </div>
                 </div>
-              </div>
+              ))}
+
+              <p className="flex items-start gap-2 border-t border-border pt-4 text-xs text-muted-foreground">
+                <Info className="mt-px h-3.5 w-3.5 shrink-0" />
+                <span>
+                  La suma de macros da <span className="font-semibold text-foreground tabular">{fromMacros.toFixed(0)} kcal</span>.
+                  La diferencia con las {editedResult.calories} kcal mostradas es normal por el redondeo nutricional.
+                </span>
+              </p>
             </section>
           </div>
         </div>
       </div>
 
-      {/* Botón de Guardar flotante */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 p-4 pb-8 bg-gradient-to-t from-background via-background/95 to-transparent flex justify-center sm:pb-4">
-        <div className="w-full max-w-4xl flex gap-3">
+      {/* Barra de guardado */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/95 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur sm:px-6">
+        <div className="mx-auto flex w-full max-w-4xl gap-3">
           {fromPlanner ? (
             // Venimos del planificador: guardado directo en la fecha elegida.
             <Button
               type="button"
               onClick={handleSavePlanned}
               disabled={isSaving}
-              className="flex-1 h-14 rounded-2xl text-lg font-black shadow-2xl shadow-primary/30 transition-all active:scale-95"
+              className="h-12 min-w-0 flex-1 gap-2 rounded-full text-base"
             >
-              {isSaving ? (
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              ) : (
-                <Calendar className="mr-2 h-5 w-5" />
-              )}
-              {isSaving ? "Guardando..." : `Guardar para ${plannedShort}`}
+              {isSaving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Calendar className="h-5 w-5" />}
+              <span className="truncate">{isSaving ? "Guardando…" : `Guardar para ${plannedShort}`}</span>
             </Button>
           ) : (
             <>
@@ -431,23 +466,19 @@ export function AnalysisResults({
                 variant="outline"
                 onClick={() => setPlanDialogOpen(true)}
                 disabled={isSaving}
-                className="flex-1 h-14 rounded-2xl text-lg font-black border-primary/20 bg-background/50 shadow-xl backdrop-blur-sm transition-all active:scale-95"
+                className="h-12 min-w-0 flex-1 gap-2 rounded-full text-base"
               >
-                <Calendar className="mr-2 h-5 w-5 text-primary" />
+                <Calendar className="h-5 w-5" />
                 Planear
               </Button>
               <Button
                 type="button"
                 onClick={() => setSaveDialogOpen(true)}
                 disabled={isSaving}
-                className="flex-[2] h-14 rounded-2xl text-lg font-black shadow-2xl shadow-primary/30 transition-all active:scale-95"
+                className="h-12 min-w-0 flex-[2] gap-2 rounded-full text-base"
               >
-                {isSaving ? (
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                ) : (
-                  <Save className="mr-2 h-5 w-5" />
-                )}
-                {isSaving ? "Guardando..." : "Registrar hoy"}
+                {isSaving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
+                {isSaving ? "Guardando…" : "Registrar hoy"}
               </Button>
             </>
           )}
@@ -455,35 +486,39 @@ export function AnalysisResults({
       </div>
 
       <AlertDialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
-        <AlertDialogContent className="rounded-[2rem]">
+        <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-xl font-black">¿Registrar comida?</AlertDialogTitle>
-            <AlertDialogDescription className="font-medium">
-              Este análisis se guardará en tu historial personal para el seguimiento de tus metas.
+            <AlertDialogTitle className="text-xl">¿Registrar comida?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se guardará en tu historial para el seguimiento de tus metas.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="py-4">
-            <Label className="mb-2 block text-sm font-black uppercase tracking-widest text-muted-foreground">
+          <div className="space-y-2 py-2">
+            <Label htmlFor="recorded-at" className="font-medium">
               Fecha y hora del registro
             </Label>
             <Input
+              id="recorded-at"
               type="datetime-local"
-              className="h-12 rounded-xl border-border/40 bg-card/40 px-4 font-bold shadow-sm"
+              className="h-11 rounded-xl tabular"
               value={recordedAt}
               onChange={(e) => setRecordedAt(e.target.value)}
             />
           </div>
-          <AlertDialogFooter className="mt-4">
-            <AlertDialogCancel className="rounded-xl font-bold">Cancelar</AlertDialogCancel>
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel className="rounded-full">Cancelar</AlertDialogCancel>
             <Button
               type="button"
-              className="rounded-xl font-black"
+              className="rounded-full"
               onClick={() => {
                 setSaveDialogOpen(false);
                 const parsedDate = recordedAt ? new Date(recordedAt) : null;
                 const validDate =
                   parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate : undefined;
-                void onSave({ ...editedResult, recordedAt: validDate } as any);
+                void onSave({
+                  ...editedResult,
+                  ...(validDate ? { recordedAt: validDate } : {}),
+                } as any);
               }}
             >
               Registrar
@@ -493,17 +528,19 @@ export function AnalysisResults({
       </AlertDialog>
 
       <AlertDialog open={planDialogOpen} onOpenChange={setPlanDialogOpen}>
-        <AlertDialogContent className="rounded-[2rem]">
+        <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-xl font-black">Planificar para el futuro</AlertDialogTitle>
-            <AlertDialogDescription className="font-medium">
-              Selecciona una fecha para añadir esta comida a tu plan semanal.
-            </AlertDialogDescription>
+            <AlertDialogTitle className="text-xl">Planificar comida</AlertDialogTitle>
+            <AlertDialogDescription>Elige un día para añadir esta comida a tu plan semanal.</AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="py-4">
+          <div className="space-y-2 py-2">
+            <Label htmlFor="planned-date" className="font-medium">
+              Fecha
+            </Label>
             <Input
+              id="planned-date"
               type="date"
-              className="rounded-xl h-12 font-bold"
+              className="h-11 rounded-xl tabular"
               min={toDateInputValue(new Date())}
               value={toDateInputValue(plannedDate)}
               onChange={(e) => {
@@ -511,15 +548,14 @@ export function AnalysisResults({
               }}
             />
           </div>
-          <AlertDialogFooter className="mt-4">
-            <AlertDialogCancel className="rounded-xl font-bold">Cancelar</AlertDialogCancel>
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel className="rounded-full">Cancelar</AlertDialogCancel>
             <Button
               type="button"
-              className="rounded-xl font-black"
+              className="rounded-full"
               onClick={() => {
                 setPlanDialogOpen(false);
-                // Usamos un cast temporal o expandimos el tipo en la llamada si es necesario, 
-                // pero onSave en app/page.tsx ya maneja el objeto expandido.
+                // onSave en app/page.tsx ya maneja el objeto expandido (isPlanned + plannedDate).
                 void onSave({ ...editedResult, isPlanned: true, plannedDate } as any);
               }}
             >

@@ -8,6 +8,7 @@ import {
 } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
 
 let app: App | undefined;
 /** Rellena al parsear el JSON; sirve de diagnóstico sin leer `options` de App. */
@@ -125,4 +126,18 @@ export function getAdminAuth() {
 
 export function getAdminFirestore() {
   return getFirestore(getAdminApp());
+}
+
+/**
+ * Bucket de Storage del proyecto (el mismo que usa el cliente). Requiere
+ * `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`; si falta, se lanza un error claro.
+ */
+export function getAdminStorageBucket() {
+  const bucketName = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET?.trim();
+  if (!bucketName) {
+    throw new Error(
+      "Falta NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET para acceder a Storage desde el servidor."
+    );
+  }
+  return getStorage(getAdminApp()).bucket(bucketName);
 }

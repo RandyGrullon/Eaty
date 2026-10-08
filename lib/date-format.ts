@@ -79,3 +79,18 @@ export function fromDateInputValue(value: string): Date {
   const [y, m, d] = value.split("-").map(Number);
   return new Date(y, (m ?? 1) - 1, d ?? 1, 12, 0, 0, 0);
 }
+
+/**
+ * Clave del día local "YYYY-MM-DD" (para documentos `dailyStats/{día}`).
+ * No usar `toISOString()`: devuelve el día UTC y en husos UTC+ adelanta/atrasa el día.
+ */
+export function localDayKey(d: Date = new Date()): string {
+  return toDateInputValue(d);
+}
+
+/** Milisegundos que faltan hasta la próxima medianoche local (mínimo 1). */
+export function msUntilNextLocalMidnight(now: Date = new Date()): number {
+  const next = new Date(now);
+  next.setHours(24, 0, 0, 0);
+  return Math.max(1, next.getTime() - now.getTime());
+}

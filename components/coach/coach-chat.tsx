@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Loader2, Sparkles, User, Bot } from "lucide-react";
+import { Send, Loader2, Sparkles, User, Bot, Lightbulb, UtensilsCrossed, Target } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useAppData } from "@/hooks/use-app-data";
 import { logger } from "@/lib/logger";
@@ -16,9 +16,9 @@ interface Message {
 }
 
 const QUICK_PROMPTS = [
-  "💡 ¿Qué cocino con mis sobras?",
-  "🍽️ Ideas para mi próxima comida",
-  "🏋️ ¿Cómo ajusto mi dieta a mi objetivo?",
+  { label: "¿Qué cocino con mis sobras?", icon: Lightbulb },
+  { label: "Ideas para mi próxima comida", icon: UtensilsCrossed },
+  { label: "¿Cómo ajusto mi dieta a mi objetivo?", icon: Target },
 ];
 
 export function CoachChat() {
@@ -121,46 +121,30 @@ export function CoachChat() {
 
   return (
     <div className="flex h-full flex-col">
-      <div ref={scrollRef} className="flex-1 space-y-5 overflow-y-auto p-1 pb-4">
+      <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto p-1 pb-4">
         {messages.map((m, i) => (
-          <div
-            key={i}
-            className={cn(
-              "flex w-full gap-3",
-              m.role === "user" ? "flex-row-reverse" : "flex-row"
-            )}
-          >
+          <div key={i} className={cn("flex w-full gap-2.5", m.role === "user" ? "flex-row-reverse" : "flex-row")}>
             <div
               className={cn(
-                "flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border text-[10px] font-bold shadow-sm",
-                m.role === "assistant"
-                  ? "border-primary/20 bg-gradient-to-br from-primary to-chart-2 text-primary-foreground"
-                  : "border-border/40 bg-muted text-muted-foreground"
+                "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
+                m.role === "assistant" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
               )}
             >
-              {m.role === "assistant" ? (
-                <Bot className="h-5 w-5" />
-              ) : (
-                <User className="h-5 w-5" />
-              )}
+              {m.role === "assistant" ? <Bot className="h-4 w-4" /> : <User className="h-4 w-4" />}
             </div>
             <div
               className={cn(
-                "relative max-w-[85%] rounded-[1.5rem] px-4 py-3 text-sm shadow-sm",
+                "relative min-w-0 max-w-[85%] break-words rounded-2xl px-4 py-2.5 text-sm",
                 m.role === "user"
-                  ? "rounded-tr-none bg-primary text-primary-foreground"
-                  : "prose prose-sm rounded-tl-none border border-border/40 bg-card text-foreground dark:prose-invert prose-strong:text-primary"
+                  ? "rounded-tr-md bg-primary text-primary-foreground"
+                  : "prose prose-sm rounded-tl-md border border-border bg-card text-foreground dark:prose-invert"
               )}
             >
               {m.role === "assistant" ? (
                 <ReactMarkdown
                   components={{
-                    strong: ({ node, ...props }) => (
-                      <strong className="font-black text-primary" {...props} />
-                    ),
-                    li: ({ node, ...props }) => (
-                      <li className="ml-4 list-disc marker:text-primary" {...props} />
-                    ),
+                    strong: ({ node, ...props }) => <strong className="font-semibold text-foreground" {...props} />,
+                    li: ({ node, ...props }) => <li className="ml-4 list-disc marker:text-primary" {...props} />,
                   }}
                 >
                   {m.content}
@@ -172,29 +156,30 @@ export function CoachChat() {
           </div>
         ))}
         {loading && (
-          <div className="flex w-full flex-row gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
-              <Bot className="h-5 w-5" />
+          <div className="flex w-full flex-row gap-2.5">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Bot className="h-4 w-4" />
             </div>
-            <div className="rounded-2xl rounded-tl-none border border-border/40 bg-muted/50 px-4 py-3">
+            <div className="rounded-2xl rounded-tl-md border border-border bg-muted/60 px-4 py-3">
               <Loader2 className="h-4 w-4 animate-spin text-primary" />
             </div>
           </div>
         )}
       </div>
 
-      <div className="shrink-0 border-t border-border/40 pt-3">
+      <div className="shrink-0 border-t border-border pt-3">
         <div className="mb-3 flex flex-wrap gap-2">
-          {QUICK_PROMPTS.map((q) => (
+          {QUICK_PROMPTS.map(({ label, icon: Icon }) => (
             <Button
-              key={q}
+              key={label}
               variant="outline"
               size="sm"
-              className="h-8 rounded-full border-primary/20 bg-primary/5 text-[10px] font-bold text-primary"
-              onClick={() => handleQuick(q)}
+              className="h-8 max-w-full gap-1.5 rounded-full px-3 text-xs font-medium"
+              onClick={() => handleQuick(label)}
               disabled={loading}
             >
-              {q}
+              <Icon className="h-3.5 w-3.5 shrink-0 text-primary" />
+              <span className="truncate">{label}</span>
             </Button>
           ))}
         </div>
@@ -204,19 +189,22 @@ export function CoachChat() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            className="rounded-xl border-border/60 bg-muted/30 focus-visible:ring-primary/20"
+            className="h-11 min-w-0 rounded-full px-4"
+            aria-label="Mensaje para el Coach"
           />
           <Button
             onClick={handleSend}
             disabled={loading || !input.trim()}
-            className="rounded-xl px-5"
+            size="icon"
+            className="h-11 w-11 shrink-0 rounded-full"
+            aria-label="Enviar"
           >
             <Send className="h-4 w-4" />
           </Button>
         </div>
-        <p className="mt-2 text-center text-[9px] font-medium italic text-muted-foreground">
-          <Sparkles className="mr-1 inline h-2.5 w-2.5" />
-          El Coach puede cometer errores. Consulta siempre a un profesional.
+        <p className="mt-2 flex items-center justify-center gap-1 text-center text-xs text-muted-foreground">
+          <Sparkles className="h-3 w-3 shrink-0" />
+          El Coach puede equivocarse. Consulta siempre a un profesional.
         </p>
       </div>
     </div>

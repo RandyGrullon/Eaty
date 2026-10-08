@@ -3,7 +3,7 @@ import { z } from "zod";
 import { runGroqChat } from "@/lib/groq-server";
 import {
   HttpApiError,
-  enforceDailyQuota,
+  withDailyQuota,
   requireUidFromRequest,
 } from "@/lib/api-auth-usage";
 import { logger } from "@/lib/logger";
@@ -58,17 +58,17 @@ export async function POST(req: Request) {
       context: body.context,
     });
 
-    const response = await runGroqChat({
-      messages: [
-        { role: "system", content: getSystemCoachChat(body.lang) },
-        { role: "user", content: userPrompt },
-      ],
-      temperature: 0.7,
-      maxTokens: 1024,
-    });
-
-    // Cuota separada o la misma de análisis? Usemos "analyze" por ahora o crea una nueva
-    await enforceDailyQuota(uid, "analyze");
+    // Reserva la cuota ANTES de llamar al LLM; se devuelve si la llamada falla.
+    const response = await withDailyQuota(uid, "coach", () =>
+      runGroqChat({
+        messages: [
+          { role: "system", content: getSystemCoachChat(body.lang) },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.7,
+        maxTokens: 1024,
+      })
+    );
 
     return NextResponse.json({ response });
   } catch (e) {

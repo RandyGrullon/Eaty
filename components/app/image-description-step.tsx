@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { ArrowLeft, Lightbulb, Sparkles } from "lucide-react";
+import { PageHeader } from "@/components/app/page-header";
 
 type ImageDescriptionStepProps = {
   file: File;
@@ -31,56 +33,62 @@ export function ImageDescriptionStep({
   }, [file]);
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <div className="bg-primary p-4 text-primary-foreground">
-        <div className="mx-auto max-w-4xl">
-          <h1 className="text-xl font-bold">Agregar descripción</h1>
-          <p className="text-sm opacity-90">
-            Puedes dejar la descripción vacía: la IA estima según la foto.
-            <span className="hidden sm:inline"> Un texto extra mejora la precisión.</span>
-            <strong> Consejo:</strong> incluye un objeto de referencia (mano o cubierto) para mejor escala.
-          </p>
-        </div>
-      </div>
-      <div className="mx-auto w-full max-w-4xl flex-1 p-4">
-        <div className="space-y-4">
-          <div className="rounded-lg bg-card p-4">
+    <div className="min-h-full bg-background pb-32 md:pb-12">
+      <PageHeader
+        title="Añadir descripción"
+        subtitle="Opcional: un texto extra mejora la precisión."
+        leading={
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={onCancel}
+            className="h-10 w-10 shrink-0 rounded-full"
+            aria-label="Cancelar"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+        }
+      />
+      <div className="mx-auto max-w-4xl px-4 pt-4 sm:px-6 lg:px-10">
+        <section className="surface space-y-5 p-5 sm:p-6">
+          <div className="aspect-video w-full overflow-hidden rounded-xl bg-muted sm:aspect-[2/1]">
             {previewUrl ? (
-              <img
-                src={previewUrl}
-                alt="Imagen seleccionada"
-                className="h-48 w-full rounded-lg object-cover"
-              />
-            ) : null}
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={previewUrl} alt="Imagen seleccionada" className="h-full w-full object-cover" />
+            ) : (
+              <div className="h-full w-full animate-pulse bg-muted" />
+            )}
           </div>
-          <div className="space-y-3">
-            <Label
-              htmlFor="meal-image-description"
-              className="text-sm font-medium text-card-foreground"
-            >
+
+          <div className="space-y-1.5">
+            <Label htmlFor="meal-image-description" className="text-sm font-medium">
               Descripción (opcional)
             </Label>
             <Textarea
               id="meal-image-description"
               value={description}
               onChange={(e) => onDescriptionChange(e.target.value)}
-              placeholder="Ej: Pizza con pepperoni, ensalada con aderezo de vinagreta, etc."
-              className="min-h-[5.5rem] resize-none text-sm"
+              placeholder="Ej.: pizza de pepperoni, ensalada con vinagreta…"
+              className="min-h-[5.5rem] resize-none rounded-xl text-sm"
               rows={3}
             />
           </div>
-          <div className="flex gap-3">
-            <Button onClick={onCancel} variant="outline" className="flex-1">
+
+          <p className="flex items-start gap-2 rounded-xl bg-muted/60 px-3 py-2.5 text-sm text-muted-foreground">
+            <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-carbs" aria-hidden />
+            Si la dejas vacía, la IA estima solo con la foto. Una mano o un cubierto en la imagen ayuda con la escala.
+          </p>
+
+          <div className="flex gap-2">
+            <Button onClick={onCancel} variant="outline" className="h-11 flex-1 rounded-full">
               Cancelar
             </Button>
-            <Button
-              onClick={onSubmit}
-              className="flex-1 bg-primary hover:bg-primary/90"
-            >
+            <Button onClick={onSubmit} className="h-11 flex-1 rounded-full">
+              <Sparkles className="h-4 w-4" />
               Analizar
             </Button>
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );

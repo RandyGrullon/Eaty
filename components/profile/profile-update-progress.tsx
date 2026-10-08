@@ -14,7 +14,7 @@ import {
 import { TrendingUp, Loader2, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { updateUserProfile } from "@/lib/meals";
-import { encryptData, decryptData } from "@/lib/encryption";
+import { parseMeasure } from "@/lib/profile-measure";
 import { convertWeight } from "@/lib/unit-conversion";
 import type { UserProfile } from "@/types/meal";
 import { logger } from "@/lib/logger";
@@ -42,16 +42,13 @@ export function ProfileUpdateProgress({
 
     let cancelled = false;
     const init = async () => {
-      const decryptedWeight =
-        typeof userProfile.weight === "string"
-          ? await decryptData(userProfile.weight, userId)
-          : userProfile.weight;
+      const weightKg = parseMeasure(userProfile.weight);
 
       const wUnit = userProfile.weightUnit || "kg";
-      const weightDisplay = decryptedWeight
+      const weightDisplay = weightKg
         ? wUnit === "lbs"
-          ? Math.round(Number(decryptedWeight) * 2.20462 * 10) / 10
-          : Math.round(Number(decryptedWeight) * 10) / 10
+          ? Math.round(weightKg * 2.20462 * 10) / 10
+          : Math.round(weightKg * 10) / 10
         : "";
 
       if (!cancelled) {
@@ -72,10 +69,9 @@ export function ProfileUpdateProgress({
     try {
       const weightValue = parseFloat(weight) || 0;
       const weightInKg = convertWeight(weightValue, weightUnit, "kg");
-      const encryptedWeight = await encryptData(weightInKg.toString(), userId);
 
       await updateUserProfile(userId, {
-        weight: encryptedWeight,
+        weight: weightInKg > 0 ? weightInKg : undefined,
         weightUnit,
         activityLevel: activityLevel as UserProfile["activityLevel"],
         fitnessGoal: fitnessGoal as UserProfile["fitnessGoal"],
@@ -101,104 +97,85 @@ export function ProfileUpdateProgress({
   if (!userProfile) return null;
 
   return (
-    <section className="pt-8 border-t border-border/40">
-      <div className="rounded-[2rem] border border-primary/20 bg-gradient-to-br from-primary/5 via-card/50 to-card/50 p-6 sm:p-8 shadow-xl shadow-primary/5">
-        <div className="flex items-center gap-2 mb-6">
-          <TrendingUp className="h-6 w-6 text-primary" />
-          <h3 className="text-2xl font-black tracking-tight text-foreground">
-            Registrar Progreso
-          </h3>
+    <section className="surface p-5 sm:p-6">
+      <div className="flex items-start gap-3">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <TrendingUp className="h-4 w-4" />
+        </span>
+        <div className="min-w-0">
+          <h3 className="text-base font-semibold">Registrar progreso</h3>
+          <p className="max-w-lg text-sm text-muted-foreground">
+            Actualiza estos datos con regularidad para que tu gasto diario y tus metas de macros sigan siendo precisos.
+          </p>
         </div>
-        <p className="mb-6 text-sm font-medium text-muted-foreground/80 max-w-lg">
-          Actualiza estos datos regularmente para que los cálculos de calorías (TDEE) y tus metas de macronutrientes sigan siendo precisos.
-        </p>
+      </div>
 
-        <div className="grid gap-6 sm:grid-cols-3 mb-6">
-          <div className="space-y-2">
-            <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">
-              Peso ({weightUnit})
-            </Label>
-            <div className="flex bg-card/60 rounded-xl border border-border/40">
-              <Input
-                type="number"
-                value={weight}
-                onChange={(e) => setWeight(e.target.value)}
-                step="0.1"
-                min="0"
-                className="flex-1 h-12 border-0 bg-transparent px-4 font-bold shadow-none focus-visible:ring-0"
-              />
-              <Select
-                value={weightUnit}
-                onValueChange={(val: "kg" | "lbs") => setWeightUnit(val)}
+      <div className="mt-5 grid gap-4 sm:grid-cols-3">
+        <div className="space-y-2">
+          <Label htmlFor="progress-weight" className="font-medium">
+            Peso ({weightUnit})
+          </Label>
+          <div className="flex h-11 items-center rounded-xl border border-input bg-background">
+            <Input
+              id="progress-weight"
+              type="number"
+              value={weight}
+              onChange={(e) => setWeight(e.target.value)}
+              step="0.1"
+              min="0"
+              className="h-full min-w-0 flex-1 border-0 bg-transparent px-3 tabular shadow-none focus-visible:ring-0"
+            />
+            <Select value={weightUnit} onValueChange={(val: "kg" | "lbs") => setWeightUnit(val)}>
+              <SelectTrigger
+                aria-label="Unidad de peso"
+                className="w-20 border-0 bg-transparent text-muted-foreground shadow-none focus:ring-0"
               >
-                <SelectTrigger className="w-20 border-0 bg-transparent ring-0 shadow-none focus:ring-0 font-bold text-muted-foreground">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="kg">kg</SelectItem>
-                  <SelectItem value="lbs">lbs</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">
-              Nivel de Actividad
-            </Label>
-            <Select
-              value={activityLevel}
-              onValueChange={setActivityLevel}
-            >
-              <SelectTrigger className="h-12 rounded-xl border-border/40 bg-card/60 px-4 font-bold shadow-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="sedentary">Sedentario</SelectItem>
-                <SelectItem value="light">Ligero</SelectItem>
-                <SelectItem value="moderate">Moderado</SelectItem>
-                <SelectItem value="active">Activo</SelectItem>
-                <SelectItem value="very_active">Muy Activo</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">
-              Objetivo Actual
-            </Label>
-            <Select
-              value={fitnessGoal}
-              onValueChange={setFitnessGoal}
-            >
-              <SelectTrigger className="h-12 rounded-xl border-border/40 bg-card/60 px-4 font-bold shadow-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="shedding">Perder peso</SelectItem>
-                <SelectItem value="maintenance">Mantener peso</SelectItem>
-                <SelectItem value="bulking">Ganar masa muscular</SelectItem>
+                <SelectItem value="kg">kg</SelectItem>
+                <SelectItem value="lbs">lbs</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
 
-        <div className="flex justify-end">
-          <Button
-            onClick={handleUpdate}
-            disabled={saving}
-            className="rounded-2xl font-black h-12 px-8 shadow-lg transition-all active:scale-95"
-          >
-            {saving ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <>
-                <Save className="h-5 w-5 mr-2" />
-                Actualizar Datos
-              </>
-            )}
-          </Button>
+        <div className="space-y-2">
+          <Label className="font-medium">Nivel de actividad</Label>
+          <Select value={activityLevel} onValueChange={setActivityLevel}>
+            <SelectTrigger className="h-11 w-full rounded-xl">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="sedentary">Sedentario</SelectItem>
+              <SelectItem value="light">Ligero</SelectItem>
+              <SelectItem value="moderate">Moderado</SelectItem>
+              <SelectItem value="active">Activo</SelectItem>
+              <SelectItem value="very_active">Muy activo</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
+
+        <div className="space-y-2">
+          <Label className="font-medium">Objetivo actual</Label>
+          <Select value={fitnessGoal} onValueChange={setFitnessGoal}>
+            <SelectTrigger className="h-11 w-full rounded-xl">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="shedding">Perder peso</SelectItem>
+              <SelectItem value="maintenance">Mantener peso</SelectItem>
+              <SelectItem value="bulking">Ganar masa muscular</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="mt-5 flex justify-end">
+        <Button onClick={handleUpdate} disabled={saving} className="h-11 w-full gap-2 rounded-full px-6 sm:w-auto">
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+          {saving ? "Guardando…" : "Actualizar datos"}
+        </Button>
       </div>
     </section>
   );

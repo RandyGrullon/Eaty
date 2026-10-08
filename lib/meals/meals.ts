@@ -12,6 +12,7 @@ import {
   mealFromDoc,
   queryMealsInRange,
 } from "@/lib/firestore-meal-utils";
+import { buildMealDocFields, dataUrlToFile, isDataUrl } from "@/lib/meal-doc";
 import type { Meal } from "@/types/meal";
 import { getDb } from "./db";
 
@@ -33,12 +34,28 @@ export async function updateMeal(
 ): Promise<void> {
   try {
     const mealRef = doc(getDb(), "users", userId, "meals", mealId);
+    // Un data URL no se guarda en Firestore: se sube a Storage. Si falla, se
+    // conserva la foto anterior (no se toca `imageUrl`).
+    let imagePatch: { imageUrl?: string | null } = { imageUrl: data.imageUrl };
+    if (isDataUrl(data.imageUrl)) {
+      imagePatch = {};
+      const file = dataUrlToFile(data.imageUrl);
+      if (file) {
+        try {
+          imagePatch = {
+            imageUrl: await uploadUserMealImage(userId, mealId, file),
+          };
+        } catch (e) {
+          logger.error("updateMeal: subida de imagen", e);
+        }
+      }
+    }
     await updateDoc(mealRef, {
       foodName: data.foodName,
       calories: data.calories,
       macros: data.macros,
       recommendations: data.recommendations,
-      imageUrl: data.imageUrl,
+      ...imagePatch,
       ...(data.aiContext !== undefined ? { aiContext: data.aiContext } : {}),
       ...(data.createdAt !== undefined
         ? { createdAt: Timestamp.fromDate(data.createdAt) }
@@ -81,34 +98,32 @@ export async function saveMeal(
   try {
     const mealsRef = collection(getDb(), "users", userId, "meals");
 
-    // Si ya tenemos base64 en imageUrl, lo usamos directamente.
-    // De lo contrario, intentaremos subir el archivo si existe.
-    const finalImageUrl = mealData.imageUrl ?? null;
-    let imageStored = false;
+    // Nunca guardamos data URLs (base64) en Firestore: el documento podría
+    // superar 1 MiB. Si llega uno sin archivo, se convierte a File y se sube.
+    let imageFile = options?.imageFile;
+    if (!imageFile && isDataUrl(mealData.imageUrl)) {
+      imageFile = dataUrlToFile(mealData.imageUrl) ?? undefined;
+    }
+    const fields = buildMealDocFields(mealData);
 
-    const docRef = await addDoc(mealsRef, {
-      ...mealData,
-      imageUrl: finalImageUrl,
-      createdAt: options?.plannedDate
+    const createdAt =
+      options?.plannedDate && !Number.isNaN(options.plannedDate.getTime())
         ? Timestamp.fromDate(options.plannedDate)
-        : Timestamp.now(),
-      isPlanned: mealData.isPlanned ?? false,
-    });
+        : Timestamp.now();
 
-    if (options?.imageFile && !finalImageUrl) {
+    const docRef = await addDoc(mealsRef, { ...fields, createdAt });
+
+    let imageStored = false;
+    if (imageFile) {
       try {
-        const url = await uploadUserMealImage(
-          userId,
-          docRef.id,
-          options.imageFile
-        );
+        const url = await uploadUserMealImage(userId, docRef.id, imageFile);
         await updateDoc(docRef, { imageUrl: url });
         imageStored = true;
       } catch (e) {
         logger.error("saveMeal: subida de imagen (comida guardada sin foto)", e);
       }
-    } else if (finalImageUrl) {
-      imageStored = true; // El base64 ya está guardado en el documento
+    } else if (fields.imageUrl) {
+      imageStored = true; // URL remota (p. ej. imagen generada) ya guardada.
     }
 
     return { mealId: docRef.id, imageStored };

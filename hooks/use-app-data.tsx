@@ -26,6 +26,13 @@ import { logger } from "@/lib/logger";
 import { mealFromDoc } from "@/lib/firestore-meal-utils";
 import { normalizeBirthDateFromFirestore } from "@/lib/age-from-birthdate";
 import {
+  fromDateInputValue,
+  localDayKey,
+  msUntilNextLocalMidnight,
+} from "@/lib/date-format";
+import { normalizeMeasure } from "@/lib/profile-measure";
+import { decryptLegacyData } from "@/lib/encryption";
+import {
   deriveTodayStats,
   deriveWeeklyProgress,
   deriveCalorieData,
@@ -75,6 +82,8 @@ type AppDataContextValue = {
   // Flags
   loading: boolean;
   profileLoading: boolean;
+  /** Error al leer el perfil en tiempo real (p. ej. permisos/red); `null` si no hay. */
+  profileError: string | null;
   // Derivados
   recentMeals: Meal[];
   todayMeals: Meal[];
@@ -135,17 +144,14 @@ const EMPTY_WEEKLY: WeeklyProgress = {
   progress: { mealsChange: 0, caloriesChange: 0, daysChange: 0 },
 };
 
-function todayKey(): string {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return today.toISOString().split("T")[0];
-}
-
 export function AppDataProvider({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useAuth();
   const uid = user?.uid ?? null;
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  // Día local actual ("YYYY-MM-DD"); se actualiza a medianoche para re-suscribir la hidratación.
+  const [dayKey, setDayKey] = useState<string>(() => localDayKey());
   const [meals, setMeals] = useState<Meal[]>([]);
   const [waterGlasses, setWaterGlassesState] = useState(0);
   const [diets, setDiets] = useState<Diet[]>([]);
@@ -160,34 +166,65 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!uid) {
       setProfile(null);
+      setProfileError(null);
       setProfileResolved(!authLoading);
       return;
     }
     setProfileResolved(false);
+    setProfileError(null);
+    let seq = 0;
+    let active = true;
+    const decrypt = (cipher: string) => decryptLegacyData(cipher, uid);
     const ref = doc(appFirebase.db, "users", uid, "profile", "main");
     const unsub = onSnapshot(
       ref,
       (snap) => {
-        if (snap.exists()) {
-          const data = snap.data();
-          const { birthDate, createdAt, updatedAt, ...rest } = data;
+        const mySeq = ++seq;
+        setProfileError(null);
+        if (!snap.exists()) {
+          setProfile(null);
+          setProfileResolved(true);
+          return;
+        }
+        const data = snap.data();
+        const { birthDate, createdAt, updatedAt, weight, height, ...rest } =
+          data;
+        // Peso/altura: siempre números. Los valores cifrados de versiones
+        // antiguas se descifran; los strings numéricos se convierten.
+        void Promise.all([
+          normalizeMeasure(weight, decrypt),
+          normalizeMeasure(height, decrypt),
+        ]).then(([weightNum, heightNum]) => {
+          if (!active || mySeq !== seq) return;
           setProfile({
-            ...(rest as Omit<UserProfile, "birthDate" | "createdAt" | "updatedAt">),
+            ...(rest as Omit<
+              UserProfile,
+              "birthDate" | "createdAt" | "updatedAt" | "weight" | "height"
+            >),
+            weight: weightNum,
+            height: heightNum,
             birthDate: normalizeBirthDateFromFirestore(birthDate),
             createdAt: createdAt?.toDate?.() ?? new Date(0),
             updatedAt: updatedAt?.toDate?.() ?? new Date(0),
           } as UserProfile);
-        } else {
-          setProfile(null);
-        }
-        setProfileResolved(true);
+          setProfileResolved(true);
+        });
       },
       (err) => {
         logger.error("AppData profile snapshot", err);
+        if (!active) return;
+        setProfileError(
+          err instanceof Error && err.message
+            ? `No se pudo cargar tu perfil: ${err.message}`
+            : "No se pudo cargar tu perfil."
+        );
         setProfileResolved(true);
       }
     );
-    return unsub;
+    return () => {
+      active = false;
+      unsub();
+    };
   }, [uid, authLoading]);
 
   // Comidas en tiempo real (ventana acotada).
@@ -217,13 +254,21 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     return unsub;
   }, [uid, authLoading]);
 
+  // Cambio de día: a medianoche local se actualiza `dayKey` (re-suscribe la hidratación).
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDayKey(localDayKey());
+    }, msUntilNextLocalMidnight() + 1000);
+    return () => clearTimeout(timer);
+  }, [dayKey]);
+
   // Hidratación del día.
   useEffect(() => {
     if (!uid) {
       setWaterGlassesState(0);
       return;
     }
-    const ref = doc(appFirebase.db, "users", uid, "dailyStats", todayKey());
+    const ref = doc(appFirebase.db, "users", uid, "dailyStats", dayKey);
     const unsub = onSnapshot(
       ref,
       (snap) => {
@@ -232,7 +277,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       (err) => logger.error("AppData dailyStats snapshot", err)
     );
     return unsub;
-  }, [uid]);
+  }, [uid, dayKey]);
 
   // Dietas en tiempo real.
   useEffect(() => {
@@ -272,12 +317,17 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
 
   // Derivados.
   const todayStats = useMemo(
-    () => (uid ? deriveTodayStats(meals, waterGlasses) : EMPTY_TODAY),
-    [uid, meals, waterGlasses]
+    () =>
+      uid
+        ? deriveTodayStats(meals, waterGlasses, fromDateInputValue(dayKey))
+        : EMPTY_TODAY,
+    // `dayKey` fuerza el recálculo al cambiar de día.
+    [uid, meals, waterGlasses, dayKey]
   );
   const weeklyProgress = useMemo(
-    () => (uid ? deriveWeeklyProgress(meals) : EMPTY_WEEKLY),
-    [uid, meals]
+    () =>
+      uid ? deriveWeeklyProgress(meals, fromDateInputValue(dayKey)) : EMPTY_WEEKLY,
+    [uid, meals, dayKey]
   );
   const calorieData = useMemo(
     () => deriveCalorieData(profile, todayStats),
@@ -288,14 +338,14 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     [meals]
   );
   const todayMeals = useMemo(() => {
-    const start = new Date();
+    const start = fromDateInputValue(dayKey);
     start.setHours(0, 0, 0, 0);
     const end = new Date(start);
     end.setDate(end.getDate() + 1);
     return meals.filter(
       (m) => !m.isPlanned && m.createdAt >= start && m.createdAt < end
     );
-  }, [meals]);
+  }, [meals, dayKey]);
   const activeDiet = useMemo(
     () => diets.find((d) => d.id === profile?.activeDietId) ?? null,
     [diets, profile?.activeDietId]
@@ -401,6 +451,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     workouts,
     loading,
     profileLoading,
+    profileError,
     recentMeals,
     todayMeals,
     todayStats,
