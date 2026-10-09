@@ -14,6 +14,8 @@ te sugiere qué ajustar.
   actividad y objetivo; reparto de proteína, carbohidratos y grasa.
 - **Panel de hoy.** Anillo de calorías, macros, hidratación, últimos 7 días y racha.
 - **Dietas generadas por IA** con recetas paso a paso e imagen IA de cada plato.
+- **Dieta con mis alimentos** (Diet Builder): eliges tus alimentos, meta y plazo; calcula déficit y
+  macros y arma 7 días de platos con gramos exactos y tutorial. Ver [docs/diet-builder.md](docs/diet-builder.md).
 - **Coach nutricional** (chat y resumen del día) y rutinas de entrenamiento.
 - **Planificador semanal**, historial con filtros y edición de comidas.
 - **Cuenta de invitado** que se convierte en cuenta real sin perder datos.
@@ -52,6 +54,7 @@ responde con ejemplos realistas. Útil para probar la app o enseñarla sin crede
 ## Documentación
 
 - [Entorno, Firebase Admin y reglas Firestore](docs/environment.md)
+- [Diet Builder](docs/diet-builder.md)
 - [Sistema visual](docs/design-system.md)
 - [PWA / offline](docs/pwa-offline.md)
 - [Actualización Next.js 15+](docs/next-upgrade.md)

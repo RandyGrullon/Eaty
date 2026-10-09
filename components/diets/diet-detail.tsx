@@ -48,6 +48,7 @@ export function DietDetailDrawer({
   const [planning, setPlanning] = useState(false);
   const [selectedDishId, setSelectedDishId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [selectedDay, setSelectedDay] = useState(1);
 
   if (!diet) {
     return (
@@ -60,6 +61,8 @@ export function DietDetailDrawer({
   const isActive = activeDiet?.id === diet.id;
   const selectedDish: DietDish | null =
     diet.dishes.find((d) => d.id === selectedDishId) ?? null;
+  const dayCount = diet.dishes.reduce((m, d) => Math.max(m, d.day ?? 0), 0);
+  const isDayPlan = dayCount > 0;
 
   const toggleActive = async () => {
     setBusy(true);
@@ -86,6 +89,15 @@ export function DietDetailDrawer({
     setPlanning(true);
     try {
       const today = new Date();
+      // Planes por días: cada plato va a su día (desde hoy) y a su hora.
+      const plannedDateFor = (d: DietDish) => {
+        if (!d.day) return today;
+        const date = new Date(today);
+        date.setDate(today.getDate() + d.day - 1);
+        const [h, m] = (d.time ?? "13:00").split(":").map(Number);
+        date.setHours(h || 13, m || 0, 0, 0);
+        return date;
+      };
       for (const d of diet.dishes) {
         await saveMeal(
           {
@@ -102,12 +114,14 @@ export function DietDetailDrawer({
             recommendations: [],
             isPlanned: true,
           },
-          { plannedDate: today }
+          { plannedDate: plannedDateFor(d) }
         );
       }
       toast({
         title: "Añadido al planificador",
-        description: `${diet.dishes.length} platos planificados para hoy.`,
+        description: dayCount > 1
+          ? `${diet.dishes.length} platos repartidos en los próximos ${dayCount} días.`
+          : `${diet.dishes.length} platos planificados para hoy.`,
       });
     } catch (e) {
       logger.error("add diet to planner", e);
@@ -206,7 +220,98 @@ export function DietDetailDrawer({
                 </Button>
               </div>
 
-              {/* Platos por tipo */}
+              {/* Platos: por día (Diet Builder) o por tipo de comida */}
+              {isDayPlan ? (
+                <div className="mt-7">
+                  {diet.plan ? (
+                    <div className="mb-4 grid grid-cols-3 gap-2">
+                      {[
+                        { label: "Déficit", value: `${diet.plan.dailyDeficit} kcal` },
+                        { label: "Ritmo", value: `${diet.plan.weeklyLossLbs} lb/sem` },
+                        { label: "Meta en", value: `~${diet.plan.projectedDays} días` },
+                      ].map((s) => (
+                        <div key={s.label} className="rounded-xl bg-muted/60 px-3 py-2">
+                          <p className="text-xs text-muted-foreground">{s.label}</p>
+                          <p className="truncate text-sm font-semibold tabular">{s.value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                  <div role="tablist" aria-label="Día del plan" className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
+                    {Array.from({ length: dayCount }, (_, i) => i + 1).map((d) => (
+                      <button
+                        key={d}
+                        role="tab"
+                        type="button"
+                        aria-selected={selectedDay === d}
+                        onClick={() => setSelectedDay(d)}
+                        className={cn(
+                          "shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors",
+                          selectedDay === d
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border bg-card text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        Día {d}
+                      </button>
+                    ))}
+                  </div>
+                  <ul className="mt-3 space-y-2">
+                    {diet.dishes
+                      .filter((d) => d.day === selectedDay)
+                      .sort((a, b) => (a.time ?? "").localeCompare(b.time ?? ""))
+                      .map((dish) => (
+                        <li key={dish.id}>
+                          <p className="eyebrow mb-1 tabular">
+                            {dish.time ? `${dish.time} · ` : ""}
+                            {dish.mealLabel ?? DIET_MEAL_TYPE_LABEL[dish.type]}
+                          </p>
+                          <ul>
+
+                          <li className="flex items-center gap-3 rounded-2xl border border-border bg-card p-2.5">
+                            <MealThumb
+                              src={dish.imageUrl ?? dietDishImageUrl(dish.name)}
+                              alt={dish.name}
+                              className="h-14 w-14 shrink-0 rounded-xl"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-medium">{dish.name}</p>
+                              <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground tabular">
+                                <span className="font-medium text-foreground">{dish.calories} kcal</span>
+                                <span className="flex items-center gap-1">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-protein" />P {dish.macros.protein}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-carbs" />C {dish.macros.carbs}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-fat" />G {dish.macros.fat}
+                                </span>
+                              </p>
+                              {dish.tutorial ? (
+                                <span className="mt-1 inline-flex items-center gap-1 text-xs text-primary">
+                                  <BookOpen className="h-3 w-3" /> Tutorial listo
+                                </span>
+                              ) : null}
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="shrink-0 rounded-full"
+                              onClick={() => setSelectedDishId(dish.id)}
+                              aria-label={`Cocinar ${dish.name}`}
+                            >
+                              <ChefHat className="h-3.5 w-3.5" />
+                              <span className="hidden sm:inline">Cocinar</span>
+                            </Button>
+                          </li>
+
+                          </ul>
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              ) : (
               <div className="mt-7 space-y-6">
                 {DIET_MEAL_TYPE_ORDER.map((type) => {
                   const items = diet.dishes.filter((d) => d.type === type);
@@ -259,6 +364,8 @@ export function DietDetailDrawer({
                   );
                 })}
               </div>
+
+              )}
 
               <Button
                 variant="ghost"

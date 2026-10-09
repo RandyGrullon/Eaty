@@ -103,8 +103,32 @@ export const dietDishSchema = z.object({
   calories: z.number().min(0).max(3500),
   macros: macrosSchema,
   tutorial: dishTutorialSchema.optional(),
+  /** Planes por días (Diet Builder): día 1..N, etiqueta y hora de la comida. */
+  day: z.number().int().min(1).max(31).optional(),
+  mealLabel: z.string().max(60).optional(),
+  time: z.string().max(10).optional(),
+  /** Ingredientes con gramos exactos (Diet Builder). */
+  portions: z
+    .array(z.object({ name: z.string(), grams: z.number(), household: z.string().optional() }))
+    .max(20)
+    .optional(),
 });
 export type DietDish = z.infer<typeof dietDishSchema>;
+
+/** Resumen del objetivo con el que el Diet Builder generó la dieta. */
+export interface DietPlanMeta {
+  source: "builder";
+  lossLbs: number;
+  durationDays: number;
+  projectedDays: number;
+  weeklyLossLbs: number;
+  protocol: "if_16_8" | "three_meals" | "four_meals";
+  bmr: number;
+  tdee: number;
+  dailyDeficit: number;
+  ingredientIds: string[];
+  days: number;
+}
 
 /** Documento de dieta (en `users/{uid}/diets/{id}`). */
 export interface Diet {
@@ -119,6 +143,8 @@ export interface Diet {
   dishes: DietDish[];
   createdBy: "ai" | "user";
   status: "draft" | "ready";
+  /** Presente si la dieta salió del Diet Builder. */
+  plan?: DietPlanMeta;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -39,6 +39,7 @@ export function dietFromDoc(d: QueryDocumentSnapshot<DocumentData>): Diet {
     dishes: Array.isArray(data.dishes) ? (data.dishes as DietDish[]) : [],
     createdBy: data.createdBy === "user" ? "user" : "ai",
     status: data.status === "draft" ? "draft" : "ready",
+    plan: data.plan && data.plan.source === "builder" ? (data.plan as Diet["plan"]) : undefined,
     createdAt: toDate(data.createdAt),
     updatedAt: toDate(data.updatedAt),
   };

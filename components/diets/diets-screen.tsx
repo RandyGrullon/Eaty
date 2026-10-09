@@ -9,9 +9,12 @@ import {
   ChefHat,
   Salad,
   UtensilsCrossed,
+  ListChecks,
+  ChevronRight,
 } from "lucide-react";
 import { useAppData } from "@/hooks/use-app-data";
 import { DietCard } from "./diet-card";
+import { DietBuilder } from "@/components/diet-builder/diet-builder";
 import { DietDetailDrawer } from "./diet-detail";
 import { GenerateDietModal } from "./generate-diet-modal";
 import { CreateDietModal } from "./create-diet-modal";
@@ -32,6 +35,7 @@ export function DietsScreen() {
   const [generateOpen, setGenerateOpen] = useState(false);
   const [generateGoal, setGenerateGoal] = useState<DietGoal | undefined>(undefined);
   const [createOpen, setCreateOpen] = useState(false);
+  const [builderOpen, setBuilderOpen] = useState(false);
 
   const selectedDiet = diets.find((d) => d.id === selectedDietId) ?? null;
 
@@ -73,6 +77,24 @@ export function DietsScreen() {
             Crear mi dieta
           </Button>
         </div>
+
+        <button
+          type="button"
+          onClick={() => setBuilderOpen(true)}
+          className="group relative mt-4 flex w-full items-center gap-4 overflow-hidden rounded-2xl bg-primary p-4 text-left text-primary-foreground shadow-lg shadow-primary/20 sm:p-5"
+        >
+          <span className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-primary-foreground/10" aria-hidden />
+          <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-foreground/15">
+            <ListChecks className="h-5 w-5" />
+          </span>
+          <span className="relative min-w-0 flex-1">
+            <span className="block font-display text-lg font-semibold leading-tight">Dieta con mis alimentos</span>
+            <span className="mt-0.5 block text-sm opacity-85">
+              Elige lo que vas a comer, tu meta y fecha: calculamos gramos, macros y recetas paso a paso.
+            </span>
+          </span>
+          <ChevronRight className="relative h-5 w-5 shrink-0 transition-transform group-hover:translate-x-0.5" />
+        </button>
 
         <div className="-mx-4 mt-4 flex gap-2 overflow-x-auto px-4 pb-1 scrollbar-none sm:mx-0 sm:flex-wrap sm:px-0">
           {QUICK_GOALS.map((g) => (
@@ -147,6 +169,11 @@ export function DietsScreen() {
         open={createOpen}
         onOpenChange={setCreateOpen}
         onCreated={(id) => setSelectedDietId(id)}
+      />
+      <DietBuilder
+        open={builderOpen}
+        onClose={() => setBuilderOpen(false)}
+        onSaved={(id) => setSelectedDietId(id)}
       />
     </div>
   );
