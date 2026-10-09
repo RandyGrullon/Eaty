@@ -43,7 +43,7 @@ export function StepFitnessGoal({ data, updateData }: StepProps) {
   return (
     <div>
       <StepHeader title="¿Cuál es tu objetivo?" description="Ajustaremos tu meta diaria y el reparto de macros." />
-      <div role="radiogroup" aria-label="Objetivo" className="grid gap-2.5">
+      <div role="radiogroup" aria-label="Objetivo" className="grid grid-cols-1 gap-2.5">
         {GOALS.map((g) => (
           <OptionCard
             key={g.value}

@@ -29,7 +29,7 @@ export function StepActivityLevel({ data, updateData }: StepProps) {
         title="¿Cuánto te mueves?"
         description="Lo usamos para estimar las calorías que gastas cada día."
       />
-      <div role="radiogroup" aria-label="Nivel de actividad" className="grid gap-2.5">
+      <div role="radiogroup" aria-label="Nivel de actividad" className="grid grid-cols-1 gap-2.5">
         {ACTIVITY_LEVELS.map((a) => (
           <OptionCard
             key={a.value}

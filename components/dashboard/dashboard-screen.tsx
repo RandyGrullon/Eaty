@@ -82,7 +82,7 @@ export function DashboardScreen({
           </div>
         </motion.header>
 
-        <div className="mt-6 grid gap-4 lg:grid-cols-12 lg:gap-5">
+        <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-5 [&>*]:min-w-0">
           {/* Resumen del día */}
           <motion.section {...fadeUp(0.05)} className="surface p-5 sm:p-7 lg:col-span-8">
             <div className="flex items-center justify-between gap-3">
@@ -147,7 +147,7 @@ export function DashboardScreen({
           </motion.section>
 
           {/* Columna lateral */}
-          <div className="grid gap-4 lg:col-span-4 lg:gap-5">
+          <div className="grid min-w-0 grid-cols-1 gap-4 lg:col-span-4 lg:gap-5">
             <motion.button
               {...fadeUp(0.1)}
               type="button"

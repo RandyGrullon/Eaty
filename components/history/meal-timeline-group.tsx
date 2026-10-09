@@ -41,7 +41,7 @@ export function MealTimelineGroup({ dateString, dayMeals, onSelect }: MealTimeli
         </div>
       </div>
 
-      <div className="grid gap-2.5 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2 [&>*]:min-w-0">
         <AnimatePresence mode="popLayout">
           {dayMeals.map((meal) => (
             <MealHistoryCard key={meal.id} meal={meal} onSelect={onSelect} />
