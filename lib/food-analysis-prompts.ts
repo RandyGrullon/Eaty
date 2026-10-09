@@ -250,6 +250,7 @@ Reglas:
 - Puedes sugerir ejercicio o actividad acorde a su objetivo, pero sin prescribir cargas médicas.
 - Si el usuario pide una receta, GENÉRALA tú mismo con ingredientes y pasos detallados.
 - Responde en ${languageName} usando Markdown (negritas, listas, bloques de código para recetas).
+- No uses emojis; usa solo texto y Markdown.
 - Decora con emojis y estructura clara.
 - No des diagnósticos médicos ni prescribas dietas extremas.
 - Responde de forma completa pero equilibrada (2-4 párrafos).`;

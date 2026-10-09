@@ -54,7 +54,14 @@ import { STATIC_TIPS_ERROR } from "@/lib/nutrition-tip-defaults";
 
 const GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions";
 
-const DEFAULT_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
+/**
+ * Modelos por defecto (llama-4-scout fue retirado de Groq):
+ * - visión (fotos): Qwen 3.8, con imágenes y modo JSON.
+ * - texto (coach, consejos, dietas, recetas, rutinas): GPT-OSS 120B.
+ * Separarlos reparte los límites por minuto del plan gratuito entre dos modelos.
+ */
+const DEFAULT_VISION_MODEL = "qwen/qwen3.8-27b";
+const DEFAULT_TEXT_MODEL = "openai/gpt-oss-120b";
 const DEFAULT_TIMEOUT_MS = 60_000;
 
 function getGroqApiKey(): string {
@@ -65,8 +72,28 @@ function getGroqApiKey(): string {
   return key;
 }
 
-function getModel(): string {
-  return process.env.GROQ_MODEL?.trim() || DEFAULT_MODEL;
+function hasImageContent(messages: ChatMessage[]): boolean {
+  return messages.some(
+    (m) => Array.isArray(m.content) && m.content.some((part) => part.type === "image_url")
+  );
+}
+
+/**
+ * El modelo de visión gratuito de Groq admite ~1000 tokens de salida por minuto:
+ * pedir más hace que Groq rechace la llamada (429). El JSON del análisis cabe de sobra.
+ */
+function capMaxTokens(messages: ChatMessage[], requested: number): number {
+  if (!hasImageContent(messages)) return requested;
+  const cap = parseInt(process.env.GROQ_VISION_MAX_TOKENS ?? "", 10);
+  return Math.min(requested, Number.isFinite(cap) && cap > 0 ? cap : 900);
+}
+
+/** Modelo según la petición: con imagen → visión; solo texto → modelo de texto. */
+function getModel(messages: ChatMessage[] = []): string {
+  if (hasImageContent(messages)) {
+    return process.env.GROQ_MODEL?.trim() || DEFAULT_VISION_MODEL;
+  }
+  return process.env.GROQ_TEXT_MODEL?.trim() || DEFAULT_TEXT_MODEL;
 }
 
 function getTimeoutMs(): number {
@@ -114,19 +141,28 @@ function isRetryableGroqError(message: string): boolean {
   );
 }
 
+/** Espera sugerida por Groq en un 429 (cabecera retry-after o "try again in Xs"), máx. 25 s. */
+function retryAfterMs(res: Response, message: string): number {
+  const header = Number.parseFloat(res.headers.get("retry-after") ?? "");
+  const fromText = /try again in ([\d.]+)s/i.exec(message)?.[1];
+  const seconds = Number.isFinite(header) ? header : fromText ? Number.parseFloat(fromText) : 2;
+  return Math.min(Math.max(seconds * 1000 + 250, 500), 25_000);
+}
+
 async function groqChatCompletion(params: {
   messages: ChatMessage[];
   responseFormatJson?: boolean;
   temperature?: number;
   maxTokens?: number;
 }): Promise<string> {
+  const model = getModel(params.messages);
   const body: Record<string, unknown> = {
-    model: getModel(),
+    model,
     messages: params.messages,
     // Más determinista para análisis nutricional (antes 0.35).
     temperature: params.temperature ?? 0.2,
     // Aumentado para alojar el JSON con componentBreakdown y referencias.
-    max_tokens: params.maxTokens ?? 2800,
+    max_tokens: capMaxTokens(params.messages, params.maxTokens ?? 2800),
     top_p: 0.9,
     stream: false,
   };
@@ -164,11 +200,13 @@ async function groqChatCompletion(params: {
 
       if (!res.ok) {
         const msg = data.error?.message ?? rawText ?? res.statusText;
-        const err = new Error(`Groq ${res.status} (${getModel()}): ${safeOneLine(msg || "Error")}`);
-        logger.error("Groq API error", { status: res.status, model: getModel(), message: msg });
+        const err = new Error(`Groq ${res.status} (${model}): ${safeOneLine(msg || "Error")}`);
+        logger.error("Groq API error", { status: res.status, model, message: msg });
         lastErr = err;
         if (attempt < maxAttempts && isRetryableGroqError(err.message)) {
-          const backoff = 400 * Math.pow(2, attempt - 1);
+          // En 429 Groq indica cuánto esperar (límite de tokens por minuto).
+          const backoff =
+            res.status === 429 ? retryAfterMs(res, msg) : 400 * Math.pow(2, attempt - 1);
           await sleep(backoff);
           continue;
         }

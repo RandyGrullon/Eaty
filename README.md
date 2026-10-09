@@ -28,7 +28,7 @@ mismo Firebase y mismo backend, con suscripciones vía RevenueCat. El módulo de
 ## Stack
 
 Next.js 14 (App Router) · React 18 · TypeScript · Tailwind CSS 4 · shadcn/ui · Framer Motion ·
-Firebase (Auth, Firestore, Storage, Admin SDK) · Groq (Llama vision) · Pollinations (imágenes
+Firebase (Auth, Firestore, Storage, Admin SDK) · Groq (Qwen 3.8 vision) · Pollinations (imágenes
 de platos) · Zod · Vitest · Vercel.
 
 ## Desarrollo
